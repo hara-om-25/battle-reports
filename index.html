@@ -103,7 +103,7 @@ function logout() {
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('email');
     state.token = null; state.user = null;
-    state.scoreTable = {}; state.drones = []; state.ammo = []; state.results = []; state.records = [];
+    state.scoreTable = {}; state.drones = []; state.ammo = []; state.results = [];  state.records = [];
     state.loaded = false; state.page = 'login';
     render();
 }
@@ -161,13 +161,14 @@ async function loadDataFromAPI() {
     try {
         state.page = 'loading'; render();
         
+        // "е бали": A=абревіатура, B=коеф. за знищено, C=коеф. за пошкоджено
         const scoreRows = await apiGet('е бали');
         state.scoreTable = {};
         for (let i = 1; i < scoreRows.length; i++) {
             if (scoreRows[i] && scoreRows[i][0]) {
                 state.scoreTable[scoreRows[i][0]] = {
-                    d: parseFloat(scoreRows[i][1]) || 0,
-                    m: parseFloat(scoreRows[i][2]) || 0
+                    znyshcheno: parseFloat(scoreRows[i][1]) || 0,
+                    poshkodzheno: parseFloat(scoreRows[i][2]) || 0
                 };
             }
         }
@@ -181,7 +182,6 @@ async function loadDataFromAPI() {
             if (row[2]) state.results.push(row[2]);
         }
         
-        // Структура: A=Звіт, B=Дата та час, C=Ціль, D=200, E=300, F=Координати, G=Дрон, H=Боєприпас, I=Результат, J=Балів
         const mainRows = await apiGet('ГОЛОВНА');
         state.records = [];
         for (let i = 1; i < mainRows.length; i++) {
@@ -238,7 +238,34 @@ async function syncListsToAPI() {
 }
 
 function cleanCoords(coord) { if(!coord) return ''; return coord.split(',')[0].split(' ').slice(0,4).join(' ').trim(); }
-function calculatePoints(abbr, q200, q300) { if(!abbr || !state.scoreTable[abbr]) return 0; return (parseInt(q200) * state.scoreTable[abbr].d) + (parseInt(q300) * state.scoreTable[abbr].m); }
+
+// Нова формула:
+// База завжди: q200 × ОС.B + q300 × ОС.C
+// Якщо ціль = ОС → тільки база
+// Якщо ціль ≠ ОС:
+//   - результат не обраний → ціль.C + база
+//   - результат "знищено" → ціль.B + база
+//   - результат "пошкоджено" → ціль.C + база
+//   - інший результат → 0 + база
+function calculatePoints(abbr, q200, q300, result) {
+    const os = state.scoreTable['ОС'] || {znyshcheno:0, poshkodzheno:0};
+    const base = parseInt(q200) * os.znyshcheno + parseInt(q300) * os.poshkodzheno;
+    if (!abbr) return base;
+    if (abbr === 'ОС') return base;
+    const target = state.scoreTable[abbr];
+    if (!target) return base;
+    let mainPoints = 0;
+    if (!result) {
+        mainPoints = target.poshkodzheno; // мінімальне = пошкоджено
+    } else if (result === 'знищено') {
+        mainPoints = target.znyshcheno;
+    } else if (result === 'пошкоджено') {
+        mainPoints = target.poshkodzheno;
+    } else {
+        mainPoints = 0;
+    }
+    return mainPoints + base;
+}
 
 async function add() {
     if(!state.form.target || !state.form.drone || !state.form.ammo || !state.form.result) {
@@ -249,7 +276,7 @@ async function add() {
     const abbr = parts.slice(0,-1).join(' ');
     if(!state.counts[abbr]) state.counts[abbr]=0;
     state.counts[abbr]++;
-    const points = calculatePoints(abbr, state.form.q200, state.form.q300);
+    const points = calculatePoints(abbr, state.form.q200, state.form.q300, state.form.result);
     const cleanedCoord = cleanCoords(state.form.coord);
     const rec = {
         reportNum: state.report,
@@ -419,34 +446,30 @@ function render() {
     
     if(state.page==='form') {
         const abbr = getAbbr();
-        const points = calculatePoints(abbr, state.form.q200, state.form.q300);
+        const points = calculatePoints(abbr, state.form.q200, state.form.q300, state.form.result);
         const targetAbbr = state.form.target ? state.form.target.split(' ').slice(0,-1).join(' ') : '';
         h += `<div class="p-6 max-w-3xl mx-auto"><div class="bg-slate-800 p-6 rounded border border-amber-900">
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                    <h1 class="text-3xl font-bold text-amber-400 mb-2">⚔️ ЗВІТ #${state.report}</h1>
-                    <p class="text-amber-300">Сьогодні: ${todayDate} | Записів: ${todayCount}</p>
-                </div>
-                <div class="space-y-2">
-                    <button onclick="newReport()" class="w-full bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded">🚩 НОВИЙ ЗВІТ</button>
-                    <div class="flex items-center gap-2">
-                        <label class="text-amber-300 font-bold">Балів:</label>
-                        <input type="text" value="${points}" disabled class="flex-1 bg-slate-700 text-amber-400 font-bold px-3 py-2 rounded text-center" />
-                    </div>
-                </div>
+            <div class="grid grid-cols-2 gap-4 items-stretch mb-4">
+                <h1 class="text-3xl font-bold text-amber-400 flex items-center">⚔️ ЗВІТ #${state.report}</h1>
+                <button onclick="newReport()" class="bg-red-700 hover:bg-red-800 text-white font-bold rounded text-lg">🚩 НОВИЙ ЗВІТ</button>
+            </div>
+            <div class="mb-6 space-y-1" style="font-size:1.3em">
+                <p class="text-amber-300">Сьогодні: ${todayDate}</p>
+                <p class="text-amber-300">Записів: ${todayCount}</p>
+                <p class="text-amber-300">Балів: <span class="text-amber-400 font-bold">${points}</span></p>
             </div>
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-amber-300 font-bold mb-2">Ціль</label>
-                        <select onchange="const v=this.value; state.form.target=v+' '+(state.counts[v]?state.counts[v]+1:1); render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
+                        <select onchange="const v=this.value; state.form.target=v?v+' '+(state.counts[v]?state.counts[v]+1:1):''; render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
                             <option value="">Виберіть...</option>
                             ${Object.keys(state.scoreTable).map(x=>`<option value="${x}" ${targetAbbr===x?'selected':''}>${x}</option>`).join('')}
                         </select>
                         ${state.form.target?`<p class="text-amber-400 text-sm mt-1">→ ${state.form.target}</p>`:''}
                     </div>
                     <div>
-                        <label class="block text-amber-300 font-bold mb-2">200 (×${abbr && state.scoreTable[abbr] ? state.scoreTable[abbr].d : '?'})</label>
+                        <label class="block text-amber-300 font-bold mb-2">200</label>
                         <select onchange="state.form.q200=parseInt(this.value);render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
                             ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q200===n?'selected':''}>${n}</option>`).join('')}
                         </select>
@@ -458,7 +481,7 @@ function render() {
                         <input type="text" value="${state.form.coord}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="w-full bg-slate-700 text-white px-3 py-2 rounded" />
                     </div>
                     <div>
-                        <label class="block text-amber-300 font-bold mb-2">300 (×${abbr && state.scoreTable[abbr] ? state.scoreTable[abbr].m : '?'})</label>
+                        <label class="block text-amber-300 font-bold mb-2">300</label>
                         <select onchange="state.form.q300=parseInt(this.value);render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
                             ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q300===n?'selected':''}>${n}</option>`).join('')}
                         </select>
