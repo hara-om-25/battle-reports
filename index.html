@@ -18,9 +18,9 @@ const SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 let state = {
     page: 'login', user: null, token: null, loaded: false,
     scoreTable: {}, drones: [], ammo: [], results: [], records: [],
-    report: 1, day: 1, counts: {},
+    report: 1, counts: {},
     form: {target:'',q200:0,q300:0,coord:'',drone:'',ammo:'',result:''},
-    selReport: null, selDay: null,
+    selReport: null, selDate: null,
     inputVal: '', inputList: null, inputIdx: null, editVal: ''
 };
 
@@ -36,13 +36,39 @@ window.onload = () => {
             if (savedToken && savedEmail) {
                 state.token = savedToken;
                 state.user = savedEmail;
-                loadDataFromAPI();
+                verifyAndLoad();
             } else {
                 render();
             }
         }
     }, 100);
 };
+
+async function verifyAndLoad() {
+    try {
+        const usersResp = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent('@')}!A:A`,
+            { headers: { 'Authorization': `Bearer ${state.token}` } }
+        ).then(r => r.json());
+        
+        if (usersResp.error) {
+            alert('Помилка доступу до файла: ' + usersResp.error.message);
+            logout(); return;
+        }
+        
+        const users = (usersResp.values || []).flat().map(x => (x||'').trim().toLowerCase()).filter(x => x);
+        const userEmail = (state.user || '').trim().toLowerCase();
+        if (!users.includes(userEmail)) {
+            alert('У вас немає доступу!\nВаш email: ' + state.user);
+            logout(); return;
+        }
+        
+        await loadDataFromAPI();
+    } catch(err) {
+        alert('Помилка перевірки: ' + err.message);
+        logout();
+    }
+}
 
 function initAuth() {
     tokenClient = google.accounts.oauth2.initTokenClient({
@@ -60,28 +86,12 @@ function initAuth() {
                 }).then(r => r.json());
                 state.user = userInfo.email;
                 
-                const usersResp = await fetch(
-                    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent('@')}!A:A`,
-                    { headers: { 'Authorization': `Bearer ${state.token}` } }
-                ).then(r => r.json());
-                
-                if (usersResp.error) {
-                    alert('Помилка доступу до файла: ' + usersResp.error.message);
-                    state.token = null; state.user = null; render(); return;
-                }
-                
-                const users = (usersResp.values || []).flat().filter(x => x);
-                if (!users.includes(state.user)) {
-                    alert('У вас немає доступу!\nВаш email: ' + state.user);
-                    state.token = null; state.user = null; render(); return;
-                }
-                
                 sessionStorage.setItem('token', state.token);
                 sessionStorage.setItem('email', state.user);
-                await loadDataFromAPI();
+                await verifyAndLoad();
             } catch(err) {
                 alert('Помилка: ' + err.message);
-                state.token = null; state.user = null; render();
+                logout();
             }
         }
     });
@@ -142,6 +152,11 @@ async function apiClear(range) {
     return resp;
 }
 
+function getDateOnly(datetime) {
+    if (!datetime) return '';
+    return datetime.split(' ')[0].replace(',', '').trim();
+}
+
 async function loadDataFromAPI() {
     try {
         state.page = 'loading'; render();
@@ -166,6 +181,7 @@ async function loadDataFromAPI() {
             if (row[2]) state.results.push(row[2]);
         }
         
+        // Структура: A=Звіт, B=Дата та час, C=Ціль, D=200, E=300, F=Координати, G=Дрон, H=Боєприпас, I=Результат, J=Балів
         const mainRows = await apiGet('ГОЛОВНА');
         state.records = [];
         for (let i = 1; i < mainRows.length; i++) {
@@ -173,16 +189,15 @@ async function loadDataFromAPI() {
             if (row[0] || row[2]) {
                 state.records.push({
                     reportNum: parseInt(row[0]) || 0,
-                    dayNum: parseInt(row[1]) || 0,
+                    datetime: row[1] || '',
                     target: row[2] || '',
                     qty200: parseInt(row[3]) || 0,
                     qty300: parseInt(row[4]) || 0,
-                    points: parseFloat(row[5]) || 0,
-                    datetime: row[6] || '',
-                    coordinates: row[7] || '',
-                    drone: row[8] || '',
-                    ammo: row[9] || '',
-                    result: row[10] || ''
+                    coordinates: row[5] || '',
+                    drone: row[6] || '',
+                    ammo: row[7] || '',
+                    result: row[8] || '',
+                    points: parseFloat(row[9]) || 0
                 });
             }
         }
@@ -190,14 +205,13 @@ async function loadDataFromAPI() {
         if (state.records.length > 0) {
             state.report = Math.max(...state.records.map(r => r.reportNum));
             const reportRecs = state.records.filter(r => r.reportNum === state.report);
-            state.day = Math.max(...reportRecs.map(r => r.dayNum));
             state.counts = {};
             reportRecs.forEach(r => {
                 const abbr = r.target.split(' ').slice(0, -1).join(' ');
                 state.counts[abbr] = (state.counts[abbr] || 0) + 1;
             });
         } else {
-            state.report = 1; state.day = 1; state.counts = {};
+            state.report = 1; state.counts = {};
         }
         
         state.loaded = true; state.page = 'form';
@@ -237,21 +251,38 @@ async function add() {
     state.counts[abbr]++;
     const points = calculatePoints(abbr, state.form.q200, state.form.q300);
     const cleanedCoord = cleanCoords(state.form.coord);
-    const rec = {reportNum:state.report, dayNum:state.day, target:abbr+' '+state.counts[abbr], qty200:state.form.q200, qty300:state.form.q300, points:points, datetime:new Date().toLocaleString('uk-UA'), coordinates:cleanedCoord, drone:state.form.drone, ammo:state.form.ammo, result:state.form.result};
+    const rec = {
+        reportNum: state.report,
+        datetime: new Date().toLocaleString('uk-UA'),
+        target: abbr+' '+state.counts[abbr],
+        qty200: state.form.q200,
+        qty300: state.form.q300,
+        coordinates: cleanedCoord,
+        drone: state.form.drone,
+        ammo: state.form.ammo,
+        result: state.form.result,
+        points: points
+    };
     state.records.push(rec);
     state.form = {target:'',q200:0,q300:0,coord:'',drone:'',ammo:'',result:''};
     
     try {
-        await apiAppend('ГОЛОВНА!A:K', [[
-            rec.reportNum, rec.dayNum, rec.target,
-            rec.qty200, rec.qty300, rec.points,
-            rec.datetime, rec.coordinates,
-            rec.drone, rec.ammo, rec.result
+        await apiAppend('ГОЛОВНА!A:J', [[
+            rec.reportNum, rec.datetime, rec.target,
+            rec.qty200, rec.qty300,
+            rec.coordinates, rec.drone, rec.ammo, rec.result,
+            rec.points
         ]]);
         alert('✅ Запис додано і синхронізовано!');
     } catch(err) {
         alert('⚠️ Запис додано локально, але не синхронізовано: ' + err.message);
     }
+    render();
+}
+
+function newReport() {
+    state.report++;
+    state.counts = {};
     render();
 }
 
@@ -312,7 +343,7 @@ function deleteItem() { if(state.inputList !== null && state.inputIdx !== null) 
 function generateReport(dayRecs) {
     let lines = [];
     lines.push('Доповідаю!');
-    const date = dayRecs[0].datetime.split(' ')[0].replace(',','');
+    const date = getDateOnly(dayRecs[0].datetime);
     lines.push(date+'р. ТГ Мур 5/7 здійснено '+dayRecs.length+' бойових вильотів.');
     const total = dayRecs.reduce((s,r)=>s+r.points,0);
     lines.push('Вражено, орієнтовно на '+total+' балів, а саме:');
@@ -327,12 +358,12 @@ function generateReport(dayRecs) {
 }
 
 function exportXLSX() {
-    if(!state.selReport || state.selDay === null) { alert('Виберіть звіт та день!'); return; }
-    const dayRecs = state.records.filter(r=>r.reportNum===state.selReport&&r.dayNum===state.selDay);
+    if(!state.selReport || !state.selDate) { alert('Виберіть звіт та день!'); return; }
+    const dayRecs = state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate);
     if(dayRecs.length===0) { alert('Немає записів!'); return; }
     try {
-        const data = [['Порядк. звіт','Порядк. день','Назва ціл.','200','300','Балів','Дата та час','Координати','Тип дрона','Боєприпас','Результат']];
-        dayRecs.forEach(r => { data.push([r.reportNum,r.dayNum,r.target,r.qty200,r.qty300,r.points,r.datetime,r.coordinates,r.drone,r.ammo,r.result]); });
+        const data = [['Звіт','Дата та час','Ціль','200','300','Координати','Тип дрона','Боєприпас','Результат','Балів']];
+        dayRecs.forEach(r => { data.push([r.reportNum,r.datetime,r.target,r.qty200,r.qty300,r.coordinates,r.drone,r.ammo,r.result,r.points]); });
         const ws = XLSX.utils.aoa_to_sheet(data);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Звіти');
@@ -342,8 +373,8 @@ function exportXLSX() {
 }
 
 function exportPDF() {
-    if(!state.selReport || state.selDay === null) { alert('Виберіть звіт та день!'); return; }
-    const dayRecs = state.records.filter(r=>r.reportNum===state.selReport&&r.dayNum===state.selDay);
+    if(!state.selReport || !state.selDate) { alert('Виберіть звіт та день!'); return; }
+    const dayRecs = state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate);
     if(dayRecs.length===0) { alert('Немає записів!'); return; }
     const lines = generateReport(dayRecs);
     const printContent = `<html><head><meta charset="UTF-8"><title>Звіт</title><style>body{font-family:Arial;line-height:1.6;padding:20px;}pre{white-space:pre-wrap;}</style></head><body><pre>${lines.join('\n')}</pre></body></html>`;
@@ -354,8 +385,8 @@ function exportPDF() {
 }
 
 function copyReport() {
-    if(!state.selReport || state.selDay === null) { alert('Виберіть звіт та день!'); return; }
-    const dayRecs = state.records.filter(r=>r.reportNum===state.selReport&&r.dayNum===state.selDay);
+    if(!state.selReport || !state.selDate) { alert('Виберіть звіт та день!'); return; }
+    const dayRecs = state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate);
     if(dayRecs.length===0) { alert('Немає записів!'); return; }
     const lines = generateReport(dayRecs);
     navigator.clipboard.writeText(lines.join('\n'));
@@ -381,13 +412,84 @@ function render() {
         return;
     }
     
+    const todayDate = getDateOnly(new Date().toLocaleString('uk-UA'));
+    const todayCount = state.records.filter(r=>r.reportNum===state.report && getDateOnly(r.datetime)===todayDate).length;
+    
     let h = `<nav class="bg-slate-950 border-b border-amber-900 p-4 sticky top-0 z-50"><div class="max-w-7xl mx-auto flex justify-between items-center"><h1 class="text-2xl font-bold text-amber-400">⚔️ БОЙОВІ ЗВІТИ</h1><div class="flex gap-2 items-center"><button onclick="state.page='form';render()" class="px-4 py-2 rounded font-bold ${state.page==='form'?'bg-amber-600':'bg-slate-700'}">ФОРМА</button><button onclick="state.page='reports';render()" class="px-4 py-2 rounded font-bold ${state.page==='reports'?'bg-amber-600':'bg-slate-700'}">ЗВІТИ</button><button onclick="state.page='lists';render()" class="px-4 py-2 rounded font-bold ${state.page==='lists'?'bg-amber-600':'bg-slate-700'}">СПИСКИ</button><button onclick="logout()" class="px-3 py-2 rounded font-bold bg-red-700 hover:bg-red-800 text-white text-sm">Вийти</button></div></div><div class="max-w-7xl mx-auto text-amber-300 text-xs mt-1">${state.user}</div></nav>`;
     
     if(state.page==='form') {
         const abbr = getAbbr();
         const points = calculatePoints(abbr, state.form.q200, state.form.q300);
         const targetAbbr = state.form.target ? state.form.target.split(' ').slice(0,-1).join(' ') : '';
-        h += `<div class="p-6 max-w-3xl mx-auto"><div class="bg-slate-800 p-6 rounded border border-amber-900"><h1 class="text-3xl font-bold text-amber-400 mb-2">⚔️ ЗВІТ #${state.report}</h1><p class="text-amber-300 mb-6">День #${state.day} | Записів: ${state.records.filter(r=>r.reportNum===state.report&&r.dayNum===state.day).length}</p><div class="space-y-4"><div><label class="block text-amber-300 font-bold mb-2">Назва ціл.*</label><select id="target" onchange="const v=this.value; state.form.target=v+' '+(state.counts[v]?state.counts[v]+1:1); render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded"><option value="">Виберіть...</option>${Object.keys(state.scoreTable).map(x=>`<option value="${x}" ${targetAbbr===x?'selected':''}>${x}</option>`).join('')}</select>${state.form.target?`<p class="text-amber-400 text-sm mt-1">→ ${state.form.target}</p>`:''}</div><div class="grid grid-cols-2 gap-4"><div><label class="block text-amber-300 font-bold mb-2">200 (×${abbr && state.scoreTable[abbr] ? state.scoreTable[abbr].d : '?'})</label><select onchange="state.form.q200=parseInt(this.value);render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q200===n?'selected':''}>${n}</option>`).join('')}</select></div><div><label class="block text-amber-300 font-bold mb-2">300 (×${abbr && state.scoreTable[abbr] ? state.scoreTable[abbr].m : '?'})</label><select onchange="state.form.q300=parseInt(this.value);render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q300===n?'selected':''}>${n}</option>`).join('')}</select></div></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-amber-300 font-bold mb-2">Результат*</label><select onchange="state.form.result=this.value;render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded"><option value="">Виберіть...</option>${state.results.map(r=>`<option value="${r}" ${state.form.result===r?'selected':''}>${r}</option>`).join('')}</select></div><div><label class="block text-amber-300 font-bold mb-2">Балів</label><input type="text" value="${points}" disabled class="w-full bg-slate-700 text-amber-400 font-bold px-3 py-2 rounded text-center" /></div></div><div><label class="block text-amber-300 font-bold mb-2">Дрон*</label><select onchange="state.form.drone=this.value;render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded"><option value="">Виберіть...</option>${state.drones.map(d=>`<option value="${d}" ${state.form.drone===d?'selected':''}>${d}</option>`).join('')}</select></div><div><label class="block text-amber-300 font-bold mb-2">Боєприпас*</label><select onchange="state.form.ammo=this.value;render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded"><option value="">Виберіть...</option>${state.ammo.map(a=>`<option value="${a}" ${state.form.ammo===a?'selected':''}>${a}</option>`).join('')}</select></div><div><label class="block text-amber-300 font-bold mb-2">Координати (MGRS)</label><input type="text" value="${state.form.coord}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="w-full bg-slate-700 text-white px-3 py-2 rounded" /></div><button onclick="add()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded">✓ ДОДАТИ ЗАПИС</button></div></div></div>`;
+        h += `<div class="p-6 max-w-3xl mx-auto"><div class="bg-slate-800 p-6 rounded border border-amber-900">
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-amber-400 mb-2">⚔️ ЗВІТ #${state.report}</h1>
+                    <p class="text-amber-300">Сьогодні: ${todayDate} | Записів: ${todayCount}</p>
+                </div>
+                <div class="space-y-2">
+                    <button onclick="newReport()" class="w-full bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded">🚩 НОВИЙ ЗВІТ</button>
+                    <div class="flex items-center gap-2">
+                        <label class="text-amber-300 font-bold">Балів:</label>
+                        <input type="text" value="${points}" disabled class="flex-1 bg-slate-700 text-amber-400 font-bold px-3 py-2 rounded text-center" />
+                    </div>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-amber-300 font-bold mb-2">Ціль</label>
+                        <select onchange="const v=this.value; state.form.target=v+' '+(state.counts[v]?state.counts[v]+1:1); render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
+                            <option value="">Виберіть...</option>
+                            ${Object.keys(state.scoreTable).map(x=>`<option value="${x}" ${targetAbbr===x?'selected':''}>${x}</option>`).join('')}
+                        </select>
+                        ${state.form.target?`<p class="text-amber-400 text-sm mt-1">→ ${state.form.target}</p>`:''}
+                    </div>
+                    <div>
+                        <label class="block text-amber-300 font-bold mb-2">200 (×${abbr && state.scoreTable[abbr] ? state.scoreTable[abbr].d : '?'})</label>
+                        <select onchange="state.form.q200=parseInt(this.value);render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
+                            ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q200===n?'selected':''}>${n}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-amber-300 font-bold mb-2">Координати (MGRS)</label>
+                        <input type="text" value="${state.form.coord}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="w-full bg-slate-700 text-white px-3 py-2 rounded" />
+                    </div>
+                    <div>
+                        <label class="block text-amber-300 font-bold mb-2">300 (×${abbr && state.scoreTable[abbr] ? state.scoreTable[abbr].m : '?'})</label>
+                        <select onchange="state.form.q300=parseInt(this.value);render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
+                            ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q300===n?'selected':''}>${n}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-amber-300 font-bold mb-2">Дрон</label>
+                        <select onchange="state.form.drone=this.value;render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
+                            <option value="">Виберіть...</option>
+                            ${state.drones.map(d=>`<option value="${d}" ${state.form.drone===d?'selected':''}>${d}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-amber-300 font-bold mb-2">Боєприпас</label>
+                        <select onchange="state.form.ammo=this.value;render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
+                            <option value="">Виберіть...</option>
+                            ${state.ammo.map(a=>`<option value="${a}" ${state.form.ammo===a?'selected':''}>${a}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-amber-300 font-bold mb-2">Результат</label>
+                    <select onchange="state.form.result=this.value;render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
+                        <option value="">Виберіть...</option>
+                        ${state.results.map(r=>`<option value="${r}" ${state.form.result===r?'selected':''}>${r}</option>`).join('')}
+                    </select>
+                </div>
+                <button onclick="add()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded">✓ ДОДАТИ ЗАПИС</button>
+            </div>
+        </div></div>`;
     }
     
     if(state.page==='lists') {
@@ -396,10 +498,10 @@ function render() {
     
     if(state.page==='reports') {
         const reps = [...new Set(state.records.map(r=>r.reportNum))].sort((a,b)=>a-b);
-        const ds = state.selReport ? [...new Set(state.records.filter(r=>r.reportNum===state.selReport).map(r=>r.dayNum))].sort((a,b)=>a-b) : [];
-        const dayRecs = state.selReport && state.selDay !== null ? state.records.filter(r=>r.reportNum===state.selReport&&r.dayNum===state.selDay) : [];
+        const dates = state.selReport ? [...new Set(state.records.filter(r=>r.reportNum===state.selReport).map(r=>getDateOnly(r.datetime)))].sort() : [];
+        const dayRecs = state.selReport && state.selDate ? state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate) : [];
         const reportLines = dayRecs.length > 0 ? generateReport(dayRecs) : [];
-        h += `<div class="p-6 space-y-6"><h1 class="text-3xl font-bold text-amber-400 mb-8">📊 ЗВІТИ</h1><div class="grid grid-cols-2 gap-4 mb-6"><div class="bg-slate-800 p-4 rounded border border-amber-900"><h3 class="text-amber-300 font-bold mb-3">Звіти</h3><button onclick="state.report++;state.day=1;state.counts={};render()" class="w-full bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded mb-4">🚩 НОВИЙ ЗВІТ</button><div class="flex flex-col gap-2">${reps.map((r,i)=>`<button onclick="state.selReport=${r};state.selDay=null;render()" class="px-4 py-3 rounded font-bold ${state.selReport===r?'bg-amber-600 text-white':'bg-slate-700 text-amber-300'}">${i===0?'Перший':'Звіт '+r}</button>`).join('')}</div></div><div class="bg-slate-800 p-4 rounded border border-amber-900"><h3 class="text-amber-300 font-bold mb-3">Дні</h3><button onclick="state.day++;render()" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded mb-4">📅 НОВИЙ ДЕНЬ</button><div class="flex flex-col gap-2">${state.selReport?ds.map(d=>{const dr=state.records.filter(r=>r.reportNum===state.selReport&&r.dayNum===d);const dt=dr[0]?dr[0].datetime.split(' ')[0].replace(',',''):'';return `<button onclick="state.selDay=${d};render()" class="px-4 py-3 rounded font-bold ${state.selDay===d?'bg-amber-600 text-white':'bg-slate-700 text-amber-300'}">${dt}</button>`;}).join(''):'<p class="text-gray-400 text-center py-4">Виберіть звіт</p>'}</div></div></div>${dayRecs.length > 0 ? `<div class="bg-slate-800 p-6 rounded border border-amber-900"><div class="flex justify-between items-center mb-4"><h3 class="text-amber-300 font-bold">Звіт на ${dayRecs[0].datetime.split(' ')[0].replace(',','')}</h3><div class="flex gap-2"><button onclick="exportXLSX()" class="bg-green-700 hover:bg-green-800 text-white font-bold py-2 px-4 rounded">📊 XLSX</button><button onclick="exportPDF()" class="bg-purple-700 hover:bg-purple-800 text-white font-bold py-2 px-4 rounded">📄 PDF</button><button onclick="copyReport()" class="bg-black hover:bg-slate-900 text-white font-bold py-2 px-4 rounded">📋 КОПІЮВАТИ</button></div></div><div class="text-white whitespace-pre-wrap font-serif text-sm bg-slate-700 p-4 rounded">${reportLines.join('\n')}</div></div>` : ''}<div class="bg-slate-800 p-6 rounded border border-amber-900"><h3 class="text-amber-300 font-bold mb-4">Записи</h3><div class="space-y-2 max-h-96 overflow-y-auto">${dayRecs.map(r=>`<div class="bg-slate-700 p-3 rounded text-sm"><p class="text-amber-400">${r.target} - ${r.result} (${r.points} б.)</p><p class="text-gray-300">200: ${r.qty200} | 300: ${r.qty300} | ${r.drone}</p><p class="text-gray-400">${r.datetime} | ${r.coordinates}</p></div>`).join('')}</div></div></div>`;
+        h += `<div class="p-6 space-y-6"><h1 class="text-3xl font-bold text-amber-400 mb-8">📊 ЗВІТИ</h1><div class="grid grid-cols-2 gap-4 mb-6"><div class="bg-slate-800 p-4 rounded border border-amber-900"><h3 class="text-amber-300 font-bold mb-3">Звіти</h3><div class="flex flex-col gap-2">${reps.map((r,i)=>`<button onclick="state.selReport=${r};state.selDate=null;render()" class="px-4 py-3 rounded font-bold ${state.selReport===r?'bg-amber-600 text-white':'bg-slate-700 text-amber-300'}">${i===0?'Перший':'Звіт '+r}</button>`).join('')}</div></div><div class="bg-slate-800 p-4 rounded border border-amber-900"><h3 class="text-amber-300 font-bold mb-3">Дні</h3><div class="flex flex-col gap-2">${state.selReport?dates.map(d=>`<button onclick="state.selDate='${d}';render()" class="px-4 py-3 rounded font-bold ${state.selDate===d?'bg-amber-600 text-white':'bg-slate-700 text-amber-300'}">${d}</button>`).join(''):'<p class="text-gray-400 text-center py-4">Виберіть звіт</p>'}</div></div></div>${dayRecs.length > 0 ? `<div class="bg-slate-800 p-6 rounded border border-amber-900"><div class="flex justify-between items-center mb-4"><h3 class="text-amber-300 font-bold">Звіт на ${state.selDate}</h3><div class="flex gap-2"><button onclick="exportXLSX()" class="bg-green-700 hover:bg-green-800 text-white font-bold py-2 px-4 rounded">📊 XLSX</button><button onclick="exportPDF()" class="bg-purple-700 hover:bg-purple-800 text-white font-bold py-2 px-4 rounded">📄 PDF</button><button onclick="copyReport()" class="bg-black hover:bg-slate-900 text-white font-bold py-2 px-4 rounded">📋 КОПІЮВАТИ</button></div></div><div class="text-white whitespace-pre-wrap font-serif text-sm bg-slate-700 p-4 rounded">${reportLines.join('\n')}</div></div>` : ''}<div class="bg-slate-800 p-6 rounded border border-amber-900"><h3 class="text-amber-300 font-bold mb-4">Записи</h3><div class="space-y-2 max-h-96 overflow-y-auto">${dayRecs.map(r=>`<div class="bg-slate-700 p-3 rounded text-sm"><p class="text-amber-400">${r.target} - ${r.result} (${r.points} б.)</p><p class="text-gray-300">200: ${r.qty200} | 300: ${r.qty300} | ${r.drone}</p><p class="text-gray-400">${r.datetime} | ${r.coordinates}</p></div>`).join('')}</div></div></div>`;
     }
     
     app.innerHTML = h;
