@@ -82,6 +82,18 @@
       color: #1a1d18;
       box-shadow: 0 4px 0 var(--yellow-dim), 0 6px 12px rgba(0,0,0,0.4);
     }
+    .btn-yellow-dim {
+      background: #8a7510;
+      border-color: #a8901a;
+      color: #1a1d18;
+      box-shadow: 0 4px 0 #5a4c08, 0 6px 12px rgba(0,0,0,0.4);
+      text-shadow: none;
+    }
+    .btn-yellow-dim.active {
+      background: var(--yellow);
+      border-color: #f4d942;
+      box-shadow: 0 4px 0 var(--yellow-dim), 0 6px 12px rgba(0,0,0,0.4);
+    }
     .btn-submit {
       background: var(--olive-dark);
       border-color: var(--olive);
@@ -161,7 +173,11 @@
       cursor: pointer;
       transition: all 0.1s;
       font-family: 'JetBrains Mono', monospace;
+      list-style: none;
+      display: block;
     }
+    .list-item::before, .list-item::marker { content: none; }
+    ul, ol { list-style: none; padding: 0; margin: 0; }
     .list-item:hover { border-color: var(--olive-bright); background: rgba(122, 149, 64, 0.1); }
     .record-card {
       background: rgba(0,0,0,0.3);
@@ -211,19 +227,7 @@
     <div id="app"></div>
     <div id="modal"></div>
     <script>
-const SHIELD_SVG = `<svg class="shield-svg" width="36" height="44" viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg">
-  <path d="M10 10 L110 10 L110 90 Q110 130 60 145 Q10 130 10 90 Z" fill="#5a6b2f" stroke="#d4b81a" stroke-width="4"/>
-  <path d="M10 10 L110 10 L110 90 Q110 130 60 145 Q10 130 10 90 Z" fill="none" stroke="#3d4720" stroke-width="2" stroke-dasharray="3,3" transform="translate(2,2) scale(0.97)"/>
-  <g fill="#d4b81a" transform="translate(60, 78) scale(0.55) translate(-50, -65)">
-    <path d="M50 5 L55 50 L55 120 L45 120 L45 50 Z M50 5 L45 50 L45 120 L55 120 L55 50 Z"/>
-    <path d="M20 25 L25 30 L30 55 L35 75 L40 85 L40 115 L30 115 L30 80 L20 50 Z"/>
-    <path d="M80 25 L75 30 L70 55 L65 75 L60 85 L60 115 L70 115 L70 80 L80 50 Z"/>
-    <path d="M35 75 L40 85 L40 105 L35 100 Z"/>
-    <path d="M65 75 L60 85 L60 105 L65 100 Z"/>
-    <path d="M40 115 L60 115 L60 125 L55 130 L45 130 L40 125 Z"/>
-    <path d="M45 130 L55 130 L52 140 L48 140 Z"/>
-  </g>
-</svg>`;
+const SHIELD_SVG = `<svg class="shield-svg" width="40" height="50" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle"><path d="M 5,5 L 95,5 L 95,80 Q 95,115 50,135 Q 5,115 5,80 Z" fill="#0057b7" stroke="#ffd700" stroke-width="3"/><g fill="#ffd700"><polygon points="48,20 52,20 53,75 50,90 47,75"/><polygon points="20,35 28,35 30,75 38,90 38,100 28,100 28,92 20,80"/><polygon points="80,35 72,35 70,75 62,90 62,100 72,100 72,92 80,80"/><polygon points="32,30 40,40 40,85 32,75"/><polygon points="68,30 60,40 60,85 68,75"/><rect x="28" y="70" width="44" height="6"/><rect x="44" y="90" width="12" height="20"/><rect x="40" y="105" width="20" height="5"/><polygon points="46,110 54,110 52,118 48,118"/></g></svg>`;
 
 
 const CLIENT_ID = '1095528804215-gjcnuo3oc12osqm596dpda81slodrmvs.apps.googleusercontent.com';
@@ -483,31 +487,57 @@ function calculatePoints(abbr, q200, q300, result) {
     return mainPoints + base;
 }
 
-async function add() {
-    if(!state.form.target || !state.form.drone || !state.form.ammo || !state.form.result) {
-        alert('Заповніть всі обов\'язкові поля!');
+function addTargetToForm() {
+    if(!state.form.newTarget || !state.form.newResult) {
+        alert('Виберіть ціль і результат!');
         return;
     }
-    const parts = state.form.target.split(' ');
+    const parts = state.form.newTarget.split(' ');
     const abbr = parts.slice(0,-1).join(' ');
     if(!state.counts[abbr]) state.counts[abbr]=0;
     state.counts[abbr]++;
-    const points = calculatePoints(abbr, state.form.q200, state.form.q300, state.form.result);
+    const fullName = abbr + ' ' + state.counts[abbr];
+    const points = calculatePoints(abbr, state.form.q200, state.form.q300, state.form.newResult);
+    state.form.targets.push({abbr, fullName, result: state.form.newResult, points});
+    state.form.newTarget = '';
+    state.form.newResult = '';
+    render();
+}
+
+function removeTargetFromForm(idx) {
+    state.form.targets.splice(idx, 1);
+    render();
+}
+
+async function add() {
+    if(state.form.targets.length === 0 || !state.form.drone || !state.form.ammo) {
+        alert('Додайте хочаб одну ціль, виберіть дрон та боєприпас!');
+        return;
+    }
+    
+    let totalPoints = 0;
+    let targetStr = '';
+    for(let i=0; i<state.form.targets.length; i++) {
+        const t = state.form.targets[i];
+        targetStr += (i>0?', ':'') + t.fullName + ' (' + t.result + ')';
+        totalPoints += t.points;
+    }
+    
     const cleanedCoord = cleanCoords(state.form.coord);
     const rec = {
         reportNum: state.report,
         datetime: new Date().toLocaleString('uk-UA'),
-        target: abbr+' '+state.counts[abbr],
+        target: targetStr,
         qty200: state.form.q200,
         qty300: state.form.q300,
         coordinates: cleanedCoord,
         drone: state.form.drone,
         ammo: state.form.ammo,
-        result: state.form.result,
-        points: points
+        result: targetStr,
+        points: totalPoints
     };
     state.records.push(rec);
-    state.form = {target:'',q200:0,q300:0,coord:'',drone:'',ammo:'',result:''};
+    state.form = {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:''};
     
     try {
         await apiAppend('ГОЛОВНА!A:J', [[
@@ -646,7 +676,8 @@ function render() {
     const app = document.getElementById('app');
     
     if (state.page === 'login' || !state.user) {
-        app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><div class="crate p-8 max-w-md w-full text-center"><div class="flex justify-center mb-4">${SHIELD_SVG.replace('width="36" height="44"','width="80" height="100"')}</div><h1 class="stencil-shadow text-3xl mb-4" style="color: var(--yellow)">БОЙОВІ ЗВІТИ</h1><p class="stencil mb-8" style="color: var(--khaki)">АВТОРИЗУЙТЕСЬ ДЛЯ ДОСТУПУ</p><button onclick="login()" class="btn-stencil btn-yellow w-full text-lg">🔐 УВІЙТИ ЧЕРЕЗ GOOGLE</button></div></div>`;
+        const bigShield = `<svg width="100" height="130" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg" style="display:inline-block"><path d="M 5,5 L 95,5 L 95,80 Q 95,115 50,135 Q 5,115 5,80 Z" fill="#0057b7" stroke="#ffd700" stroke-width="3"/><g fill="#ffd700" transform="scale(1.2) translate(-5, 0)"><polygon points="48,20 52,20 53,75 50,90 47,75"/><polygon points="20,35 28,35 30,75 38,90 38,100 28,100 28,92 20,80"/><polygon points="80,35 72,35 70,75 62,90 62,100 72,100 72,92 80,80"/><polygon points="32,30 40,40 40,85 32,75"/><polygon points="68,30 60,40 60,85 68,75"/><rect x="28" y="70" width="44" height="6"/><rect x="44" y="90" width="12" height="20"/><rect x="40" y="105" width="20" height="5"/><polygon points="46,110 54,110 52,118 48,118"/></g></svg>`;
+        app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><div class="crate p-8 max-w-md w-full text-center"><div class="flex justify-center mb-4">${bigShield}</div><h1 class="stencil-shadow text-3xl mb-4" style="color: var(--yellow)">БОЙОВІ ЗВІТИ</h1><p class="stencil mb-8" style="color: var(--khaki)">АВТОРИЗУЙТЕСЬ ДЛЯ ДОСТУПУ</p><button onclick="login()" class="btn-stencil btn-yellow-dim w-full text-lg">🔐 УВІЙТИ ЧЕРЕЗ GOOGLE</button></div></div>`;
         return;
     }
     
@@ -658,12 +689,23 @@ function render() {
     const todayDate = getDateOnly(new Date().toLocaleString('uk-UA'));
     const todayCount = state.records.filter(r=>r.reportNum===state.report && getDateOnly(r.datetime)===todayDate).length;
     
-    let h = `<nav class="crate p-3 m-4 sticky top-4 z-40"><div class="flex justify-between items-center flex-wrap gap-2"><h1 class="stencil-shadow text-xl flex items-center gap-2" style="color: var(--yellow)">${SHIELD_SVG} БОЙОВІ ЗВІТИ</h1><div class="flex gap-2 items-center flex-wrap"><button onclick="state.page='form';render()" class="nav-btn ${state.page==='form'?'active':''}">ФОРМА</button><button onclick="state.page='reports';render()" class="nav-btn ${state.page==='reports'?'active':''}">ЗВІТИ</button><button onclick="state.page='lists';render()" class="nav-btn ${state.page==='lists'?'active':''}">СПИСКИ</button><button onclick="logout()" class="nav-btn logout">ВИЙТИ</button></div></div><div class="text-xs mt-2 stencil" style="color: var(--text-dim)">${esc(state.user)}</div></nav>`;
+    let h = `<nav class="crate p-3 m-4 sticky top-4 z-40">
+        <div class="flex justify-between items-center flex-wrap gap-2">
+            <div class="flex items-center gap-3 flex-wrap">
+                <h1 class="stencil-shadow text-xl" style="color: var(--yellow)">БОЙОВІ ЗВІТИ</h1>
+                <span class="text-xs stencil" style="color: var(--text-dim)">${esc(state.user)}</span>
+            </div>
+            <div class="flex gap-2 items-center flex-wrap">
+                <button onclick="state.page='form';render()" class="nav-btn ${state.page==='form'?'active':''}">ФОРМА</button>
+                <button onclick="state.page='reports';render()" class="nav-btn ${state.page==='reports'?'active':''}">ЗВІТИ</button>
+                <button onclick="state.page='lists';render()" class="nav-btn ${state.page==='lists'?'active':''}">СПИСКИ</button>
+                <button onclick="logout()" class="nav-btn logout">ВИЙТИ</button>
+            </div>
+        </div>
+    </nav>`;
     
     if(state.page==='form') {
-        const abbr = getAbbr();
-        const points = calculatePoints(abbr, state.form.q200, state.form.q300, state.form.result);
-        const targetAbbr = state.form.target ? state.form.target.split(' ').slice(0,-1).join(' ') : '';
+        const totalPoints = state.form.targets.reduce((sum, t) => sum + t.points, 0);
         h += `<div class="p-4 max-w-3xl mx-auto"><div class="crate p-6">
             <div class="grid grid-cols-2 gap-4 items-stretch mb-4">
                 <div class="flex flex-col justify-center">
@@ -675,29 +717,42 @@ function render() {
             <div class="mb-6 space-y-1 stencil" style="font-size: 1.15em">
                 <p><span style="color: var(--khaki)">СЬОГОДНІ:</span> <span style="color: var(--text)">${todayDate}</span></p>
                 <p><span style="color: var(--khaki)">ЗАПИСІВ:</span> <span style="color: var(--text)">${todayCount}</span></p>
-                <p><span style="color: var(--khaki)">БАЛІВ:</span> <span style="color: var(--yellow)" class="text-2xl">${points}</span></p>
+                <p><span style="color: var(--khaki)">БАЛІВ:</span> <span style="color: var(--yellow)" class="text-2xl">${totalPoints}</span></p>
             </div>
+            
+            <div class="mb-6">
+                <h3 class="stencil" style="color: var(--khaki); margin-bottom: 8px">ЦІЛІ (${state.form.targets.length})</h3>
+                <div class="space-y-2" style="max-height: 150px; overflow-y: auto">
+                    ${state.form.targets.map((t, i) => `<div class="list-item" style="display:flex; justify-content:space-between; align-items:center"><span>${esc(t.fullName)} - ${esc(t.result)} (${t.points} б.)</span><button onclick="removeTargetFromForm(${i})" class="btn-stencil" style="padding:4px 8px; font-size:12px">✕</button></div>`).join('')}
+                </div>
+            </div>
+            
             <div class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid gap-4" style="grid-template-columns: auto 1fr 1.5fr">
+                    <label class="label" style="padding-top:30px">+</label>
                     <div>
                         <label class="label block mb-2">ЦІЛЬ</label>
-                        <select onchange="const v=this.value; state.form.target=v?v+' '+(state.counts[v]?state.counts[v]+1:1):''; render()" class="field">
+                        <select onchange="state.form.newTarget=this.value; render()" value="${state.form.newTarget}" class="field">
                             <option value="">Виберіть...</option>
-                            ${Object.keys(state.scoreTable).map(x=>`<option value="${esc(x)}" ${targetAbbr===x?'selected':''}>${esc(x)}</option>`).join('')}
+                            ${Object.keys(state.scoreTable).map(x=>`<option value="${esc(x)}" ${state.form.newTarget===x?'selected':''}>${esc(x)}</option>`).join('')}
                         </select>
-                        ${state.form.target?`<p class="text-sm mt-1 stencil" style="color: var(--yellow)">→ ${esc(state.form.target)}</p>`:''}
                     </div>
+                    <div>
+                        <label class="label block mb-2">РЕЗУЛЬТАТ</label>
+                        <select onchange="state.form.newResult=this.value; render()" value="${state.form.newResult}" class="field">
+                            <option value="">Виберіть...</option>
+                            ${state.results.map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                <button onclick="addTargetToForm()" class="btn-stencil btn-green w-full">ДОДАТИ ЦІЛЬ</button>
+                
+                <div class="grid grid-cols-2 gap-4 mt-6" style="border-top: 1px dashed var(--khaki); padding-top: 16px">
                     <div>
                         <label class="label block mb-2">200</label>
                         <select onchange="state.form.q200=parseInt(this.value);render()" class="field">
                             ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q200===n?'selected':''}>${n}</option>`).join('')}
                         </select>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="label block mb-2">КООРДИНАТИ MGRS</label>
-                        <input type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="field" />
                     </div>
                     <div>
                         <label class="label block mb-2">300</label>
@@ -705,8 +760,10 @@ function render() {
                             ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q300===n?'selected':''}>${n}</option>`).join('')}
                         </select>
                     </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
+                    <div style="grid-column: 1/-1">
+                        <label class="label block mb-2">КООРДИНАТИ MGRS</label>
+                        <input type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="field" />
+                    </div>
                     <div>
                         <label class="label block mb-2">ДРОН</label>
                         <select onchange="state.form.drone=this.value;render()" class="field">
@@ -722,14 +779,8 @@ function render() {
                         </select>
                     </div>
                 </div>
-                <div>
-                    <label class="label block mb-2">РЕЗУЛЬТАТ</label>
-                    <select onchange="state.form.result=this.value;render()" class="field">
-                        <option value="">Виберіть...</option>
-                        ${state.results.map(r=>`<option value="${esc(r)}" ${state.form.result===r?'selected':''}>${esc(r)}</option>`).join('')}
-                    </select>
-                </div>
-                <button onclick="add()" class="btn-stencil btn-submit w-full text-lg mt-2">✓ ДОДАТИ ЗАПИС</button>
+                
+                <button onclick="add()" class="btn-stencil btn-yellow-dim w-full text-lg mt-4">✓ ДОДАТИ ЗАПИС</button>
             </div>
         </div></div>`;
     }
@@ -748,11 +799,11 @@ function render() {
             <div class="grid grid-cols-2 gap-4">
                 <div class="crate p-4">
                     <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ЗВІТИ</h3>
-                    <div class="flex flex-col gap-2">${reps.map((r,i)=>`<button onclick="state.selReport=${r};state.selDate=null;render()" class="btn-stencil ${state.selReport===r?'btn-yellow':''}">${i===0?'ПЕРШИЙ':'ЗВІТ '+r}</button>`).join('') || '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає звітів</p>'}</div>
+                    <div class="flex flex-col gap-2">${reps.map((r,i)=>`<button onclick="state.selReport=${r};state.selDate=null;render()" class="btn-stencil ${state.selReport===r?'btn-yellow':'btn-yellow-dim'}">${i===0?'ПЕРШИЙ':'ЗВІТ '+r}</button>`).join('') || '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає звітів</p>'}</div>
                 </div>
                 <div class="crate p-4">
                     <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ДНІ</h3>
-                    <div class="flex flex-col gap-2">${state.selReport?(dates.map(d=>`<button onclick="state.selDate='${d}';render()" class="btn-stencil ${state.selDate===d?'btn-yellow':''}">${d}</button>`).join('') || '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає днів</p>'):'<p class="stencil text-center py-2" style="color: var(--text-dim)">Виберіть звіт</p>'}</div>
+                    <div class="flex flex-col gap-2">${state.selReport?(dates.map(d=>`<button onclick="state.selDate='${d}';render()" class="btn-stencil ${state.selDate===d?'btn-yellow':'btn-yellow-dim'}">${d}</button>`).join('') || '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає днів</p>'):'<p class="stencil text-center py-2" style="color: var(--text-dim)">Виберіть звіт</p>'}</div>
                 </div>
             </div>
             ${dayRecs.length > 0 ? `<div class="crate p-4">
