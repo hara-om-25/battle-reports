@@ -435,7 +435,8 @@ async function loadDataFromAPI() {
         state.loaded = true; state.page = 'form';
         render();
     } catch(err) {
-        alert('Помилка завантаження: ' + err.message);
+        console.error('Завантаження failed:', err);
+        alert('Помилка завантаження: ' + err.message + '\n\nДеталі в консолі (F12)');
         logout();
     }
 }
@@ -704,7 +705,8 @@ function render() {
     </nav>`;
     
     if(state.page==='form') {
-        const totalPoints = state.form.targets.reduce((sum, t) => sum + t.points, 0);
+        if(!state.form.targets) state.form.targets = [];
+        const totalPoints = state.form.targets.reduce((sum, t) => sum + (t.points||0), 0);
         h += `<div class="p-4 max-w-3xl mx-auto"><div class="crate p-6">
             <div class="grid grid-cols-2 gap-4 items-stretch mb-4">
                 <div class="flex flex-col justify-center">
