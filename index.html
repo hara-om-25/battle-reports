@@ -3,15 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚔️ БОЙОВІ ЗВІТИ</title>
+    <title>БОЙОВІ ЗВІТИ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+    :root {
+      --bg: #1a1d18;
+      --surface: #252a23;
+      --surface-light: #323830;
+      --khaki: #8b8b3a;
+      --olive: #5a6b2f;
+      --olive-bright: #7a9540;
+      --olive-dark: #3d4720;
+      --yellow: #d4b81a;
+      --yellow-dim: #8a7510;
+      --text: #d9d6c4;
+      --text-dim: #8a8870;
+      --danger: #6b2a1a;
+      --danger-bright: #9c4530;
+    }
+    * { font-family: 'JetBrains Mono', monospace; }
+    body {
+      background: var(--bg);
+      background-image:
+        radial-gradient(circle at 20% 30%, rgba(122, 149, 64, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(212, 184, 26, 0.05) 0%, transparent 50%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .stencil { font-family: 'Stardos Stencil', serif; letter-spacing: 0.05em; }
+    .stencil-shadow {
+      font-family: 'Stardos Stencil', serif;
+      letter-spacing: 0.05em;
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.4), 4px 4px 0 rgba(0,0,0,0.2);
+    }
+    .crate {
+      background: var(--surface);
+      border: 2px solid var(--olive);
+      border-radius: 4px;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+    .crate::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: -1px; right: -1px; bottom: -1px;
+      border: 1px dashed rgba(139, 139, 58, 0.3);
+      border-radius: 4px;
+      pointer-events: none;
+    }
+    .btn-stencil {
+      background: var(--olive);
+      border: 2px solid var(--olive-bright);
+      color: var(--text);
+      font-family: 'Stardos Stencil', serif;
+      letter-spacing: 0.1em;
+      padding: 10px 16px;
+      border-radius: 2px;
+      box-shadow: 0 4px 0 #2d3818, 0 6px 12px rgba(0,0,0,0.4);
+      transition: all 0.1s;
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+      cursor: pointer;
+    }
+    .btn-stencil:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #2d3818, 0 4px 8px rgba(0,0,0,0.4);
+    }
+    .btn-danger {
+      background: var(--danger);
+      border-color: var(--danger-bright);
+      box-shadow: 0 4px 0 #3d1810, 0 6px 12px rgba(0,0,0,0.4);
+    }
+    .btn-yellow {
+      background: var(--yellow);
+      border-color: #f4d942;
+      color: #1a1d18;
+      box-shadow: 0 4px 0 var(--yellow-dim), 0 6px 12px rgba(0,0,0,0.4);
+    }
+    .btn-submit {
+      background: var(--olive-dark);
+      border-color: var(--olive);
+      color: var(--text);
+      box-shadow: 0 4px 0 #1f2810, 0 6px 12px rgba(0,0,0,0.4);
+    }
+    .btn-blue {
+      background: #3d5a7a;
+      border-color: #5a7a9c;
+      box-shadow: 0 4px 0 #1f2d3d, 0 6px 12px rgba(0,0,0,0.4);
+    }
+    .btn-black {
+      background: #1a1d18;
+      border-color: #3a3d35;
+      box-shadow: 0 4px 0 #0a0d08, 0 6px 12px rgba(0,0,0,0.4);
+    }
+    .btn-green {
+      background: #2d5a30;
+      border-color: #4a7d4d;
+      box-shadow: 0 4px 0 #1a3318, 0 6px 12px rgba(0,0,0,0.4);
+    }
+    .field {
+      background: rgba(0,0,0,0.3);
+      border: 2px solid var(--surface-light);
+      border-radius: 2px;
+      color: var(--text);
+      padding: 10px 12px;
+      width: 100%;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .field:focus { border-color: var(--olive-bright); outline: none; }
+    select.field {
+      background-color: rgba(0,0,0,0.3);
+      background-image: linear-gradient(45deg, transparent 50%, var(--khaki) 50%), linear-gradient(135deg, var(--khaki) 50%, transparent 50%);
+      background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
+      padding-right: 28px;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    select.field option { background: var(--surface); color: var(--text); font-family: 'JetBrains Mono', monospace; }
+    .label {
+      font-family: 'Stardos Stencil', serif;
+      letter-spacing: 0.1em;
+      color: var(--khaki);
+      font-size: 0.85em;
+      text-transform: uppercase;
+    }
+    .nav-btn {
+      font-family: 'Stardos Stencil', serif;
+      letter-spacing: 0.1em;
+      padding: 8px 14px;
+      background: var(--surface);
+      border: 1px solid var(--olive);
+      color: var(--text-dim);
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    .nav-btn.active {
+      background: var(--olive);
+      color: #fff;
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+    }
+    .nav-btn.logout {
+      background: var(--danger);
+      border-color: var(--danger-bright);
+      color: #fff;
+    }
+    .shield-svg { display: inline-block; vertical-align: middle; }
+    .list-item {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--surface-light);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.1s;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .list-item:hover { border-color: var(--olive-bright); background: rgba(122, 149, 64, 0.1); }
+    .record-card {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--surface-light);
+      padding: 10px 12px;
+      border-radius: 2px;
+    }
+    .report-box {
+      background: rgba(0,0,0,0.4);
+      border: 1px dashed var(--khaki);
+      padding: 16px;
+      border-radius: 2px;
+      color: var(--text);
+      white-space: pre-wrap;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9em;
+    }
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 50; padding: 16px;
+    }
+    .modal-box {
+      background: var(--surface);
+      border: 2px solid var(--olive);
+      border-radius: 4px;
+      padding: 24px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    }
+    .stamp {
+      display: inline-block;
+      font-family: 'Stardos Stencil', serif;
+      border: 2px solid var(--yellow);
+      color: var(--yellow);
+      padding: 2px 8px;
+      letter-spacing: 0.15em;
+      transform: rotate(-3deg);
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+      font-size: 0.65em;
+    }
+    </style>
 </head>
-<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white font-mono">
+<body>
     <div id="app"></div>
     <div id="modal"></div>
     <script>
+const SHIELD_SVG = `<svg class="shield-svg" width="36" height="44" viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 10 L110 10 L110 90 Q110 130 60 145 Q10 130 10 90 Z" fill="#5a6b2f" stroke="#d4b81a" stroke-width="4"/>
+  <path d="M10 10 L110 10 L110 90 Q110 130 60 145 Q10 130 10 90 Z" fill="none" stroke="#3d4720" stroke-width="2" stroke-dasharray="3,3" transform="translate(2,2) scale(0.97)"/>
+  <g fill="#d4b81a" transform="translate(60, 78) scale(0.55) translate(-50, -65)">
+    <path d="M50 5 L55 50 L55 120 L45 120 L45 50 Z M50 5 L45 50 L45 120 L55 120 L55 50 Z"/>
+    <path d="M20 25 L25 30 L30 55 L35 75 L40 85 L40 115 L30 115 L30 80 L20 50 Z"/>
+    <path d="M80 25 L75 30 L70 55 L65 75 L60 85 L60 115 L70 115 L70 80 L80 50 Z"/>
+    <path d="M35 75 L40 85 L40 105 L35 100 Z"/>
+    <path d="M65 75 L60 85 L60 105 L65 100 Z"/>
+    <path d="M40 115 L60 115 L60 125 L55 130 L45 130 L40 125 Z"/>
+    <path d="M45 130 L55 130 L52 140 L48 140 Z"/>
+  </g>
+</svg>`;
+
+
 const CLIENT_ID = '1095528804215-gjcnuo3oc12osqm596dpda81slodrmvs.apps.googleusercontent.com';
 const SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 
@@ -239,6 +453,8 @@ async function syncListsToAPI() {
 
 function cleanCoords(coord) { if(!coord) return ''; return coord.split(',')[0].split(' ').slice(0,4).join(' ').trim(); }
 
+function esc(s) { if(s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 // Нова формула:
 // База завжди: q200 × ОС.B + q300 × ОС.C
 // Якщо ціль = ОС → тільки база
@@ -318,19 +534,19 @@ function clearInput() { state.inputVal = ''; state.inputList = null; state.input
 
 function showModal() {
     const modal = document.getElementById('modal');
-    modal.innerHTML = `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div class="bg-slate-800 p-6 rounded border border-amber-900 w-96"><h2 class="text-xl font-bold text-amber-400 mb-4">В який список додати?</h2><div class="space-y-2"><button onclick="addToList('drones');closeModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Дрони</button><button onclick="addToList('ammo');closeModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Боєприпас</button><button onclick="addToList('results');closeModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Результати</button><button onclick="closeModal()" class="w-full bg-slate-600 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded">Скасувати</button></div></div></div>`;
+    modal.innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">В ЯКИЙ СПИСОК ДОДАТИ?</h2><div class="space-y-2"><button onclick="addToList('drones');closeModal()" class="btn-stencil btn-blue w-full">ДРОНИ</button><button onclick="addToList('ammo');closeModal()" class="btn-stencil btn-blue w-full">БОЄПРИПАС</button><button onclick="addToList('results');closeModal()" class="btn-stencil btn-blue w-full">РЕЗУЛЬТАТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
 }
 
 function showEditModal() {
     const modal = document.getElementById('modal');
     state.editVal = state.inputVal;
-    modal.innerHTML = `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div class="bg-slate-800 p-6 rounded border border-amber-900 w-96"><h2 class="text-xl font-bold text-amber-400 mb-4">Редагування</h2><div class="mb-4"><input type="text" id="editInput" value="${state.editVal}" class="w-full bg-slate-700 text-white px-3 py-2 rounded border border-amber-900" /></div><div class="space-y-2"><button onclick="saveEdit()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Зберігти</button><button onclick="closeModal()" class="w-full bg-slate-600 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded">Скасувати</button></div></div></div>`;
+    modal.innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div class="mb-4"><input type="text" id="editInput" value="${esc(state.editVal)}" class="field" /></div><div class="space-y-2"><button onclick="saveEdit()" class="btn-stencil btn-green w-full">ЗБЕРЕГТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
     setTimeout(() => { document.getElementById('editInput').focus(); }, 100);
 }
 
 function showDeleteModal() {
     const modal = document.getElementById('modal');
-    modal.innerHTML = `<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"><div class="bg-slate-800 p-6 rounded border border-amber-900 w-96"><h2 class="text-xl font-bold text-amber-400 mb-4">Видалення</h2><div class="mb-4 bg-slate-700 p-3 rounded border border-amber-900"><p class="text-white text-center">${state.inputVal}</p></div><div class="space-y-2"><button onclick="confirmDelete()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Видалити</button><button onclick="closeModal()" class="w-full bg-slate-600 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded">Скасувати</button></div></div></div>`;
+    modal.innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">ВИДАЛЕННЯ</h2><div class="mb-4 p-3 rounded" style="background: rgba(0,0,0,0.4); border: 1px dashed var(--khaki)"><p class="text-center stencil">${esc(state.inputVal)}</p></div><div class="space-y-2"><button onclick="confirmDelete()" class="btn-stencil btn-danger w-full">ВИДАЛИТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
 }
 
 async function saveEdit() {
@@ -423,100 +639,103 @@ function copyReport() {
 function getAbbr() { const p = state.form.target.split(' '); return p.length>1?p.slice(0,-1).join(' '):''; }
 
 function renderListSection(list, title) {
-    return `<div class="bg-slate-800 p-6 rounded border border-amber-900"><h2 class="text-lg font-bold text-amber-300 mb-4">${title} (${state[list].length})</h2><div class="space-y-2">${state[list].map((x,i)=>`<div class="bg-slate-700 p-2 rounded cursor-pointer hover:bg-slate-600" onclick="selectItem('${list}',${i})">${x}</div>`).join('')}</div></div>`;
+    return `<div class="crate p-4"><h2 class="stencil-shadow text-lg mb-3" style="color: var(--yellow)">${title} <span style="color: var(--khaki)">(${state[list].length})</span></h2><div class="space-y-2">${state[list].map((x,i)=>`<div class="list-item" onclick="selectItem('${list}',${i})">${esc(x)}</div>`).join('')}</div></div>`;
 }
 
 function render() {
     const app = document.getElementById('app');
     
     if (state.page === 'login' || !state.user) {
-        app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><div class="bg-slate-800 p-8 rounded border border-amber-900 max-w-md w-full text-center"><h1 class="text-4xl font-bold text-amber-400 mb-4">⚔️ БОЙОВІ ЗВІТИ</h1><p class="text-amber-300 mb-8">Авторизуйтесь для доступу</p><button onclick="login()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded text-lg">🔐 Увійти через Google</button></div></div>`;
+        app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><div class="crate p-8 max-w-md w-full text-center"><div class="flex justify-center mb-4">${SHIELD_SVG.replace('width="36" height="44"','width="80" height="100"')}</div><h1 class="stencil-shadow text-3xl mb-4" style="color: var(--yellow)">БОЙОВІ ЗВІТИ</h1><p class="stencil mb-8" style="color: var(--khaki)">АВТОРИЗУЙТЕСЬ ДЛЯ ДОСТУПУ</p><button onclick="login()" class="btn-stencil btn-yellow w-full text-lg">🔐 УВІЙТИ ЧЕРЕЗ GOOGLE</button></div></div>`;
         return;
     }
     
     if (state.page === 'loading') {
-        app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><div class="bg-slate-800 p-8 rounded border border-amber-900 text-center"><h1 class="text-2xl font-bold text-amber-400 mb-4">⏳ Завантаження...</h1><p class="text-amber-300">Підвантажуємо дані з файла</p></div></div>`;
+        app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><div class="crate p-8 text-center"><h1 class="stencil-shadow text-2xl mb-4" style="color: var(--yellow)">⏳ ЗАВАНТАЖЕННЯ...</h1><p class="stencil" style="color: var(--khaki)">ПІДВАНТАЖУЄМО ДАНІ З ФАЙЛА</p></div></div>`;
         return;
     }
     
     const todayDate = getDateOnly(new Date().toLocaleString('uk-UA'));
     const todayCount = state.records.filter(r=>r.reportNum===state.report && getDateOnly(r.datetime)===todayDate).length;
     
-    let h = `<nav class="bg-slate-950 border-b border-amber-900 p-4 sticky top-0 z-50"><div class="max-w-7xl mx-auto flex justify-between items-center"><h1 class="text-2xl font-bold text-amber-400">⚔️ БОЙОВІ ЗВІТИ</h1><div class="flex gap-2 items-center"><button onclick="state.page='form';render()" class="px-4 py-2 rounded font-bold ${state.page==='form'?'bg-amber-600':'bg-slate-700'}">ФОРМА</button><button onclick="state.page='reports';render()" class="px-4 py-2 rounded font-bold ${state.page==='reports'?'bg-amber-600':'bg-slate-700'}">ЗВІТИ</button><button onclick="state.page='lists';render()" class="px-4 py-2 rounded font-bold ${state.page==='lists'?'bg-amber-600':'bg-slate-700'}">СПИСКИ</button><button onclick="logout()" class="px-3 py-2 rounded font-bold bg-red-700 hover:bg-red-800 text-white text-sm">Вийти</button></div></div><div class="max-w-7xl mx-auto text-amber-300 text-xs mt-1">${state.user}</div></nav>`;
+    let h = `<nav class="crate p-3 m-4 sticky top-4 z-40"><div class="flex justify-between items-center flex-wrap gap-2"><h1 class="stencil-shadow text-xl flex items-center gap-2" style="color: var(--yellow)">${SHIELD_SVG} БОЙОВІ ЗВІТИ</h1><div class="flex gap-2 items-center flex-wrap"><button onclick="state.page='form';render()" class="nav-btn ${state.page==='form'?'active':''}">ФОРМА</button><button onclick="state.page='reports';render()" class="nav-btn ${state.page==='reports'?'active':''}">ЗВІТИ</button><button onclick="state.page='lists';render()" class="nav-btn ${state.page==='lists'?'active':''}">СПИСКИ</button><button onclick="logout()" class="nav-btn logout">ВИЙТИ</button></div></div><div class="text-xs mt-2 stencil" style="color: var(--text-dim)">${esc(state.user)}</div></nav>`;
     
     if(state.page==='form') {
         const abbr = getAbbr();
         const points = calculatePoints(abbr, state.form.q200, state.form.q300, state.form.result);
         const targetAbbr = state.form.target ? state.form.target.split(' ').slice(0,-1).join(' ') : '';
-        h += `<div class="p-6 max-w-3xl mx-auto"><div class="bg-slate-800 p-6 rounded border border-amber-900">
+        h += `<div class="p-4 max-w-3xl mx-auto"><div class="crate p-6">
             <div class="grid grid-cols-2 gap-4 items-stretch mb-4">
-                <h1 class="text-3xl font-bold text-amber-400 flex items-center">⚔️ ЗВІТ #${state.report}</h1>
-                <button onclick="newReport()" class="bg-red-700 hover:bg-red-800 text-white font-bold rounded text-lg">🚩 НОВИЙ ЗВІТ</button>
+                <div class="flex flex-col justify-center">
+                    <span class="stamp w-fit mb-2">// CONFIDENTIAL //</span>
+                    <h2 class="stencil-shadow text-3xl" style="color: var(--yellow)">ЗВІТ №${state.report}</h2>
+                </div>
+                <button onclick="newReport()" class="btn-stencil btn-danger">🚩 НОВИЙ ЗВІТ</button>
             </div>
-            <div class="mb-6 space-y-1" style="font-size:1.3em">
-                <p class="text-amber-300">Сьогодні: ${todayDate}</p>
-                <p class="text-amber-300">Записів: ${todayCount}</p>
-                <p class="text-amber-300">Балів: <span class="text-amber-400 font-bold">${points}</span></p>
+            <div class="mb-6 space-y-1 stencil" style="font-size: 1.15em">
+                <p><span style="color: var(--khaki)">СЬОГОДНІ:</span> <span style="color: var(--text)">${todayDate}</span></p>
+                <p><span style="color: var(--khaki)">ЗАПИСІВ:</span> <span style="color: var(--text)">${todayCount}</span></p>
+                <p><span style="color: var(--khaki)">БАЛІВ:</span> <span style="color: var(--yellow)" class="text-2xl">${points}</span></p>
             </div>
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-amber-300 font-bold mb-2">Ціль</label>
-                        <select onchange="const v=this.value; state.form.target=v?v+' '+(state.counts[v]?state.counts[v]+1:1):''; render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
+                        <label class="label block mb-2">ЦІЛЬ</label>
+                        <select onchange="const v=this.value; state.form.target=v?v+' '+(state.counts[v]?state.counts[v]+1:1):''; render()" class="field">
                             <option value="">Виберіть...</option>
-                            ${Object.keys(state.scoreTable).map(x=>`<option value="${x}" ${targetAbbr===x?'selected':''}>${x}</option>`).join('')}
+                            ${Object.keys(state.scoreTable).map(x=>`<option value="${esc(x)}" ${targetAbbr===x?'selected':''}>${esc(x)}</option>`).join('')}
                         </select>
-                        ${state.form.target?`<p class="text-amber-400 text-sm mt-1">→ ${state.form.target}</p>`:''}
+                        ${state.form.target?`<p class="text-sm mt-1 stencil" style="color: var(--yellow)">→ ${esc(state.form.target)}</p>`:''}
                     </div>
                     <div>
-                        <label class="block text-amber-300 font-bold mb-2">200</label>
-                        <select onchange="state.form.q200=parseInt(this.value);render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
+                        <label class="label block mb-2">200</label>
+                        <select onchange="state.form.q200=parseInt(this.value);render()" class="field">
                             ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q200===n?'selected':''}>${n}</option>`).join('')}
                         </select>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-amber-300 font-bold mb-2">Координати (MGRS)</label>
-                        <input type="text" value="${state.form.coord}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="w-full bg-slate-700 text-white px-3 py-2 rounded" />
+                        <label class="label block mb-2">КООРДИНАТИ MGRS</label>
+                        <input type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="field" />
                     </div>
                     <div>
-                        <label class="block text-amber-300 font-bold mb-2">300</label>
-                        <select onchange="state.form.q300=parseInt(this.value);render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
+                        <label class="label block mb-2">300</label>
+                        <select onchange="state.form.q300=parseInt(this.value);render()" class="field">
                             ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q300===n?'selected':''}>${n}</option>`).join('')}
                         </select>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-amber-300 font-bold mb-2">Дрон</label>
-                        <select onchange="state.form.drone=this.value;render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
+                        <label class="label block mb-2">ДРОН</label>
+                        <select onchange="state.form.drone=this.value;render()" class="field">
                             <option value="">Виберіть...</option>
-                            ${state.drones.map(d=>`<option value="${d}" ${state.form.drone===d?'selected':''}>${d}</option>`).join('')}
+                            ${state.drones.map(d=>`<option value="${esc(d)}" ${state.form.drone===d?'selected':''}>${esc(d)}</option>`).join('')}
                         </select>
                     </div>
                     <div>
-                        <label class="block text-amber-300 font-bold mb-2">Боєприпас</label>
-                        <select onchange="state.form.ammo=this.value;render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
+                        <label class="label block mb-2">БОЄПРИПАС</label>
+                        <select onchange="state.form.ammo=this.value;render()" class="field">
                             <option value="">Виберіть...</option>
-                            ${state.ammo.map(a=>`<option value="${a}" ${state.form.ammo===a?'selected':''}>${a}</option>`).join('')}
+                            ${state.ammo.map(a=>`<option value="${esc(a)}" ${state.form.ammo===a?'selected':''}>${esc(a)}</option>`).join('')}
                         </select>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-amber-300 font-bold mb-2">Результат</label>
-                    <select onchange="state.form.result=this.value;render()" class="w-full bg-slate-700 text-white px-3 py-2 rounded">
+                    <label class="label block mb-2">РЕЗУЛЬТАТ</label>
+                    <select onchange="state.form.result=this.value;render()" class="field">
                         <option value="">Виберіть...</option>
-                        ${state.results.map(r=>`<option value="${r}" ${state.form.result===r?'selected':''}>${r}</option>`).join('')}
+                        ${state.results.map(r=>`<option value="${esc(r)}" ${state.form.result===r?'selected':''}>${esc(r)}</option>`).join('')}
                     </select>
                 </div>
-                <button onclick="add()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded">✓ ДОДАТИ ЗАПИС</button>
+                <button onclick="add()" class="btn-stencil btn-submit w-full text-lg mt-2">✓ ДОДАТИ ЗАПИС</button>
             </div>
         </div></div>`;
     }
     
     if(state.page==='lists') {
-        h += `<div class="p-6 space-y-6"><h1 class="text-3xl font-bold text-amber-400 mb-8">СПИСКИ</h1><div class="bg-slate-800 p-6 rounded border border-amber-900 mb-8"><div class="flex gap-2 mb-4"><button onclick="addItem()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded font-bold">+</button><input type="text" value="${state.inputVal}" onchange="state.inputVal=this.value" placeholder="Редагування..." class="flex-1 bg-slate-700 text-white px-3 py-2 rounded border border-amber-900" /><button onclick="clearInput()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded font-bold">✕</button><button onclick="editItem()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded font-bold">✏️</button><button onclick="deleteItem()" class="bg-black hover:bg-slate-900 text-white px-3 py-2 rounded font-bold">🗑️</button></div></div><div class="grid grid-cols-1 md:grid-cols-3 gap-8">${renderListSection('drones','Дрони')}${renderListSection('ammo','Боєприпас')}${renderListSection('results','Результати')}</div></div>`;
+        h += `<div class="p-4 space-y-4"><h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">СПИСКИ</h1><div class="crate p-4"><div class="flex gap-2 mb-2 flex-wrap"><button onclick="addItem()" class="btn-stencil btn-green">+</button><input type="text" value="${esc(state.inputVal)}" onchange="state.inputVal=this.value" placeholder="Редагування..." class="field flex-1" style="min-width: 120px" /><button onclick="clearInput()" class="btn-stencil btn-danger">✕</button><button onclick="editItem()" class="btn-stencil btn-blue">✏</button><button onclick="deleteItem()" class="btn-stencil btn-black">🗑</button></div></div><div class="grid grid-cols-1 md:grid-cols-3 gap-4">${renderListSection('drones','ДРОНИ')}${renderListSection('ammo','БОЄПРИПАС')}${renderListSection('results','РЕЗУЛЬТАТИ')}</div></div>`;
     }
     
     if(state.page==='reports') {
@@ -524,7 +743,34 @@ function render() {
         const dates = state.selReport ? [...new Set(state.records.filter(r=>r.reportNum===state.selReport).map(r=>getDateOnly(r.datetime)))].sort() : [];
         const dayRecs = state.selReport && state.selDate ? state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate) : [];
         const reportLines = dayRecs.length > 0 ? generateReport(dayRecs) : [];
-        h += `<div class="p-6 space-y-6"><h1 class="text-3xl font-bold text-amber-400 mb-8">📊 ЗВІТИ</h1><div class="grid grid-cols-2 gap-4 mb-6"><div class="bg-slate-800 p-4 rounded border border-amber-900"><h3 class="text-amber-300 font-bold mb-3">Звіти</h3><div class="flex flex-col gap-2">${reps.map((r,i)=>`<button onclick="state.selReport=${r};state.selDate=null;render()" class="px-4 py-3 rounded font-bold ${state.selReport===r?'bg-amber-600 text-white':'bg-slate-700 text-amber-300'}">${i===0?'Перший':'Звіт '+r}</button>`).join('')}</div></div><div class="bg-slate-800 p-4 rounded border border-amber-900"><h3 class="text-amber-300 font-bold mb-3">Дні</h3><div class="flex flex-col gap-2">${state.selReport?dates.map(d=>`<button onclick="state.selDate='${d}';render()" class="px-4 py-3 rounded font-bold ${state.selDate===d?'bg-amber-600 text-white':'bg-slate-700 text-amber-300'}">${d}</button>`).join(''):'<p class="text-gray-400 text-center py-4">Виберіть звіт</p>'}</div></div></div>${dayRecs.length > 0 ? `<div class="bg-slate-800 p-6 rounded border border-amber-900"><div class="flex justify-between items-center mb-4"><h3 class="text-amber-300 font-bold">Звіт на ${state.selDate}</h3><div class="flex gap-2"><button onclick="exportXLSX()" class="bg-green-700 hover:bg-green-800 text-white font-bold py-2 px-4 rounded">📊 XLSX</button><button onclick="exportPDF()" class="bg-purple-700 hover:bg-purple-800 text-white font-bold py-2 px-4 rounded">📄 PDF</button><button onclick="copyReport()" class="bg-black hover:bg-slate-900 text-white font-bold py-2 px-4 rounded">📋 КОПІЮВАТИ</button></div></div><div class="text-white whitespace-pre-wrap font-serif text-sm bg-slate-700 p-4 rounded">${reportLines.join('\n')}</div></div>` : ''}<div class="bg-slate-800 p-6 rounded border border-amber-900"><h3 class="text-amber-300 font-bold mb-4">Записи</h3><div class="space-y-2 max-h-96 overflow-y-auto">${dayRecs.map(r=>`<div class="bg-slate-700 p-3 rounded text-sm"><p class="text-amber-400">${r.target} - ${r.result} (${r.points} б.)</p><p class="text-gray-300">200: ${r.qty200} | 300: ${r.qty300} | ${r.drone}</p><p class="text-gray-400">${r.datetime} | ${r.coordinates}</p></div>`).join('')}</div></div></div>`;
+        h += `<div class="p-4 space-y-4">
+            <h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">ЗВІТИ</h1>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="crate p-4">
+                    <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ЗВІТИ</h3>
+                    <div class="flex flex-col gap-2">${reps.map((r,i)=>`<button onclick="state.selReport=${r};state.selDate=null;render()" class="btn-stencil ${state.selReport===r?'btn-yellow':''}">${i===0?'ПЕРШИЙ':'ЗВІТ '+r}</button>`).join('') || '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає звітів</p>'}</div>
+                </div>
+                <div class="crate p-4">
+                    <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ДНІ</h3>
+                    <div class="flex flex-col gap-2">${state.selReport?(dates.map(d=>`<button onclick="state.selDate='${d}';render()" class="btn-stencil ${state.selDate===d?'btn-yellow':''}">${d}</button>`).join('') || '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає днів</p>'):'<p class="stencil text-center py-2" style="color: var(--text-dim)">Виберіть звіт</p>'}</div>
+                </div>
+            </div>
+            ${dayRecs.length > 0 ? `<div class="crate p-4">
+                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                    <h3 class="stencil-shadow" style="color: var(--yellow)">ЗВІТ НА ${state.selDate}</h3>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="exportXLSX()" class="btn-stencil btn-green">XLSX</button>
+                        <button onclick="exportPDF()" class="btn-stencil btn-blue">PDF</button>
+                        <button onclick="copyReport()" class="btn-stencil btn-black">КОПІЮВАТИ</button>
+                    </div>
+                </div>
+                <div class="report-box">${reportLines.join('\n')}</div>
+            </div>` : ''}
+            <div class="crate p-4">
+                <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ЗАПИСИ</h3>
+                <div class="space-y-2 max-h-96 overflow-y-auto">${dayRecs.length > 0 ? dayRecs.map(r=>`<div class="record-card text-sm"><p style="color: var(--yellow)" class="stencil">${esc(r.target)} — ${esc(r.result)} <span style="color: var(--khaki)">(${r.points} б.)</span></p><p style="color: var(--text)">200: ${r.qty200} | 300: ${r.qty300} | ${esc(r.drone)}</p><p style="color: var(--text-dim)">${esc(r.datetime)} | ${esc(r.coordinates)}</p></div>`).join('') : '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає записів</p>'}</div>
+            </div>
+        </div>`;
     }
     
     app.innerHTML = h;
