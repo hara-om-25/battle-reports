@@ -227,6 +227,14 @@
     <div id="app"></div>
     <div id="modal"></div>
     <script>
+window.addEventListener('error', function(e) {
+    alert('JS ПОМИЛКА:\n' + e.message + '\n\nФайл: ' + (e.filename||'?') + '\nРядок: ' + (e.lineno||'?') + '\nСтек:\n' + (e.error && e.error.stack ? e.error.stack.substring(0,500) : 'нема'));
+});
+window.addEventListener('unhandledrejection', function(e) {
+    alert('PROMISE ПОМИЛКА:\n' + (e.reason && e.reason.message || e.reason) + '\n\nСтек:\n' + (e.reason && e.reason.stack ? e.reason.stack.substring(0,500) : 'нема'));
+});
+</script>
+    <script>
 const SHIELD_SVG = `<svg class="shield-svg" width="40" height="50" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle"><path d="M 5,5 L 95,5 L 95,80 Q 95,115 50,135 Q 5,115 5,80 Z" fill="#0057b7" stroke="#ffd700" stroke-width="3"/><g fill="#ffd700"><polygon points="48,20 52,20 53,75 50,90 47,75"/><polygon points="20,35 28,35 30,75 38,90 38,100 28,100 28,92 20,80"/><polygon points="80,35 72,35 70,75 62,90 62,100 72,100 72,92 80,80"/><polygon points="32,30 40,40 40,85 32,75"/><polygon points="68,30 60,40 60,85 68,75"/><rect x="28" y="70" width="44" height="6"/><rect x="44" y="90" width="12" height="20"/><rect x="40" y="105" width="20" height="5"/><polygon points="46,110 54,110 52,118 48,118"/></g></svg>`;
 
 
