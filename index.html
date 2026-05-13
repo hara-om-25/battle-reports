@@ -66,55 +66,18 @@
       transition: all 0.1s;
       text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
       cursor: pointer;
+      text-align: center;
     }
     .btn-stencil:active {
       transform: translateY(2px);
       box-shadow: 0 2px 0 #2d3818, 0 4px 8px rgba(0,0,0,0.4);
     }
-    .btn-danger {
-      background: var(--danger);
-      border-color: var(--danger-bright);
-      box-shadow: 0 4px 0 #3d1810, 0 6px 12px rgba(0,0,0,0.4);
-    }
-    .btn-yellow {
-      background: var(--yellow);
-      border-color: #f4d942;
-      color: #1a1d18;
-      box-shadow: 0 4px 0 var(--yellow-dim), 0 6px 12px rgba(0,0,0,0.4);
-    }
-    .btn-yellow-dim {
-      background: #8a7510;
-      border-color: #a8901a;
-      color: #1a1d18;
-      box-shadow: 0 4px 0 #5a4c08, 0 6px 12px rgba(0,0,0,0.4);
-      text-shadow: none;
-    }
-    .btn-yellow-dim.active {
-      background: var(--yellow);
-      border-color: #f4d942;
-      box-shadow: 0 4px 0 var(--yellow-dim), 0 6px 12px rgba(0,0,0,0.4);
-    }
-    .btn-submit {
-      background: var(--olive-dark);
-      border-color: var(--olive);
-      color: var(--text);
-      box-shadow: 0 4px 0 #1f2810, 0 6px 12px rgba(0,0,0,0.4);
-    }
-    .btn-blue {
-      background: #3d5a7a;
-      border-color: #5a7a9c;
-      box-shadow: 0 4px 0 #1f2d3d, 0 6px 12px rgba(0,0,0,0.4);
-    }
-    .btn-black {
-      background: #1a1d18;
-      border-color: #3a3d35;
-      box-shadow: 0 4px 0 #0a0d08, 0 6px 12px rgba(0,0,0,0.4);
-    }
-    .btn-green {
-      background: #2d5a30;
-      border-color: #4a7d4d;
-      box-shadow: 0 4px 0 #1a3318, 0 6px 12px rgba(0,0,0,0.4);
-    }
+    .btn-danger { background: var(--danger); border-color: var(--danger-bright); box-shadow: 0 4px 0 #3d1810, 0 6px 12px rgba(0,0,0,0.4); }
+    .btn-yellow { background: var(--yellow); border-color: #f4d942; color: #1a1d18; box-shadow: 0 4px 0 var(--yellow-dim), 0 6px 12px rgba(0,0,0,0.4); }
+    .btn-blue { background: #3d5a7a; border-color: #5a7a9c; box-shadow: 0 4px 0 #1f2d3d, 0 6px 12px rgba(0,0,0,0.4); }
+    .btn-green { background: #2d5a30; border-color: #4a7d4d; box-shadow: 0 4px 0 #1a3318, 0 6px 12px rgba(0,0,0,0.4); }
+    .btn-black { background: #1a1d18; border-color: #3a3d35; box-shadow: 0 4px 0 #0a0d08, 0 6px 12px rgba(0,0,0,0.4); }
+    
     .field {
       background: rgba(0,0,0,0.3);
       border: 2px solid var(--surface-light);
@@ -122,730 +85,376 @@
       color: var(--text);
       padding: 10px 12px;
       width: 100%;
-      font-family: 'JetBrains Mono', monospace;
     }
     .field:focus { border-color: var(--olive-bright); outline: none; }
-    select.field {
-      background-color: rgba(0,0,0,0.3);
-      background-image: linear-gradient(45deg, transparent 50%, var(--khaki) 50%), linear-gradient(135deg, var(--khaki) 50%, transparent 50%);
-      background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
-      background-size: 5px 5px, 5px 5px;
-      background-repeat: no-repeat;
-      padding-right: 28px;
-      appearance: none;
-      -webkit-appearance: none;
-    }
-    select.field option { background: var(--surface); color: var(--text); font-family: 'JetBrains Mono', monospace; }
-    .label {
-      font-family: 'Stardos Stencil', serif;
-      letter-spacing: 0.1em;
-      color: var(--khaki);
-      font-size: 0.85em;
-      text-transform: uppercase;
-    }
-    .nav-btn {
-      font-family: 'Stardos Stencil', serif;
-      letter-spacing: 0.1em;
-      padding: 8px 14px;
-      background: var(--surface);
-      border: 1px solid var(--olive);
-      color: var(--text-dim);
-      border-radius: 2px;
-      cursor: pointer;
-    }
-    .nav-btn.active {
-      background: var(--olive);
-      color: #fff;
-      text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
-    }
-    .nav-btn.logout {
-      background: var(--danger);
-      border-color: var(--danger-bright);
-      color: #fff;
-    }
-    .shield-svg { display: inline-block; vertical-align: middle; }
+    
     .list-item {
       background: rgba(0,0,0,0.3);
       border: 1px solid var(--surface-light);
-      color: var(--text);
       padding: 8px 12px;
+      margin-bottom: 4px;
       border-radius: 2px;
       cursor: pointer;
-      transition: all 0.1s;
-      font-family: 'JetBrains Mono', monospace;
-      list-style: none;
-      display: block;
+      transition: 0.1s;
     }
-    .list-item::before, .list-item::marker { content: none; }
-    ul, ol { list-style: none; padding: 0; margin: 0; }
-    .list-item:hover { border-color: var(--olive-bright); background: rgba(122, 149, 64, 0.1); }
-    .record-card {
-      background: rgba(0,0,0,0.3);
-      border: 1px solid var(--surface-light);
-      padding: 10px 12px;
-      border-radius: 2px;
-    }
+    .list-item:hover { border-color: var(--olive-bright); background: rgba(122,149,64,0.1); }
+    .list-item.selected { border-color: var(--yellow); background: rgba(212,184,26,0.1); }
+
     .report-box {
       background: rgba(0,0,0,0.4);
       border: 1px dashed var(--khaki);
       padding: 16px;
-      border-radius: 2px;
-      color: var(--text);
-      white-space: pre-wrap;
-      font-family: 'JetBrains Mono', monospace;
       font-size: 0.9em;
+      white-space: pre-wrap;
+      line-height: 1.4;
     }
     .modal-overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.7);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 50; padding: 16px;
-    }
-    .modal-box {
-      background: var(--surface);
-      border: 2px solid var(--olive);
-      border-radius: 4px;
-      padding: 24px;
-      width: 100%;
-      max-width: 400px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-    }
-    .stamp {
-      display: inline-block;
-      font-family: 'Stardos Stencil', serif;
-      border: 2px solid var(--yellow);
-      color: var(--yellow);
-      padding: 2px 8px;
-      letter-spacing: 0.15em;
-      transform: rotate(-3deg);
-      text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
-      font-size: 0.65em;
+      position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+      display: flex; align-items: center; justify-content: center; z-index: 100;
     }
     </style>
 </head>
 <body>
-    <div id="app"></div>
+    <div id="app" class="max-w-4xl mx-auto p-4"></div>
     <div id="modal"></div>
-    <script>
-window.addEventListener('error', function(e) {
-    alert('JS ПОМИЛКА:\n' + e.message + '\n\nФайл: ' + (e.filename||'?') + '\nРядок: ' + (e.lineno||'?') + '\nСтек:\n' + (e.error && e.error.stack ? e.error.stack.substring(0,500) : 'нема'));
-});
-window.addEventListener('unhandledrejection', function(e) {
-    alert('PROMISE ПОМИЛКА:\n' + (e.reason && e.reason.message || e.reason) + '\n\nСтек:\n' + (e.reason && e.reason.stack ? e.reason.stack.substring(0,500) : 'нема'));
-});
-</script>
-    <script>
-const SHIELD_SVG = `<svg class="shield-svg" width="40" height="50" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle"><path d="M 5,5 L 95,5 L 95,80 Q 95,115 50,135 Q 5,115 5,80 Z" fill="#0057b7" stroke="#ffd700" stroke-width="3"/><g fill="#ffd700"><polygon points="48,20 52,20 53,75 50,90 47,75"/><polygon points="20,35 28,35 30,75 38,90 38,100 28,100 28,92 20,80"/><polygon points="80,35 72,35 70,75 62,90 62,100 72,100 72,92 80,80"/><polygon points="32,30 40,40 40,85 32,75"/><polygon points="68,30 60,40 60,85 68,75"/><rect x="28" y="70" width="44" height="6"/><rect x="44" y="90" width="12" height="20"/><rect x="40" y="105" width="20" height="5"/><polygon points="46,110 54,110 52,118 48,118"/></g></svg>`;
 
-
+<script>
 const CLIENT_ID = '1095528804215-gjcnuo3oc12osqm596dpda81slodrmvs.apps.googleusercontent.com';
 const SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 
 let state = {
-    page: 'login', user: null, token: null, loaded: false,
+    page: 'login', user: null, token: null,
     scoreTable: {}, drones: [], ammo: [], results: [], records: [],
     report: 1, counts: {},
-    form: {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:''},
+    form: { targets: [], q200: 0, q300: 0, coord: '', drone: '', ammo: '', newTarget: '', newResult: '' },
     selReport: null, selDate: null,
-    inputVal: '', inputList: null, inputIdx: null, editVal: ''
+    activeList: null, activeIdx: null
 };
 
-let tokenClient = null;
-
+// Ініціалізація Google Auth
 window.onload = () => {
-    const initInterval = setInterval(() => {
-        if (typeof google !== 'undefined' && google.accounts) {
-            clearInterval(initInterval);
-            initAuth();
-            const savedToken = sessionStorage.getItem('token');
-            const savedEmail = sessionStorage.getItem('email');
-            if (savedToken && savedEmail) {
-                state.token = savedToken;
-                state.user = savedEmail;
-                verifyAndLoad();
-            } else {
-                render();
-            }
-        }
-    }, 100);
+    const savedToken = sessionStorage.getItem('token');
+    const savedEmail = sessionStorage.getItem('email');
+    if (savedToken && savedEmail) {
+        state.token = savedToken;
+        state.user = savedEmail;
+        loadData();
+    } else {
+        render();
+    }
 };
 
-async function verifyAndLoad() {
-    try {
-        const usersResp = await fetch(
-            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent('@')}!A:A`,
-            { headers: { 'Authorization': `Bearer ${state.token}` } }
-        ).then(r => r.json());
-        
-        if (usersResp.error) {
-            alert('Помилка доступу до файла: ' + usersResp.error.message);
-            logout(); return;
-        }
-        
-        const users = (usersResp.values || []).flat().map(x => (x||'').trim().toLowerCase()).filter(x => x);
-        const userEmail = (state.user || '').trim().toLowerCase();
-        if (!users.includes(userEmail)) {
-            alert('У вас немає доступу!\nВаш email: ' + state.user);
-            logout(); return;
-        }
-        
-        await loadDataFromAPI();
-    } catch(err) {
-        alert('Помилка перевірки: ' + err.message);
-        logout();
-    }
-}
-
-function initAuth() {
-    tokenClient = google.accounts.oauth2.initTokenClient({
+function login() {
+    const client = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email',
-        callback: async (response) => {
-            if (response.error) {
-                alert('Помилка авторизації: ' + response.error);
-                return;
-            }
-            state.token = response.access_token;
-            try {
-                const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                    headers: { 'Authorization': `Bearer ${state.token}` }
-                }).then(r => r.json());
-                state.user = userInfo.email;
-                
-                sessionStorage.setItem('token', state.token);
-                sessionStorage.setItem('email', state.user);
-                await verifyAndLoad();
-            } catch(err) {
-                alert('Помилка: ' + err.message);
-                logout();
-            }
-        }
-    });
-}
-
-function login() { tokenClient.requestAccessToken(); }
-
-function logout() {
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('email');
-    state.token = null; state.user = null;
-    state.scoreTable = {}; state.drones = []; state.ammo = []; state.results = [];  state.records = [];
-    state.loaded = false; state.page = 'login';
-    render();
-}
-
-async function apiGet(range) {
-    const resp = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}`,
-        { headers: { 'Authorization': `Bearer ${state.token}` } }
-    ).then(r => r.json());
-    if (resp.error) throw new Error(resp.error.message);
-    return resp.values || [];
-}
-
-async function apiAppend(range, values) {
-    const resp = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`,
-        {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${state.token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ values: values })
-        }
-    ).then(r => r.json());
-    if (resp.error) throw new Error(resp.error.message);
-    return resp;
-}
-
-async function apiUpdate(range, values) {
-    const resp = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
-        {
-            method: 'PUT',
-            headers: { 'Authorization': `Bearer ${state.token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ values: values })
-        }
-    ).then(r => r.json());
-    if (resp.error) throw new Error(resp.error.message);
-    return resp;
-}
-
-async function apiClear(range) {
-    const resp = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}:clear`,
-        { method: 'POST', headers: { 'Authorization': `Bearer ${state.token}` } }
-    ).then(r => r.json());
-    if (resp.error) throw new Error(resp.error.message);
-    return resp;
-}
-
-function getDateOnly(datetime) {
-    if (!datetime) return '';
-    return datetime.split(' ')[0].replace(',', '').trim();
-}
-
-async function loadDataFromAPI() {
-    try {
-        state.page = 'loading'; render();
-        
-        // "е бали": A=абревіатура, B=коеф. за знищено, C=коеф. за пошкоджено
-        const scoreRows = await apiGet('е бали');
-        state.scoreTable = {};
-        for (let i = 1; i < scoreRows.length; i++) {
-            if (scoreRows[i] && scoreRows[i][0]) {
-                state.scoreTable[scoreRows[i][0]] = {
-                    znyshcheno: parseFloat(scoreRows[i][1]) || 0,
-                    poshkodzheno: parseFloat(scoreRows[i][2]) || 0
-                };
-            }
-        }
-        
-        const listRows = await apiGet('СПИСКИ');
-        state.drones = []; state.ammo = []; state.results = [];
-        for (let i = 1; i < listRows.length; i++) {
-            const row = listRows[i] || [];
-            if (row[0]) state.drones.push(row[0]);
-            if (row[1]) state.ammo.push(row[1]);
-            if (row[2]) state.results.push(row[2]);
-        }
-        
-        const mainRows = await apiGet('ГОЛОВНА');
-        state.records = [];
-        for (let i = 1; i < mainRows.length; i++) {
-            const row = mainRows[i] || [];
-            if (row[0] || row[2]) {
-                state.records.push({
-                    reportNum: parseInt(row[0]) || 0,
-                    datetime: row[1] || '',
-                    target: row[2] || '',
-                    qty200: parseInt(row[3]) || 0,
-                    qty300: parseInt(row[4]) || 0,
-                    coordinates: row[5] || '',
-                    drone: row[6] || '',
-                    ammo: row[7] || '',
-                    result: row[8] || '',
-                    points: parseFloat(row[9]) || 0
+        callback: (resp) => {
+            if (resp.access_token) {
+                state.token = resp.access_token;
+                fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { Authorization: `Bearer ${state.token}` }
+                })
+                .then(r => r.json())
+                .then(u => {
+                    state.user = u.email;
+                    sessionStorage.setItem('token', state.token);
+                    sessionStorage.setItem('email', state.user);
+                    loadData();
                 });
             }
         }
-        
-        if (state.records.length > 0) {
-            state.report = Math.max(...state.records.map(r => r.reportNum));
-            const reportRecs = state.records.filter(r => r.reportNum === state.report);
-            state.counts = {};
-            reportRecs.forEach(r => {
-                const abbr = r.target.split(' ').slice(0, -1).join(' ');
-                state.counts[abbr] = (state.counts[abbr] || 0) + 1;
-            });
-        } else {
-            state.report = 1; state.counts = {};
-        }
-        
-        state.loaded = true; state.page = 'form';
-        render();
-    } catch(err) {
-        console.error('Завантаження failed:', err);
-        alert('Помилка завантаження: ' + err.message + '\n\nДеталі в консолі (F12)');
-        logout();
-    }
+    });
+    client.requestAccessToken();
 }
 
-async function syncListsToAPI() {
+async function loadData() {
+    state.page = 'loading'; render();
     try {
-        await apiClear('СПИСКИ!A2:C');
-        const maxLen = Math.max(state.drones.length, state.ammo.length, state.results.length);
-        if (maxLen === 0) return;
-        const rows = [];
-        for (let i = 0; i < maxLen; i++) {
-            rows.push([state.drones[i] || '', state.ammo[i] || '', state.results[i] || '']);
+        const getValues = async (range) => {
+            const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}`, {
+                headers: { Authorization: `Bearer ${state.token}` }
+            });
+            const d = await r.json();
+            return d.values || [];
+        };
+
+        const scores = await getValues('е бали!A2:C');
+        state.scoreTable = scores.reduce((acc, row) => {
+            if(row[0]) acc[row[0]] = { znyshcheno: parseFloat(row[1])||0, poshkodzheno: parseFloat(row[2])||0 };
+            return acc;
+        }, {});
+
+        const lists = await getValues('СПИСКИ!A2:C');
+        state.drones = lists.map(r => r[0]).filter(Boolean);
+        state.ammo = lists.map(r => r[1]).filter(Boolean);
+        state.results = lists.map(r => r[2]).filter(Boolean);
+
+        const main = await getValues('ГОЛОВНА!A2:J');
+        state.records = main.map(row => ({
+            reportNum: parseInt(row[0])||0, datetime: row[1], target: row[2],
+            q200: parseInt(row[3])||0, q300: parseInt(row[4])||0,
+            coord: row[5], drone: row[6], ammo: row[7], result: row[8], points: parseFloat(row[9])||0
+        }));
+
+        if(state.records.length > 0) {
+            state.report = Math.max(...state.records.map(r => r.reportNum));
+            updateTargetCounts();
         }
-        await apiUpdate(`СПИСКИ!A2:C${maxLen + 1}`, rows);
-    } catch(err) {
-        alert('Помилка синхронізації списків: ' + err.message);
+
+        state.page = 'form';
+    } catch (e) {
+        alert("Помилка завантаження даних");
+        state.page = 'login';
     }
+    render();
 }
 
-function cleanCoords(coord) { if(!coord) return ''; return coord.split(',')[0].split(' ').slice(0,4).join(' ').trim(); }
+function updateTargetCounts() {
+    state.counts = {};
+    state.records.filter(r => r.reportNum === state.report).forEach(r => {
+        const tNames = r.target.split(', ');
+        tNames.forEach(tn => {
+            const abbr = tn.split(' ').slice(0, -1).join(' ');
+            state.counts[abbr] = (state.counts[abbr] || 0) + 1;
+        });
+    });
+}
 
-function esc(s) { if(s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function cleanCoords(val) {
+    if(!val) return '';
+    // Очищення: залишаємо тільки цифри, крапки та пробіли (основна частина координат)
+    return val.split(',')[0].replace(/[^\d.\s]/g, '').trim().split(/\s+/).slice(0,4).join(' ');
+}
 
-// Нова формула:
-// База завжди: q200 × ОС.B + q300 × ОС.C
-// Якщо ціль = ОС → тільки база
-// Якщо ціль ≠ ОС:
-//   - результат не обраний → ціль.C + база
-//   - результат "знищено" → ціль.B + база
-//   - результат "пошкоджено" → ціль.C + база
-//   - інший результат → 0 + база
 function calculatePoints(abbr, q200, q300, result) {
-    const os = state.scoreTable['ОС'] || {znyshcheno:0, poshkodzheno:0};
-    const base = parseInt(q200) * os.znyshcheno + parseInt(q300) * os.poshkodzheno;
-    if (!abbr) return base;
-    if (abbr === 'ОС') return base;
+    const os = state.scoreTable['ОС'] || {znyshcheno: 0, poshkodzheno: 0};
+    const base = (q200 * os.znyshcheno) + (q300 * os.poshkodzheno);
+    
+    if (!abbr || abbr === 'ОС') return base;
     const target = state.scoreTable[abbr];
     if (!target) return base;
-    let mainPoints = 0;
-    if (!result) {
-        mainPoints = target.poshkodzheno; // мінімальне = пошкоджено
-    } else if (result === 'знищено') {
-        mainPoints = target.znyshcheno;
-    } else if (result === 'пошкоджено') {
-        mainPoints = target.poshkodzheno;
-    } else {
-        mainPoints = 0;
-    }
-    return mainPoints + base;
+
+    let targetPoints = 0;
+    if (result === 'знищено') targetPoints = target.znyshcheno;
+    else if (result === 'пошкоджено') targetPoints = target.poshkodzheno;
+    
+    return targetPoints + base;
 }
 
-function addTargetToForm() {
-    if(!state.form.newTarget || !state.form.newResult) {
-        alert('Виберіть ціль і результат!');
-        return;
-    }
+function addTarget() {
+    if(!state.form.newTarget || !state.form.newResult) return alert("Оберіть ціль та результат");
     const abbr = state.form.newTarget;
-    if(!state.counts[abbr]) state.counts[abbr]=0;
-    state.counts[abbr]++;
-    const fullName = abbr + ' ' + state.counts[abbr];
-    state.form.targets.push({abbr, fullName, result: state.form.newResult});
+    state.counts[abbr] = (state.counts[abbr] || 0) + 1;
+    state.form.targets.push({
+        abbr: abbr,
+        fullName: `${abbr} ${state.counts[abbr]}`,
+        result: state.form.newResult
+    });
     state.form.newTarget = '';
-    state.form.newResult = '';
     render();
 }
 
-function removeTargetFromForm(idx) {
-    const t = state.form.targets[idx];
-    if(t && state.counts[t.abbr]) state.counts[t.abbr]--;
-    state.form.targets.splice(idx, 1);
-    render();
-}
+async function submitRecord() {
+    if(state.form.targets.length === 0 || !state.form.drone) return alert("Заповніть цілі та дрон");
+    
+    const totalPoints = state.form.targets.reduce((sum, t) => 
+        sum + calculatePoints(t.abbr, state.form.q200, state.form.q300, t.result), 0);
+    
+    const newRec = [
+        state.report,
+        new Date().toLocaleString('uk-UA'),
+        state.form.targets.map(t => t.fullName).join(', '),
+        state.form.q200,
+        state.form.q300,
+        cleanCoords(state.form.coord),
+        state.form.drone,
+        state.form.ammo,
+        state.form.targets.map(t => t.result).join(', '),
+        totalPoints
+    ];
 
-async function add() {
-    if(state.form.targets.length === 0 || !state.form.drone || !state.form.ammo) {
-        alert('Додайте хоча б одну ціль, виберіть дрон та боєприпас!');
-        return;
-    }
-    
-    let totalPoints = 0;
-    let targetStr = '';
-    let resultStr = '';
-    for(let i=0; i<state.form.targets.length; i++) {
-        const t = state.form.targets[i];
-        const pts = calculatePoints(t.abbr, state.form.q200, state.form.q300, t.result);
-        totalPoints += pts;
-        targetStr += (i>0?', ':'') + t.fullName;
-        resultStr += (i>0?', ':'') + t.result;
-    }
-    
-    const cleanedCoord = cleanCoords(state.form.coord);
-    const rec = {
-        reportNum: state.report,
-        datetime: new Date().toLocaleString('uk-UA'),
-        target: targetStr,
-        qty200: state.form.q200,
-        qty300: state.form.q300,
-        coordinates: cleanedCoord,
-        drone: state.form.drone,
-        ammo: state.form.ammo,
-        result: resultStr,
-        points: totalPoints
-    };
-    state.records.push(rec);
-    state.form = {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:''};
-    
     try {
-        await apiAppend('ГОЛОВНА!A:J', [[
-            rec.reportNum, rec.datetime, rec.target,
-            rec.qty200, rec.qty300,
-            rec.coordinates, rec.drone, rec.ammo, rec.result,
-            rec.points
-        ]]);
-        alert('✅ Запис додано і синхронізовано!');
-    } catch(err) {
-        alert('⚠️ Запис додано локально, але не синхронізовано: ' + err.message);
-    }
-    render();
-}
-
-function newReport() {
-    state.report++;
-    state.counts = {};
-    render();
-}
-
-function selectItem(list, idx) { state.inputVal = state[list][idx]; state.inputList = list; state.inputIdx = idx; render(); }
-function clearInput() { state.inputVal = ''; state.inputList = null; state.inputIdx = null; render(); }
-
-function showModal() {
-    const modal = document.getElementById('modal');
-    modal.innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">В ЯКИЙ СПИСОК ДОДАТИ?</h2><div class="space-y-2"><button onclick="addToList('drones');closeModal()" class="btn-stencil btn-blue w-full">ДРОНИ</button><button onclick="addToList('ammo');closeModal()" class="btn-stencil btn-blue w-full">БОЄПРИПАС</button><button onclick="addToList('results');closeModal()" class="btn-stencil btn-blue w-full">РЕЗУЛЬТАТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
-}
-
-function showEditModal() {
-    const modal = document.getElementById('modal');
-    state.editVal = state.inputVal;
-    modal.innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div class="mb-4"><input type="text" id="editInput" value="${esc(state.editVal)}" class="field" /></div><div class="space-y-2"><button onclick="saveEdit()" class="btn-stencil btn-green w-full">ЗБЕРЕГТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
-    setTimeout(() => { document.getElementById('editInput').focus(); }, 100);
-}
-
-function showDeleteModal() {
-    const modal = document.getElementById('modal');
-    modal.innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">ВИДАЛЕННЯ</h2><div class="mb-4 p-3 rounded" style="background: rgba(0,0,0,0.4); border: 1px dashed var(--khaki)"><p class="text-center stencil">${esc(state.inputVal)}</p></div><div class="space-y-2"><button onclick="confirmDelete()" class="btn-stencil btn-danger w-full">ВИДАЛИТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
-}
-
-async function saveEdit() {
-    const val = document.getElementById('editInput').value;
-    if(val.trim() && state.inputList !== null && state.inputIdx !== null) {
-        state[state.inputList][state.inputIdx] = val.trim();
-        state.inputVal = val.trim();
-        await syncListsToAPI();
-        closeModal(); render();
-    }
-}
-
-async function confirmDelete() {
-    if(state.inputList !== null && state.inputIdx !== null) {
-        state[state.inputList].splice(state.inputIdx, 1);
-        await syncListsToAPI();
-        clearInput(); closeModal(); render();
-    }
-}
-
-function closeModal() { document.getElementById('modal').innerHTML = ''; }
-
-async function addToList(list) {
-    if(state.inputVal.trim()) {
-        if(!state[list].includes(state.inputVal.trim())) {
-            state[list].push(state.inputVal.trim());
-            await syncListsToAPI();
-        }
-        clearInput(); render();
-    }
-}
-
-function addItem() { showModal(); }
-function editItem() { if(state.inputList !== null && state.inputIdx !== null) { showEditModal(); } }
-function deleteItem() { if(state.inputList !== null && state.inputIdx !== null) { showDeleteModal(); } }
-
-function generateReport(dayRecs) {
-    let lines = [];
-    lines.push('Доповідаю!');
-    const date = getDateOnly(dayRecs[0].datetime);
-    lines.push(date+'р. ТГ Мур 5/7 здійснено '+dayRecs.length+' бойових вильотів.');
-    const total = dayRecs.reduce((s,r)=>s+r.points,0);
-    lines.push('Вражено, орієнтовно на '+total+' балів, а саме:');
-    lines.push('');
-    const grouped = {};
-    dayRecs.forEach(r => { const key=r.target+' '+r.result; grouped[key]=(grouped[key]||0)+1; });
-    let i=1;
-    Object.entries(grouped).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => { lines.push(i+'. '+k+' - '+v+' шт.'); i++; });
-    lines.push('');
-    lines.push('🫡🤝🇺🇦');
-    return lines;
-}
-
-function exportXLSX() {
-    if(!state.selReport || !state.selDate) { alert('Виберіть звіт та день!'); return; }
-    const dayRecs = state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate);
-    if(dayRecs.length===0) { alert('Немає записів!'); return; }
-    try {
-        const data = [['Звіт','Дата та час','Ціль','200','300','Координати','Тип дрона','Боєприпас','Результат','Балів']];
-        dayRecs.forEach(r => { data.push([r.reportNum,r.datetime,r.target,r.qty200,r.qty300,r.coordinates,r.drone,r.ammo,r.result,r.points]); });
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Звіти');
-        XLSX.writeFile(wb, 'battle-reports.xlsx');
-        alert('✅ XLSX експортовано!');
-    } catch(e) { alert('Помилка: ' + e.message); }
-}
-
-function exportPDF() {
-    if(!state.selReport || !state.selDate) { alert('Виберіть звіт та день!'); return; }
-    const dayRecs = state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate);
-    if(dayRecs.length===0) { alert('Немає записів!'); return; }
-    const lines = generateReport(dayRecs);
-    const printContent = `<html><head><meta charset="UTF-8"><title>Звіт</title><style>body{font-family:Arial;line-height:1.6;padding:20px;}pre{white-space:pre-wrap;}</style></head><body><pre>${lines.join('\n')}</pre></body></html>`;
-    const printWindow = window.open('','','height=400,width=600');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    setTimeout(() => printWindow.print(), 250);
-}
-
-function copyReport() {
-    if(!state.selReport || !state.selDate) { alert('Виберіть звіт та день!'); return; }
-    const dayRecs = state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate);
-    if(dayRecs.length===0) { alert('Немає записів!'); return; }
-    const lines = generateReport(dayRecs);
-    navigator.clipboard.writeText(lines.join('\n'));
-    alert('✅ Скопійовано!');
-}
-
-function getAbbr() { const p = state.form.target.split(' '); return p.length>1?p.slice(0,-1).join(' '):''; }
-
-function renderListSection(list, title) {
-    return `<div class="crate p-4"><h2 class="stencil-shadow text-lg mb-3" style="color: var(--yellow)">${title} <span style="color: var(--khaki)">(${state[list].length})</span></h2><div class="space-y-2">${state[list].map((x,i)=>`<div class="list-item" onclick="selectItem('${list}',${i})">${esc(x)}</div>`).join('')}</div></div>`;
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/ГОЛОВНА!A:J:append?valueInputOption=USER_ENTERED`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${state.token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ values: [newRec] })
+        });
+        alert("Запис додано успішно!");
+        loadData();
+    } catch (e) { alert("Помилка відправки"); }
 }
 
 function render() {
     const app = document.getElementById('app');
-    
-    if (state.page === 'login' || !state.user) {
-        app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><div class="crate p-8 max-w-md w-full text-center"><h1 class="stencil-shadow text-3xl mb-4" style="color: var(--yellow)">БОЙОВІ ЗВІТИ</h1><p class="stencil mb-8" style="color: var(--khaki)">АВТОРИЗУЙТЕСЬ ДЛЯ ДОСТУПУ</p><button onclick="login()" class="btn-stencil btn-yellow-dim w-full text-lg">🔐 УВІЙТИ ЧЕРЕЗ GOOGLE</button></div></div>`;
+    if(state.page === 'login') {
+        app.innerHTML = `<div class="flex flex-col items-center justify-center h-96 crate p-8">
+            <h1 class="stencil-shadow text-3xl mb-8 text-[var(--yellow)]">БОЙОВІ ЗВІТИ</h1>
+            <button onclick="login()" class="btn-stencil btn-yellow w-full max-w-xs">УВІЙТИ ЧЕРЕЗ GOOGLE</button>
+        </div>`;
         return;
     }
     
-    if (state.page === 'loading') {
-        app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><div class="crate p-8 text-center"><h1 class="stencil-shadow text-2xl mb-4" style="color: var(--yellow)">⏳ ЗАВАНТАЖЕННЯ...</h1><p class="stencil" style="color: var(--khaki)">ПІДВАНТАЖУЄМО ДАНІ З ФАЙЛА</p></div></div>`;
+    if(state.page === 'loading') {
+        app.innerHTML = `<div class="text-center p-20 stencil text-[var(--khaki)]">ЗАВАНТАЖЕННЯ ДАНИХ...</div>`;
         return;
     }
-    
-    const todayDate = getDateOnly(new Date().toLocaleString('uk-UA'));
-    const todayCount = state.records.filter(r=>r.reportNum===state.report && getDateOnly(r.datetime)===todayDate).length;
-    
-    let h = `<nav class="crate p-3 m-4 sticky top-4 z-40">
-        <div class="flex justify-between items-center flex-wrap gap-2">
-            <div class="flex items-center gap-3 flex-wrap">
-                <img src="data:image/png;base64,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" alt="Тризуб" style="height:40px;width:auto;display:inline-block;vertical-align:middle"/>
-                <h1 class="stencil-shadow text-xl" style="color: var(--yellow)">БОЙОВІ ЗВІТИ</h1>
-                <span style="font-family: 'JetBrains Mono', monospace; color: var(--khaki); font-size: 1.15em">${esc(state.user)}</span>
-            </div>
-            <div class="flex gap-2 items-center flex-wrap">
-                <button onclick="state.page='form';render()" class="nav-btn ${state.page==='form'?'active':''}">ФОРМА</button>
-                <button onclick="state.page='reports';render()" class="nav-btn ${state.page==='reports'?'active':''}">ЗВІТИ</button>
-                <button onclick="state.page='lists';render()" class="nav-btn ${state.page==='lists'?'active':''}">СПИСКИ</button>
-                <button onclick="logout()" class="nav-btn logout">ВИЙТИ</button>
+
+    app.innerHTML = `
+        <div class="flex justify-between items-center mb-6 crate p-4">
+            <h2 class="stencil text-xl text-[var(--yellow)]">ЗВІТ №${state.report}</h2>
+            <div class="flex gap-2">
+                <button onclick="state.page='form'; render()" class="nav-btn ${state.page==='form'?'active':''}">ФОРМА</button>
+                <button onclick="state.page='archive'; render()" class="nav-btn ${state.page==='archive'?'active':''}">АРХІВ</button>
+                <button onclick="state.page='settings'; render()" class="nav-btn ${state.page==='settings'?'active':''}">НАЛАШТУВАННЯ</button>
             </div>
         </div>
-    </nav>`;
-    
-    if(state.page==='form') {
-        if(!state.form.targets) state.form.targets = [];
-        let totalPoints = 0;
-        const targetPoints = state.form.targets.map(t => {
-            const pts = calculatePoints(t.abbr, state.form.q200, state.form.q300, t.result);
-            totalPoints += pts;
-            return pts;
-        });
-        h += `<div class="p-4 max-w-3xl mx-auto"><div class="crate p-6">
-            <div class="grid gap-4 items-center mb-4" style="grid-template-columns: auto 1fr auto">
-                <h2 class="stencil-shadow text-3xl" style="color: var(--yellow)">ЗВІТ №${state.report}</h2>
-                <div class="flex justify-center"><span class="stamp">// CONFIDENTIAL //</span></div>
-                <button onclick="newReport()" class="btn-stencil btn-danger">🚩 НОВИЙ ЗВІТ</button>
-            </div>
-            <div class="mb-6 space-y-1 stencil" style="font-size: 1.15em">
-                <p><span style="color: var(--khaki)">СЬОГОДНІ:</span> <span style="color: var(--text)">${todayDate}</span></p>
-                <p><span style="color: var(--khaki)">ЗАПИСІВ:</span> <span style="color: var(--text)">${todayCount}</span></p>
-                <p><span style="color: var(--khaki)">БАЛІВ:</span> <span style="color: var(--yellow)" class="text-2xl">${totalPoints}</span></p>
-            </div>
-            
-            <div class="mb-6">
-                <h3 class="stencil" style="color: var(--khaki); margin-bottom: 8px">ЦІЛІ (${state.form.targets.length})</h3>
-                <div class="space-y-2" style="max-height: 150px; overflow-y: auto">
-                    ${state.form.targets.map((t, i) => `<div class="list-item" style="display:flex; justify-content:space-between; align-items:center"><span>${esc(t.fullName)} - ${esc(t.result)} (${targetPoints[i]} б.)</span><button onclick="removeTargetFromForm(${i})" class="btn-stencil" style="padding:4px 8px; font-size:12px">✕</button></div>`).join('')}
-                </div>
-            </div>
-            
-            <div class="space-y-4">
-                <div class="grid gap-3" style="grid-template-columns: 30% 60% 10%">
-                    <div>
-                        <label class="label block mb-2">ЦІЛЬ</label>
-                        <select onchange="state.form.newTarget=this.value; render()" class="field">
-                            <option value="">Виберіть...</option>
-                            ${Object.keys(state.scoreTable).map(x=>`<option value="${esc(x)}" ${state.form.newTarget===x?'selected':''}>${esc(x)}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="label block mb-2">РЕЗУЛЬТАТ</label>
-                        <select onchange="state.form.newResult=this.value; render()" class="field">
-                            <option value="">Виберіть...</option>
-                            ${state.results.map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div style="display:flex; align-items:flex-end">
-                        <button onclick="addTargetToForm()" class="btn-stencil btn-green w-full" style="aspect-ratio:1; padding:0; font-size:24px; height:42px">+</button>
-                    </div>
-                </div>
-                
-                <div class="grid gap-4 mt-6" style="grid-template-columns: 50% 25% 25%; border-top: 1px dashed var(--khaki); padding-top: 16px">
-                    <div>
-                        <label class="label block mb-2">КООРДИНАТИ MGRS</label>
-                        <input type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="field" />
-                    </div>
-                    <div>
-                        <label class="label block mb-2">200</label>
-                        <select onchange="state.form.q200=parseInt(this.value);render()" class="field">
-                            ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q200===n?'selected':''}>${n}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="label block mb-2">300</label>
-                        <select onchange="state.form.q300=parseInt(this.value);render()" class="field">
-                            ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q300===n?'selected':''}>${n}</option>`).join('')}
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="label block mb-2">ДРОН</label>
-                        <select onchange="state.form.drone=this.value;render()" class="field">
-                            <option value="">Виберіть...</option>
-                            ${state.drones.map(d=>`<option value="${esc(d)}" ${state.form.drone===d?'selected':''}>${esc(d)}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="label block mb-2">БОЄПРИПАС</label>
-                        <select onchange="state.form.ammo=this.value;render()" class="field">
-                            <option value="">Виберіть...</option>
-                            ${state.ammo.map(a=>`<option value="${esc(a)}" ${state.form.ammo===a?'selected':''}>${esc(a)}</option>`).join('')}
-                        </select>
-                    </div>
-                </div>
-                
-                <button onclick="add()" class="btn-stencil btn-yellow-dim w-full text-lg mt-4">✓ ДОДАТИ ЗАПИС</button>
-            </div>
-        </div></div>`;
-    }
-    
-    if(state.page==='lists') {
-        h += `<div class="p-4 space-y-4"><h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">СПИСКИ</h1><div class="crate p-4"><div class="flex gap-2 mb-2 flex-wrap"><button onclick="addItem()" class="btn-stencil btn-green">+</button><input type="text" value="${esc(state.inputVal)}" onchange="state.inputVal=this.value" placeholder="Редагування..." class="field flex-1" style="min-width: 120px" /><button onclick="clearInput()" class="btn-stencil btn-danger">✕</button><button onclick="editItem()" class="btn-stencil btn-blue">✏</button><button onclick="deleteItem()" class="btn-stencil btn-black">🗑</button></div></div><div class="grid grid-cols-1 md:grid-cols-3 gap-4">${renderListSection('drones','ДРОНИ')}${renderListSection('ammo','БОЄПРИПАС')}${renderListSection('results','РЕЗУЛЬТАТИ')}</div></div>`;
-    }
-    
-    if(state.page==='reports') {
-        const reps = [...new Set(state.records.map(r=>r.reportNum))].sort((a,b)=>a-b);
-        const dates = state.selReport ? [...new Set(state.records.filter(r=>r.reportNum===state.selReport).map(r=>getDateOnly(r.datetime)))].sort() : [];
-        const dayRecs = state.selReport && state.selDate ? state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate) : [];
-        const reportLines = dayRecs.length > 0 ? generateReport(dayRecs) : [];
-        h += `<div class="p-4 space-y-4">
-            <h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">ЗВІТИ</h1>
-            <div class="grid grid-cols-2 gap-4">
-                <div class="crate p-4">
-                    <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ЗВІТИ</h3>
-                    <div class="flex flex-col gap-2">${reps.map((r,i)=>`<button onclick="state.selReport=${r};state.selDate=null;render()" class="btn-stencil ${state.selReport===r?'btn-yellow':'btn-yellow-dim'}">${i===0?'ПЕРШИЙ':'ЗВІТ '+r}</button>`).join('') || '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає звітів</p>'}</div>
-                </div>
-                <div class="crate p-4">
-                    <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ДНІ</h3>
-                    <div class="flex flex-col gap-2">${state.selReport?(dates.map(d=>`<button onclick="state.selDate='${d}';render()" class="btn-stencil ${state.selDate===d?'btn-yellow':'btn-yellow-dim'}">${d}</button>`).join('') || '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає днів</p>'):'<p class="stencil text-center py-2" style="color: var(--text-dim)">Виберіть звіт</p>'}</div>
-                </div>
-            </div>
-            ${dayRecs.length > 0 ? `<div class="crate p-4">
-                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
-                    <h3 class="stencil-shadow" style="color: var(--yellow)">ЗВІТ НА ${state.selDate}</h3>
-                    <div class="flex gap-2 flex-wrap">
-                        <button onclick="exportXLSX()" class="btn-stencil btn-green">XLSX</button>
-                        <button onclick="exportPDF()" class="btn-stencil btn-blue">PDF</button>
-                        <button onclick="copyReport()" class="btn-stencil btn-black">КОПІЮВАТИ</button>
-                    </div>
-                </div>
-                <div class="report-box">${reportLines.join('\n')}</div>
-            </div>` : ''}
-            <div class="crate p-4">
-                <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ЗАПИСИ</h3>
-                <div class="space-y-2 max-h-96 overflow-y-auto">${dayRecs.length > 0 ? dayRecs.map(r=>`<div class="record-card text-sm"><p style="color: var(--yellow)" class="stencil">${esc(r.target)} — ${esc(r.result)} <span style="color: var(--khaki)">(${r.points} б.)</span></p><p style="color: var(--text)">200: ${r.qty200} | 300: ${r.qty300} | ${esc(r.drone)}</p><p style="color: var(--text-dim)">${esc(r.datetime)} | ${esc(r.coordinates)}</p></div>`).join('') : '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає записів</p>'}</div>
-            </div>
-        </div>`;
-    }
-    
-    app.innerHTML = h;
+
+        ${state.page === 'form' ? renderForm() : state.page === 'archive' ? renderArchive() : renderSettings()}
+    `;
 }
-    </script>
+
+function renderForm() {
+    return `
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="crate p-4 space-y-4">
+                <h3 class="stencil text-[var(--khaki)]">ДАНІ ВИЛЬОТУ</h3>
+                <div>
+                    <label class="label">Ціль</label>
+                    <div class="flex gap-2">
+                        <select class="field" onchange="state.form.newTarget=this.value">
+                            <option value="">Оберіть...</option>
+                            ${Object.keys(state.scoreTable).map(t => `<option value="${t}">${t}</option>`).join('')}
+                        </select>
+                        <select class="field w-1/3" onchange="state.form.newResult=this.value">
+                            <option value="">Результат...</option>
+                            ${state.results.map(r => `<option value="${r}">${r}</option>`).join('')}
+                        </select>
+                        <button onclick="addTarget()" class="btn-stencil btn-blue">+</button>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    ${state.form.targets.map((t, i) => `
+                        <span class="bg-[var(--surface-light)] border border-[var(--olive)] px-2 py-1 text-sm rounded flex items-center gap-2">
+                            ${t.fullName} (${t.result})
+                            <button onclick="state.form.targets.splice(${i},1); render()" class="text-red-500">×</button>
+                        </span>
+                    `).join('')}
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="label">ОС 200</label><input type="number" class="field" oninput="state.form.q200=this.value"></div>
+                    <div><label class="label">ОС 300</label><input type="number" class="field" oninput="state.form.q300=this.value"></div>
+                </div>
+                <div><label class="label">Координати (вставити все)</label><input type="text" class="field" oninput="state.form.coord=this.value"></div>
+            </div>
+
+            <div class="crate p-4 space-y-4">
+                <h3 class="stencil text-[var(--khaki)]">ОБЛАДНАННЯ</h3>
+                <div>
+                    <label class="label">Дрон</label>
+                    <select class="field" onchange="state.form.drone=this.value">
+                        <option value="">Оберіть...</option>
+                        ${state.drones.map(d => `<option value="${d}">${d}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="label">Боєприпас</label>
+                    <select class="field" onchange="state.form.ammo=this.value">
+                        <option value="">Оберіть...</option>
+                        ${state.ammo.map(a => `<option value="${a}">${a}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="pt-4">
+                    <button onclick="submitRecord()" class="btn-stencil btn-green w-full py-4 text-lg">ЗБЕРЕГТИ ЗАПИС</button>
+                    <button onclick="if(confirm('Почати новий звіт?')){state.report++; state.counts={}; render()}" class="btn-stencil btn-black w-full mt-2">НОВИЙ ЗВІТ</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderArchive() {
+    const dates = [...new Set(state.records.map(r => r.datetime.split(',')[0]))].reverse();
+    return `
+        <div class="crate p-4">
+            <div class="flex gap-4 mb-4">
+                <select class="field" onchange="state.selDate=this.value; render()">
+                    <option value="">Оберіть дату...</option>
+                    ${dates.map(d => `<option value="${d}">${d}</option>`).join('')}
+                </select>
+            </div>
+            ${state.selDate ? renderReportPreview() : ''}
+        </div>
+    `;
+}
+
+function renderReportPreview() {
+    const dayRecs = state.records.filter(r => r.datetime.startsWith(state.selDate));
+    if(dayRecs.length === 0) return `<p>Немає записів за цю дату</p>`;
+    
+    const totalPoints = dayRecs.reduce((s, r) => s + r.points, 0);
+    const grouped = {};
+    dayRecs.forEach(r => {
+        const key = `${r.target} — ${r.result}`;
+        grouped[key] = (grouped[key] || 0) + 1;
+    });
+
+    const reportText = [
+        "Доповідаю!",
+        `${state.selDate}р. ТГ Мур 5/7 здійснено ${dayRecs.length} бойових вильотів.`,
+        `Вражено, орієнтовно на ${totalPoints} балів, а саме:`,
+        "",
+        ...Object.entries(grouped).map(([k, v], i) => `${i+1}. ${k} - ${v} шт.`),
+        "",
+        "🫡🤝🇺🇦"
+    ].join('\n');
+
+    return `
+        <div class="space-y-4">
+            <div class="report-box">${reportText}</div>
+            <div class="flex gap-2">
+                <button onclick="navigator.clipboard.writeText(\`${reportText}\`); alert('Скопійовано!')" class="btn-stencil btn-blue flex-1">КОПІЮВАТИ ТЕКСТ</button>
+                <button onclick="exportXLSX()" class="btn-stencil btn-green flex-1">XLSX</button>
+            </div>
+        </div>
+    `;
+}
+
+function renderSettings() {
+    return `
+        <div class="grid md:grid-cols-3 gap-6">
+            <div class="crate p-4">
+                <h3 class="label mb-2">Дрони</h3>
+                <div class="max-h-60 overflow-y-auto">
+                    ${state.drones.map(d => `<div class="list-item">${d}</div>`).join('')}
+                </div>
+            </div>
+            <div class="crate p-4">
+                <h3 class="label mb-2">Боєприпаси</h3>
+                <div class="max-h-60 overflow-y-auto">
+                    ${state.ammo.map(a => `<div class="list-item">${a}</div>`).join('')}
+                </div>
+            </div>
+            <div class="crate p-4">
+                <h3 class="label mb-2">Результати</h3>
+                <div class="max-h-60 overflow-y-auto">
+                    ${state.results.map(r => `<div class="list-item">${r}</div>`).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function exportXLSX() {
+    const dayRecs = state.records.filter(r => r.datetime.startsWith(state.selDate));
+    const data = [
+        ["№ Звіту", "Час", "Ціль", "200", "300", "Координати", "Дрон", "Боєприпас", "Результат", "Бали"],
+        ...dayRecs.map(r => [r.reportNum, r.datetime, r.target, r.q200, r.q300, r.coord, r.drone, r.ammo, r.result, r.points])
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Звіт");
+    XLSX.writeFile(wb, `Report_${state.selDate.replace(/\//g, '-')}.xlsx`);
+}
+</script>
 </body>
 </html>
