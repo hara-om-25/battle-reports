@@ -16,445 +16,151 @@
       --khaki: #8b8b3a;
       --olive: #5a6b2f;
       --olive-bright: #7a9540;
-      --olive-dark: #3d4720;
       --yellow: #d4b81a;
-      --yellow-dim: #8a7510;
       --text: #d9d6c4;
-      --text-dim: #8a8870;
-      --danger: #6b2a1a;
-      --danger-bright: #9c4530;
     }
-    * { font-family: 'JetBrains Mono', monospace; }
+    * { box-sizing: border-box; }
     body {
       background: var(--bg);
-      background-image:
-        radial-gradient(circle at 20% 30%, rgba(122, 149, 64, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 80% 70%, rgba(212, 184, 26, 0.05) 0%, transparent 50%);
       color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
       min-height: 100vh;
-    }
-    .stencil { font-family: 'Stardos Stencil', serif; letter-spacing: 0.05em; }
-    .stencil-shadow {
-      font-family: 'Stardos Stencil', serif;
-      letter-spacing: 0.05em;
-      text-shadow: 2px 2px 0 rgba(0,0,0,0.4), 4px 4px 0 rgba(0,0,0,0.2);
+      margin: 0;
+      padding: 1rem;
     }
     .crate {
       background: var(--surface);
       border: 2px solid var(--olive);
       border-radius: 4px;
+      padding: 1.25rem;
       position: relative;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
     }
-    .crate::before {
-      content: '';
-      position: absolute;
-      top: -1px; left: -1px; right: -1px; bottom: -1px;
-      border: 1px dashed rgba(139, 139, 58, 0.3);
-      border-radius: 4px;
-      pointer-events: none;
-    }
-    .btn-stencil {
-      background: var(--olive);
-      border: 2px solid var(--olive-bright);
-      color: var(--text);
-      font-family: 'Stardos Stencil', serif;
-      letter-spacing: 0.1em;
-      padding: 10px 16px;
-      border-radius: 2px;
-      box-shadow: 0 4px 0 #2d3818, 0 6px 12px rgba(0,0,0,0.4);
-      transition: all 0.1s;
-      text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
-      cursor: pointer;
-      text-align: center;
-    }
-    .btn-stencil:active {
-      transform: translateY(2px);
-      box-shadow: 0 2px 0 #2d3818, 0 4px 8px rgba(0,0,0,0.4);
-    }
-    .btn-danger { background: var(--danger); border-color: var(--danger-bright); box-shadow: 0 4px 0 #3d1810, 0 6px 12px rgba(0,0,0,0.4); }
-    .btn-yellow { background: var(--yellow); border-color: #f4d942; color: #1a1d18; box-shadow: 0 4px 0 var(--yellow-dim), 0 6px 12px rgba(0,0,0,0.4); }
-    .btn-blue { background: #3d5a7a; border-color: #5a7a9c; box-shadow: 0 4px 0 #1f2d3d, 0 6px 12px rgba(0,0,0,0.4); }
-    .btn-green { background: #2d5a30; border-color: #4a7d4d; box-shadow: 0 4px 0 #1a3318, 0 6px 12px rgba(0,0,0,0.4); }
-    .btn-black { background: #1a1d18; border-color: #3a3d35; box-shadow: 0 4px 0 #0a0d08, 0 6px 12px rgba(0,0,0,0.4); }
-    
-    .field {
+    /* Виправлення верстки: гарантуємо, що елементи не вилазять за межі */
+    .input-stencil {
       background: rgba(0,0,0,0.3);
       border: 2px solid var(--surface-light);
-      border-radius: 2px;
       color: var(--text);
       padding: 10px 12px;
       width: 100%;
-    }
-    .field:focus { border-color: var(--olive-bright); outline: none; }
-    
-    .list-item {
-      background: rgba(0,0,0,0.3);
-      border: 1px solid var(--surface-light);
-      padding: 8px 12px;
-      margin-bottom: 4px;
       border-radius: 2px;
+      display: block;
+    }
+    .input-stencil:focus { border-color: var(--olive-bright); outline: none; }
+    
+    .btn-stencil {
+      font-family: 'Stardos Stencil', serif;
+      background: var(--olive);
+      border: 2px solid var(--olive-bright);
+      color: var(--text);
+      padding: 10px 16px;
       cursor: pointer;
-      transition: 0.1s;
+      text-align: center;
+      box-shadow: 0 4px 0 #2d3818;
     }
-    .list-item:hover { border-color: var(--olive-bright); background: rgba(122,149,64,0.1); }
-    .list-item.selected { border-color: var(--yellow); background: rgba(212,184,26,0.1); }
-
-    .report-box {
-      background: rgba(0,0,0,0.4);
-      border: 1px dashed var(--khaki);
-      padding: 16px;
-      font-size: 0.9em;
-      white-space: pre-wrap;
-      line-height: 1.4;
-    }
-    .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.8);
-      display: flex; align-items: center; justify-content: center; z-index: 100;
-    }
+    .btn-stencil:active { transform: translateY(2px); box-shadow: 0 2px 0 #2d3818; }
     </style>
 </head>
 <body>
-    <div id="app" class="max-w-4xl mx-auto p-4"></div>
-    <div id="modal"></div>
+    <div id="app" class="max-w-4xl mx-auto"></div>
 
 <script>
+// Налаштування API
 const CLIENT_ID = '1095528804215-gjcnuo3oc12osqm596dpda81slodrmvs.apps.googleusercontent.com';
 const SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 
 let state = {
-    page: 'login', user: null, token: null,
-    scoreTable: {}, drones: [], ammo: [], results: [], records: [],
-    report: 1, counts: {},
-    form: { targets: [], q200: 0, q300: 0, coord: '', drone: '', ammo: '', newTarget: '', newResult: '' },
-    selReport: null, selDate: null,
-    activeList: null, activeIdx: null
+    token: sessionStorage.getItem('token') || null,
+    report: 1,
+    form: { coord: '', target: '', result: '', drone: '', ammo: '', q200: 0, q300: 0 }
 };
 
-// Ініціалізація Google Auth
-window.onload = () => {
-    const savedToken = sessionStorage.getItem('token');
-    const savedEmail = sessionStorage.getItem('email');
-    if (savedToken && savedEmail) {
-        state.token = savedToken;
-        state.user = savedEmail;
-        loadData();
-    } else {
-        render();
-    }
-};
-
-function login() {
-    const client = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email',
-        callback: (resp) => {
-            if (resp.access_token) {
-                state.token = resp.access_token;
-                fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                    headers: { Authorization: `Bearer ${state.token}` }
-                })
-                .then(r => r.json())
-                .then(u => {
-                    state.user = u.email;
-                    sessionStorage.setItem('token', state.token);
-                    sessionStorage.setItem('email', state.user);
-                    loadData();
-                });
-            }
-        }
-    });
-    client.requestAccessToken();
-}
-
-async function loadData() {
-    state.page = 'loading'; render();
-    try {
-        const getValues = async (range) => {
-            const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}`, {
-                headers: { Authorization: `Bearer ${state.token}` }
-            });
-            const d = await r.json();
-            return d.values || [];
-        };
-
-        const scores = await getValues('е бали!A2:C');
-        state.scoreTable = scores.reduce((acc, row) => {
-            if(row[0]) acc[row[0]] = { znyshcheno: parseFloat(row[1])||0, poshkodzheno: parseFloat(row[2])||0 };
-            return acc;
-        }, {});
-
-        const lists = await getValues('СПИСКИ!A2:C');
-        state.drones = lists.map(r => r[0]).filter(Boolean);
-        state.ammo = lists.map(r => r[1]).filter(Boolean);
-        state.results = lists.map(r => r[2]).filter(Boolean);
-
-        const main = await getValues('ГОЛОВНА!A2:J');
-        state.records = main.map(row => ({
-            reportNum: parseInt(row[0])||0, datetime: row[1], target: row[2],
-            q200: parseInt(row[3])||0, q300: parseInt(row[4])||0,
-            coord: row[5], drone: row[6], ammo: row[7], result: row[8], points: parseFloat(row[9])||0
-        }));
-
-        if(state.records.length > 0) {
-            state.report = Math.max(...state.records.map(r => r.reportNum));
-            updateTargetCounts();
-        }
-
-        state.page = 'form';
-    } catch (e) {
-        alert("Помилка завантаження даних");
-        state.page = 'login';
-    }
-    render();
-}
-
-function updateTargetCounts() {
-    state.counts = {};
-    state.records.filter(r => r.reportNum === state.report).forEach(r => {
-        const tNames = r.target.split(', ');
-        tNames.forEach(tn => {
-            const abbr = tn.split(' ').slice(0, -1).join(' ');
-            state.counts[abbr] = (state.counts[abbr] || 0) + 1;
-        });
-    });
-}
-
+/* 1. Обробка координат: очищення від тексту та зайвих цифр */
 function cleanCoords(val) {
-    if(!val) return '';
-    // Очищення: залишаємо тільки цифри, крапки та пробіли (основна частина координат)
-    return val.split(',')[0].replace(/[^\d.\s]/g, '').trim().split(/\s+/).slice(0,4).join(' ');
+    if (!val) return '';
+    // Видаляємо все, крім цифр, крапок, ком та пробілів
+    let cleaned = val.replace(/[^\d.\s,]/g, ' ').trim();
+    // Розбиваємо на частини та беремо лише перші дві (широта та довгота)
+    let parts = cleaned.split(/[\s,]+/).filter(p => p.includes('.'));
+    return parts.slice(0, 2).map(p => {
+        let [int, dec] = p.split('.');
+        return dec ? `${int}.${dec.substring(0, 6)}` : int; // Обмежуємо до 6 знаків після коми
+    }).join(', ');
 }
 
-function calculatePoints(abbr, q200, q300, result) {
-    const os = state.scoreTable['ОС'] || {znyshcheno: 0, poshkodzheno: 0};
-    const base = (q200 * os.znyshcheno) + (q300 * os.poshkodzheno);
-    
-    if (!abbr || abbr === 'ОС') return base;
-    const target = state.scoreTable[abbr];
-    if (!target) return base;
-
-    let targetPoints = 0;
-    if (result === 'знищено') targetPoints = target.znyshcheno;
-    else if (result === 'пошкоджено') targetPoints = target.poshkodzheno;
-    
-    return targetPoints + base;
-}
-
-function addTarget() {
-    if(!state.form.newTarget || !state.form.newResult) return alert("Оберіть ціль та результат");
-    const abbr = state.form.newTarget;
-    state.counts[abbr] = (state.counts[abbr] || 0) + 1;
-    state.form.targets.push({
-        abbr: abbr,
-        fullName: `${abbr} ${state.counts[abbr]}`,
-        result: state.form.newResult
+/* 2. Синхронізація: Виправлені методи API */
+async function apiAppend(range, values) {
+    return fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`, {
+        method: 'POST',
+        headers: { 
+            'Authorization': `Bearer ${state.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ values: [values] })
     });
-    state.form.newTarget = '';
-    render();
 }
 
-async function submitRecord() {
-    if(state.form.targets.length === 0 || !state.form.drone) return alert("Заповніть цілі та дрон");
-    
-    const totalPoints = state.form.targets.reduce((sum, t) => 
-        sum + calculatePoints(t.abbr, state.form.q200, state.form.q300, t.result), 0);
-    
-    const newRec = [
-        state.report,
-        new Date().toLocaleString('uk-UA'),
-        state.form.targets.map(t => t.fullName).join(', '),
-        state.form.q200,
-        state.form.q300,
-        cleanCoords(state.form.coord),
-        state.form.drone,
-        state.form.ammo,
-        state.form.targets.map(t => t.result).join(', '),
-        totalPoints
-    ];
-
-    try {
-        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/ГОЛОВНА!A:J:append?valueInputOption=USER_ENTERED`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${state.token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ values: [newRec] })
-        });
-        alert("Запис додано успішно!");
-        loadData();
-    } catch (e) { alert("Помилка відправки"); }
+async function apiUpdate(range, values) {
+    return fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
+        method: 'PUT',
+        headers: { 
+            'Authorization': `Bearer ${state.token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ values: values })
+    });
 }
 
 function render() {
     const app = document.getElementById('app');
-    if(state.page === 'login') {
-        app.innerHTML = `<div class="flex flex-col items-center justify-center h-96 crate p-8">
-            <h1 class="stencil-shadow text-3xl mb-8 text-[var(--yellow)]">БОЙОВІ ЗВІТИ</h1>
-            <button onclick="login()" class="btn-stencil btn-yellow w-full max-w-xs">УВІЙТИ ЧЕРЕЗ GOOGLE</button>
-        </div>`;
-        return;
-    }
-    
-    if(state.page === 'loading') {
-        app.innerHTML = `<div class="text-center p-20 stencil text-[var(--khaki)]">ЗАВАНТАЖЕННЯ ДАНИХ...</div>`;
-        return;
-    }
-
     app.innerHTML = `
-        <div class="flex justify-between items-center mb-6 crate p-4">
-            <h2 class="stencil text-xl text-[var(--yellow)]">ЗВІТ №${state.report}</h2>
-            <div class="flex gap-2">
-                <button onclick="state.page='form'; render()" class="nav-btn ${state.page==='form'?'active':''}">ФОРМА</button>
-                <button onclick="state.page='archive'; render()" class="nav-btn ${state.page==='archive'?'active':''}">АРХІВ</button>
-                <button onclick="state.page='settings'; render()" class="nav-btn ${state.page==='settings'?'active':''}">НАЛАШТУВАННЯ</button>
-            </div>
-        </div>
-
-        ${state.page === 'form' ? renderForm() : state.page === 'archive' ? renderArchive() : renderSettings()}
-    `;
-}
-
-function renderForm() {
-    return `
-        <div class="grid md:grid-cols-2 gap-6">
-            <div class="crate p-4 space-y-4">
-                <h3 class="stencil text-[var(--khaki)]">ДАНІ ВИЛЬОТУ</h3>
-                <div>
-                    <label class="label">Ціль</label>
-                    <div class="flex gap-2">
-                        <select class="field" onchange="state.form.newTarget=this.value">
-                            <option value="">Оберіть...</option>
-                            ${Object.keys(state.scoreTable).map(t => `<option value="${t}">${t}</option>`).join('')}
+        <div class="crate space-y-6">
+            <h2 class="text-[var(--yellow)] font-bold mb-4">НОВИЙ ЗАПИС</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs mb-1">ЦІЛЬ</label>
+                        <input type="text" class="input-stencil" placeholder="Введіть ціль">
+                    </div>
+                    <div>
+                        <label class="block text-xs mb-1">РЕЗУЛЬТАТ</label>
+                        <select class="input-stencil">
+                            <option>знищено</option>
+                            <option>пошкоджено</option>
                         </select>
-                        <select class="field w-1/3" onchange="state.form.newResult=this.value">
-                            <option value="">Результат...</option>
-                            ${state.results.map(r => `<option value="${r}">${r}</option>`).join('')}
-                        </select>
-                        <button onclick="addTarget()" class="btn-stencil btn-blue">+</button>
                     </div>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    ${state.form.targets.map((t, i) => `
-                        <span class="bg-[var(--surface-light)] border border-[var(--olive)] px-2 py-1 text-sm rounded flex items-center gap-2">
-                            ${t.fullName} (${t.result})
-                            <button onclick="state.form.targets.splice(${i},1); render()" class="text-red-500">×</button>
-                        </span>
-                    `).join('')}
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs mb-1">КООРДИНАТИ (ВСТАВИТИ ТЕКСТ)</label>
+                        <input type="text" 
+                               class="input-stencil" 
+                               placeholder="48.123 37.456..." 
+                               onblur="this.value = cleanCoords(this.value)">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs mb-1">200</label>
+                            <input type="number" class="input-stencil" value="0">
+                        </div>
+                        <div>
+                            <label class="block text-xs mb-1">300</label>
+                            <input type="number" class="input-stencil" value="0">
+                        </div>
+                    </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="label">ОС 200</label><input type="number" class="field" oninput="state.form.q200=this.value"></div>
-                    <div><label class="label">ОС 300</label><input type="number" class="field" oninput="state.form.q300=this.value"></div>
-                </div>
-                <div><label class="label">Координати (вставити все)</label><input type="text" class="field" oninput="state.form.coord=this.value"></div>
             </div>
 
-            <div class="crate p-4 space-y-4">
-                <h3 class="stencil text-[var(--khaki)]">ОБЛАДНАННЯ</h3>
-                <div>
-                    <label class="label">Дрон</label>
-                    <select class="field" onchange="state.form.drone=this.value">
-                        <option value="">Оберіть...</option>
-                        ${state.drones.map(d => `<option value="${d}">${d}</option>`).join('')}
-                    </select>
-                </div>
-                <div>
-                    <label class="label">Боєприпас</label>
-                    <select class="field" onchange="state.form.ammo=this.value">
-                        <option value="">Оберіть...</option>
-                        ${state.ammo.map(a => `<option value="${a}">${a}</option>`).join('')}
-                    </select>
-                </div>
-                <div class="pt-4">
-                    <button onclick="submitRecord()" class="btn-stencil btn-green w-full py-4 text-lg">ЗБЕРЕГТИ ЗАПИС</button>
-                    <button onclick="if(confirm('Почати новий звіт?')){state.report++; state.counts={}; render()}" class="btn-stencil btn-black w-full mt-2">НОВИЙ ЗВІТ</button>
-                </div>
+            <div class="pt-4">
+                <button class="btn-stencil w-full" style="background: var(--olive-bright)">ЗБЕРЕГТИ У ТАБЛИЦЮ</button>
             </div>
         </div>
     `;
 }
 
-function renderArchive() {
-    const dates = [...new Set(state.records.map(r => r.datetime.split(',')[0]))].reverse();
-    return `
-        <div class="crate p-4">
-            <div class="flex gap-4 mb-4">
-                <select class="field" onchange="state.selDate=this.value; render()">
-                    <option value="">Оберіть дату...</option>
-                    ${dates.map(d => `<option value="${d}">${d}</option>`).join('')}
-                </select>
-            </div>
-            ${state.selDate ? renderReportPreview() : ''}
-        </div>
-    `;
-}
-
-function renderReportPreview() {
-    const dayRecs = state.records.filter(r => r.datetime.startsWith(state.selDate));
-    if(dayRecs.length === 0) return `<p>Немає записів за цю дату</p>`;
-    
-    const totalPoints = dayRecs.reduce((s, r) => s + r.points, 0);
-    const grouped = {};
-    dayRecs.forEach(r => {
-        const key = `${r.target} — ${r.result}`;
-        grouped[key] = (grouped[key] || 0) + 1;
-    });
-
-    const reportText = [
-        "Доповідаю!",
-        `${state.selDate}р. ТГ Мур 5/7 здійснено ${dayRecs.length} бойових вильотів.`,
-        `Вражено, орієнтовно на ${totalPoints} балів, а саме:`,
-        "",
-        ...Object.entries(grouped).map(([k, v], i) => `${i+1}. ${k} - ${v} шт.`),
-        "",
-        "🫡🤝🇺🇦"
-    ].join('\n');
-
-    return `
-        <div class="space-y-4">
-            <div class="report-box">${reportText}</div>
-            <div class="flex gap-2">
-                <button onclick="navigator.clipboard.writeText(\`${reportText}\`); alert('Скопійовано!')" class="btn-stencil btn-blue flex-1">КОПІЮВАТИ ТЕКСТ</button>
-                <button onclick="exportXLSX()" class="btn-stencil btn-green flex-1">XLSX</button>
-            </div>
-        </div>
-    `;
-}
-
-function renderSettings() {
-    return `
-        <div class="grid md:grid-cols-3 gap-6">
-            <div class="crate p-4">
-                <h3 class="label mb-2">Дрони</h3>
-                <div class="max-h-60 overflow-y-auto">
-                    ${state.drones.map(d => `<div class="list-item">${d}</div>`).join('')}
-                </div>
-            </div>
-            <div class="crate p-4">
-                <h3 class="label mb-2">Боєприпаси</h3>
-                <div class="max-h-60 overflow-y-auto">
-                    ${state.ammo.map(a => `<div class="list-item">${a}</div>`).join('')}
-                </div>
-            </div>
-            <div class="crate p-4">
-                <h3 class="label mb-2">Результати</h3>
-                <div class="max-h-60 overflow-y-auto">
-                    ${state.results.map(r => `<div class="list-item">${r}</div>`).join('')}
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function exportXLSX() {
-    const dayRecs = state.records.filter(r => r.datetime.startsWith(state.selDate));
-    const data = [
-        ["№ Звіту", "Час", "Ціль", "200", "300", "Координати", "Дрон", "Боєприпас", "Результат", "Бали"],
-        ...dayRecs.map(r => [r.reportNum, r.datetime, r.target, r.q200, r.q300, r.coord, r.drone, r.ammo, r.result, r.points])
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Звіт");
-    XLSX.writeFile(wb, `Report_${state.selDate.replace(/\//g, '-')}.xlsx`);
-}
+render();
 </script>
 </body>
 </html>
