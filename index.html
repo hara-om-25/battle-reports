@@ -1,166 +1,98 @@
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>БОЙОВІ ЗВІТИ</title>
-    <link href="https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <style>
-    :root {
-      --bg: #1a1d18;
-      --surface: #252a23;
-      --surface-light: #323830;
-      --khaki: #8b8b3a;
-      --olive: #5a6b2f;
-      --olive-bright: #7a9540;
-      --yellow: #d4b81a;
-      --text: #d9d6c4;
-    }
+import re
+
+# Read the original file content
+with open('battle-v66.html', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# 1. Update CSS for inputs and crate to prevent overflow and fix padding
+# Ensuring box-sizing is border-box and inputs have full width without bleeding
+css_fix = """
     * { box-sizing: border-box; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'JetBrains Mono', monospace;
-      min-height: 100vh;
-      margin: 0;
-      padding: 1rem;
-    }
     .crate {
       background: var(--surface);
       border: 2px solid var(--olive);
       border-radius: 4px;
-      padding: 1.25rem;
       position: relative;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      padding: 1.25rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
     }
-    /* Виправлення верстки: гарантуємо, що елементи не вилазять за межі */
     .input-stencil {
-      background: rgba(0,0,0,0.3);
-      border: 2px solid var(--surface-light);
-      color: var(--text);
-      padding: 10px 12px;
       width: 100%;
-      border-radius: 2px;
+      box-sizing: border-box;
       display: block;
+      margin-bottom: 0.5rem;
     }
-    .input-stencil:focus { border-color: var(--olive-bright); outline: none; }
-    
-    .btn-stencil {
-      font-family: 'Stardos Stencil', serif;
-      background: var(--olive);
-      border: 2px solid var(--olive-bright);
-      color: var(--text);
-      padding: 10px 16px;
-      cursor: pointer;
-      text-align: center;
-      box-shadow: 0 4px 0 #2d3818;
+    .report-box {
+      padding: 1rem;
+      margin-top: 1rem;
+      border: 1px dashed var(--khaki);
+      background: rgba(0,0,0,0.2);
     }
-    .btn-stencil:active { transform: translateY(2px); box-shadow: 0 2px 0 #2d3818; }
-    </style>
-</head>
-<body>
-    <div id="app" class="max-w-4xl mx-auto"></div>
+    .record-card {
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+      border-bottom: 1px solid var(--surface-light);
+    }
+"""
 
-<script>
-// Налаштування API
-const CLIENT_ID = '1095528804215-gjcnuo3oc12osqm596dpda81slodrmvs.apps.googleusercontent.com';
-const SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
+# Replace or insert global box-sizing and padding fixes in <style>
+if '<style>' in content:
+    content = content.replace('<style>', f'<style>{css_fix}')
 
-let state = {
-    token: sessionStorage.getItem('token') || null,
-    report: 1,
-    form: { coord: '', target: '', result: '', drone: '', ammo: '', q200: 0, q300: 0 }
-};
-
-/* 1. Обробка координат: очищення від тексту та зайвих цифр */
+# 2. Add deep coordinate cleaning function
+clean_coords_js = """
 function cleanCoords(val) {
     if (!val) return '';
-    // Видаляємо все, крім цифр, крапок, ком та пробілів
-    let cleaned = val.replace(/[^\d.\s,]/g, ' ').trim();
-    // Розбиваємо на частини та беремо лише перші дві (широта та довгота)
-    let parts = cleaned.split(/[\s,]+/).filter(p => p.includes('.'));
-    return parts.slice(0, 2).map(p => {
-        let [int, dec] = p.split('.');
-        return dec ? `${int}.${dec.substring(0, 6)}` : int; // Обмежуємо до 6 знаків після коми
-    }).join(', ');
+    // Remove text, keep numbers, dots, commas and spaces
+    let cleaned = val.replace(/[^\\d.\\s,]/g, ' ').trim();
+    // Split and extract the first two numeric groups that look like coordinates (contain dots)
+    let parts = cleaned.split(/[\\s,]+/).filter(p => p.includes('.'));
+    if (parts.length >= 2) {
+        return parts.slice(0, 2).map(p => {
+            let [int, dec] = p.split('.');
+            return dec ? `${int}.${dec.substring(0, 6)}` : int;
+        }).join(', ');
+    }
+    return cleaned;
 }
+"""
 
-/* 2. Синхронізація: Виправлені методи API */
-async function apiAppend(range, values) {
-    return fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`, {
-        method: 'POST',
-        headers: { 
+# Insert JS function into the script tag
+content = content.replace('const SHEET_ID =', f'{clean_coords_js}\nconst SHEET_ID =')
+
+# 3. Ensure the coordinate input uses the cleaner
+content = content.replace('oninput="state.form.coord=this.value"', 'onblur="this.value = cleanCoords(this.value); state.form.coord=this.value"')
+
+# 4. Stabilize API methods (apiUpdate, apiAppend)
+# We look for where fetch is called for sheets and make sure they are robust
+api_fix = """
+async function apiRequest(method, path, body = null) {
+    const options = {
+        method: method,
+        headers: {
             'Authorization': `Bearer ${state.token}`,
             'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ values: [values] })
-    });
+        }
+    };
+    if (body) options.body = JSON.stringify(body);
+    const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}${path}`, options);
+    return response.json();
+}
+
+async function apiAppend(range, values) {
+    return apiRequest('POST', `/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`, { values: [values] });
 }
 
 async function apiUpdate(range, values) {
-    return fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
-        method: 'PUT',
-        headers: { 
-            'Authorization': `Bearer ${state.token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ values: values })
-    });
+    return apiRequest('PUT', `/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, { values: values });
 }
+"""
 
-function render() {
-    const app = document.getElementById('app');
-    app.innerHTML = `
-        <div class="crate space-y-6">
-            <h2 class="text-[var(--yellow)] font-bold mb-4">НОВИЙ ЗАПИС</h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs mb-1">ЦІЛЬ</label>
-                        <input type="text" class="input-stencil" placeholder="Введіть ціль">
-                    </div>
-                    <div>
-                        <label class="block text-xs mb-1">РЕЗУЛЬТАТ</label>
-                        <select class="input-stencil">
-                            <option>знищено</option>
-                            <option>пошкоджено</option>
-                        </select>
-                    </div>
-                </div>
+# Try to insert these helper functions
+content = content.replace('async function loadData()', f'{api_fix}\nasync function loadData()')
 
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs mb-1">КООРДИНАТИ (ВСТАВИТИ ТЕКСТ)</label>
-                        <input type="text" 
-                               class="input-stencil" 
-                               placeholder="48.123 37.456..." 
-                               onblur="this.value = cleanCoords(this.value)">
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs mb-1">200</label>
-                            <input type="number" class="input-stencil" value="0">
-                        </div>
-                        <div>
-                            <label class="block text-xs mb-1">300</label>
-                            <input type="number" class="input-stencil" value="0">
-                        </div>
-                    </div>
-                </div>
-            </div>
+# Save as index.html
+with open('index.html', 'w', encoding='utf-8') as f:
+    f.write(content)
 
-            <div class="pt-4">
-                <button class="btn-stencil w-full" style="background: var(--olive-bright)">ЗБЕРЕГТИ У ТАБЛИЦЮ</button>
-            </div>
-        </div>
-    `;
-}
 
-render();
-</script>
-</body>
-</html>
