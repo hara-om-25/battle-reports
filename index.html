@@ -501,35 +501,38 @@ function addTargetToForm() {
         alert('Виберіть ціль і результат!');
         return;
     }
-    const parts = state.form.newTarget.split(' ');
-    const abbr = parts.slice(0,-1).join(' ');
+    const abbr = state.form.newTarget;
     if(!state.counts[abbr]) state.counts[abbr]=0;
     state.counts[abbr]++;
     const fullName = abbr + ' ' + state.counts[abbr];
-    const points = calculatePoints(abbr, state.form.q200, state.form.q300, state.form.newResult);
-    state.form.targets.push({abbr, fullName, result: state.form.newResult, points});
+    state.form.targets.push({abbr, fullName, result: state.form.newResult});
     state.form.newTarget = '';
     state.form.newResult = '';
     render();
 }
 
 function removeTargetFromForm(idx) {
+    const t = state.form.targets[idx];
+    if(t && state.counts[t.abbr]) state.counts[t.abbr]--;
     state.form.targets.splice(idx, 1);
     render();
 }
 
 async function add() {
     if(state.form.targets.length === 0 || !state.form.drone || !state.form.ammo) {
-        alert('Додайте хочаб одну ціль, виберіть дрон та боєприпас!');
+        alert('Додайте хоча б одну ціль, виберіть дрон та боєприпас!');
         return;
     }
     
     let totalPoints = 0;
     let targetStr = '';
+    let resultStr = '';
     for(let i=0; i<state.form.targets.length; i++) {
         const t = state.form.targets[i];
-        targetStr += (i>0?', ':'') + t.fullName + ' (' + t.result + ')';
-        totalPoints += t.points;
+        const pts = calculatePoints(t.abbr, state.form.q200, state.form.q300, t.result);
+        totalPoints += pts;
+        targetStr += (i>0?', ':'') + t.fullName;
+        resultStr += (i>0?', ':'') + t.result;
     }
     
     const cleanedCoord = cleanCoords(state.form.coord);
@@ -542,7 +545,7 @@ async function add() {
         coordinates: cleanedCoord,
         drone: state.form.drone,
         ammo: state.form.ammo,
-        result: targetStr,
+        result: resultStr,
         points: totalPoints
     };
     state.records.push(rec);
@@ -701,7 +704,7 @@ function render() {
         <div class="flex justify-between items-center flex-wrap gap-2">
             <div class="flex items-center gap-3 flex-wrap">
                 <h1 class="stencil-shadow text-xl" style="color: var(--yellow)">БОЙОВІ ЗВІТИ</h1>
-                <span class="text-xs stencil" style="color: var(--text-dim)">${esc(state.user)}</span>
+                <span class="stencil" style="color: var(--khaki); font-size: 1.15em">${esc(state.user)}</span>
             </div>
             <div class="flex gap-2 items-center flex-wrap">
                 <button onclick="state.page='form';render()" class="nav-btn ${state.page==='form'?'active':''}">ФОРМА</button>
@@ -714,13 +717,16 @@ function render() {
     
     if(state.page==='form') {
         if(!state.form.targets) state.form.targets = [];
-        const totalPoints = state.form.targets.reduce((sum, t) => sum + (t.points||0), 0);
+        let totalPoints = 0;
+        const targetPoints = state.form.targets.map(t => {
+            const pts = calculatePoints(t.abbr, state.form.q200, state.form.q300, t.result);
+            totalPoints += pts;
+            return pts;
+        });
         h += `<div class="p-4 max-w-3xl mx-auto"><div class="crate p-6">
-            <div class="grid grid-cols-2 gap-4 items-stretch mb-4">
-                <div class="flex flex-col justify-center">
-                    <span class="stamp w-fit mb-2">// CONFIDENTIAL //</span>
-                    <h2 class="stencil-shadow text-3xl" style="color: var(--yellow)">ЗВІТ №${state.report}</h2>
-                </div>
+            <div class="grid gap-4 items-center mb-4" style="grid-template-columns: auto 1fr auto">
+                <h2 class="stencil-shadow text-3xl" style="color: var(--yellow)">ЗВІТ №${state.report}</h2>
+                <div class="flex justify-center"><span class="stamp">// CONFIDENTIAL //</span></div>
                 <button onclick="newReport()" class="btn-stencil btn-danger">🚩 НОВИЙ ЗВІТ</button>
             </div>
             <div class="mb-6 space-y-1 stencil" style="font-size: 1.15em">
@@ -732,7 +738,7 @@ function render() {
             <div class="mb-6">
                 <h3 class="stencil" style="color: var(--khaki); margin-bottom: 8px">ЦІЛІ (${state.form.targets.length})</h3>
                 <div class="space-y-2" style="max-height: 150px; overflow-y: auto">
-                    ${state.form.targets.map((t, i) => `<div class="list-item" style="display:flex; justify-content:space-between; align-items:center"><span>${esc(t.fullName)} - ${esc(t.result)} (${t.points} б.)</span><button onclick="removeTargetFromForm(${i})" class="btn-stencil" style="padding:4px 8px; font-size:12px">✕</button></div>`).join('')}
+                    ${state.form.targets.map((t, i) => `<div class="list-item" style="display:flex; justify-content:space-between; align-items:center"><span>${esc(t.fullName)} - ${esc(t.result)} (${targetPoints[i]} б.)</span><button onclick="removeTargetFromForm(${i})" class="btn-stencil" style="padding:4px 8px; font-size:12px">✕</button></div>`).join('')}
                 </div>
             </div>
             
