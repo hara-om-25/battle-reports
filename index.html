@@ -808,9 +808,9 @@ function formatRecord(r) {
     const idx = state.records.indexOf(r);
     const tgts = r.target ? r.target.split(', ') : [];
     const ress = r.result ? r.result.split(', ') : [];
-    const tgtLines = tgts.map((t,i)=>`<p class="stencil" style="color:var(--text)">${esc(t)} — <span style="color:var(--khaki)">${esc(ress[i]||'')}</span></p>`).join('');
+    const tgtLine = tgts.map((t,i)=>`${esc(t)} — <span style="color:var(--khaki)">${esc(ress[i]||'')}</span>`).join(', ');
     return `<div class="record-card text-sm" style="position:relative;padding-right:80px">
-${tgtLines}
+<p class="stencil" style="color:var(--text)">${tgtLine}</p>
 <p class="stencil" style="color:var(--text-dim);font-size:0.85em;margin-top:4px">${esc(r.coordinates)} | ${esc(r.drone)} | ${esc(r.ammo)} | 200:${r.qty200} | 300:${r.qty300}</p>
 <p class="stencil" style="color:var(--yellow)">${r.points} балів</p>
 <div style="position:absolute;top:8px;right:8px;display:flex;gap:6px">
