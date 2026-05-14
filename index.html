@@ -402,8 +402,8 @@ async function loadDataFromAPI() {
         for (let i = 1; i < listRows.length; i++) {
             const row = listRows[i] || [];
             if (row[0]) state.drones.push(row[0]);
-            if (row[1]) state.ammo.push(row[1]);
-            if (row[2]) state.results.push(row[2]);
+            if (row[1]) state.results.push(row[1]);
+            if (row[2]) state.ammo.push(row[2]);
         }
         
         const mainRows = await apiGet('ГОЛОВНА');
@@ -457,7 +457,7 @@ async function syncListsToAPI() {
         if (maxLen === 0) return;
         const rows = [];
         for (let i = 0; i < maxLen; i++) {
-            rows.push([state.drones[i] || '', state.ammo[i] || '', state.results[i] || '']);
+            rows.push([state.drones[i] || '', state.results[i] || '', state.ammo[i] || '']);
         }
         await apiUpdate(`СПИСКИ!A2:C${maxLen + 1}`, rows);
     } catch(err) {
