@@ -773,11 +773,13 @@ function render() {
             <div class="mb-6 space-y-1 stencil" style="font-size: 1.15em">
                 <p><span style="color: var(--khaki)">СЬОГОДНІ:</span> <span style="color: var(--text)">${todayDate}</span></p>
                 <p><span style="color: var(--khaki)">ЗАПИСІВ:</span> <span style="color: var(--text)">${todayCount}</span></p>
-                <p><span style="color: var(--khaki)">БАЛІВ:</span> <span style="color: var(--yellow)" class="text-2xl">${totalPoints}</span></p>
             </div>
             
             <div class="mb-6">
-                <h3 class="stencil" style="color: var(--khaki); margin-bottom: 8px">ЦІЛІ (${state.form.targets.length})</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px">
+                    <h3 class="stencil" style="color: var(--khaki)">ЦІЛІ (${state.form.targets.length})</h3>
+                    <span class="stencil" style="color: var(--khaki)">БАЛІВ: <span style="color: var(--yellow)" class="text-2xl">${totalPoints}</span></span>
+                </div>
                 <div class="space-y-2" style="max-height: 150px; overflow-y: auto">
                     ${state.form.targets.map((t, i) => `<div class="list-item" style="display:flex; justify-content:space-between; align-items:center"><span>${esc(t.fullName)} - ${esc(t.result)} (${targetPoints[i]} б.)</span><button onclick="removeTargetFromForm(${i})" class="btn-stencil" style="padding:4px 8px; font-size:12px">✕</button></div>`).join('')}
                 </div>
