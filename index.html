@@ -776,9 +776,9 @@ function render() {
             </div>
             
             <div class="mb-6">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px">
-                    <h3 class="stencil" style="color: var(--khaki)">ЦІЛІ (${state.form.targets.length})</h3>
-                    <span class="stencil" style="color: var(--khaki)">БАЛІВ: <span style="color: var(--yellow)" class="text-2xl">${totalPoints}</span></span>
+                <div class="stencil" style="display:flex; align-items:center; gap: 2em; margin-bottom: 8px; color: var(--khaki)">
+                    <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>
+                    <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>
                 </div>
                 <div class="space-y-2" style="max-height: 150px; overflow-y: auto">
                     ${state.form.targets.map((t, i) => `<div class="list-item" style="display:flex; justify-content:space-between; align-items:center"><span>${esc(t.fullName)} - ${esc(t.result)} (${targetPoints[i]} б.)</span><button onclick="removeTargetFromForm(${i})" class="btn-stencil" style="padding:4px 8px; font-size:12px">✕</button></div>`).join('')}
