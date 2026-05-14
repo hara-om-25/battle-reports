@@ -208,7 +208,7 @@ def apply_patches(html):
     )
     patches.append((old_header, new_header, 'zvit-header'))
 
-    # ── 9. Stats block — 3 vertical lines → 1 horizontal row with БАЛІВ СЬОГОДНІ ──
+    # ── 9. Stats block — 3 vertical lines → 1 horizontal row, space-between ──
     old_stats = (
         '            <div class="mb-6 space-y-1 stencil" style="font-size: 1.15em">\n'
         '                <p><span style="color: var(--khaki)">СЬОГОДНІ:</span> <span style="color: var(--text)">${todayDate}</span></p>\n'
@@ -217,10 +217,10 @@ def apply_patches(html):
         '            </div>'
     )
     new_stats = (
-        '            <div class="mb-4 stencil" style="font-size:1.15em; display:flex; align-items:center; gap:2em; flex-wrap:wrap">\n'
+        '            <div class="mb-4 stencil" style="font-size:1.15em; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap">\n'
         '                <span><span style="color:var(--khaki)">СЬОГОДНІ:</span> <span style="color:var(--text)">${todayDate}</span></span>\n'
-        '                <span><span style="color:var(--khaki)">ЗАПИСІВ:</span> <span style="color:var(--text)">${todayCount}</span></span>\n'
-        '                <span><span style="color:var(--khaki)">БАЛІВ СЬОГОДНІ:</span> <span style="color:var(--yellow)">${todayPoints}</span></span>\n'
+        '                <span><span style="color:var(--khaki)">ВИЛЬОТІВ:</span> <span style="color:var(--text)">${todayCount}</span></span>\n'
+        '                <span><span style="color:var(--khaki)">БАЛІВ ЗА СЬОГОДНІ:</span> <span style="color:var(--text)">${todayPoints}</span></span>\n'
         '            </div>'
     )
     patches.append((old_stats, new_stats, 'stats-block'))
