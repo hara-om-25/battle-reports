@@ -636,12 +636,10 @@ function generateReport(dayRecs) {
     lines.push('Вражено, орієнтовно на '+totalPoints+' балів, а саме:');
     lines.push('');
 
-    // ОС: рахуємо суму колонок 200 і 300 по всіх записах дня
     const hasOs = dayRecs.some(r => r.target.split(', ').some(t => t.trim().toLowerCase().startsWith('ос')));
     const osSum200 = dayRecs.reduce((s, r) => s + (parseInt(r.qty200) || 0), 0);
     const osSum300 = dayRecs.reduce((s, r) => s + (parseInt(r.qty300) || 0), 0);
 
-    // Інші цілі: групуємо за (тип + результат), рахуємо кількість записів
     const otherGrouped = {};
     dayRecs.forEach(r => {
         const targets = r.target.split(', ');
@@ -804,7 +802,7 @@ function render() {
                 
                 <div class="grid gap-4 mt-6" style="grid-template-columns: 2fr 1fr 1fr; border-top: 1px dashed var(--khaki); padding-top: 16px">
                     <div>
-                        <label class="label block mb-2">КООРДИНАТИ MGRS</label>
+                        <label class="label block mb-2">MGRS</label>
                         <input type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="field" />
                     </div>
                     <div>
