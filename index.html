@@ -620,6 +620,61 @@ async function confirmDelete() {
 
 function closeModal() { document.getElementById('modal').innerHTML = ''; }
 
+async function syncRecordsToAPI() {
+    await apiClear('ГОЛОВНА!A2:J');
+    if (state.records.length > 0) {
+        const rows = state.records.map(r => [
+            r.reportNum, r.datetime, r.target,
+            r.qty200, r.qty300,
+            r.coordinates, r.drone, r.ammo, r.result,
+            r.points
+        ]);
+        await apiUpdate(`ГОЛОВНА!A2:J${state.records.length + 1}`, rows);
+    }
+}
+
+function showDeleteRecordModal(idx) {
+    const r = state.records[idx];
+    if (!r) return;
+    state.pendingRecordIdx = idx;
+    const modal = document.getElementById('modal');
+    modal.innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">ВИДАЛЕННЯ ВИЛЬОТУ</h2><div class="mb-4 p-3 rounded" style="background: rgba(0,0,0,0.4); border: 1px dashed var(--khaki)"><p class="stencil" style="color:var(--text)">${esc(r.target)} — ${esc(r.result)}</p><p class="stencil mt-1" style="color:var(--text-dim);font-size:0.85em">${esc(r.datetime)}</p></div><div class="space-y-2"><button onclick="confirmDeleteRecord()" class="btn-stencil btn-danger w-full">ВИДАЛИТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
+}
+
+async function confirmDeleteRecord() {
+    const idx = state.pendingRecordIdx;
+    if (idx === null || idx === undefined) return;
+    state.records.splice(idx, 1);
+    state.pendingRecordIdx = null;
+    try { await syncRecordsToAPI(); } catch(e) { alert('Помилка: ' + e.message); }
+    closeModal(); render();
+}
+
+function showEditRecordModal(idx) {
+    const r = state.records[idx];
+    if (!r) return;
+    state.pendingRecordIdx = idx;
+    const modal = document.getElementById('modal');
+    modal.innerHTML = `<div class="modal-overlay"><div class="modal-box" style="max-height:90vh;overflow-y:auto"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div class="space-y-3"><div><label class="label block mb-1">ЦІЛІ</label><input id="er_target" class="field" value="${esc(r.target)}"/></div><div><label class="label block mb-1">РЕЗУЛЬТАТИ</label><input id="er_result" class="field" value="${esc(r.result)}"/></div><div><label class="label block mb-1">MGRS</label><input id="er_coord" class="field" value="${esc(r.coordinates)}"/></div><div class="grid grid-cols-2 gap-2"><div><label class="label block mb-1">200</label><input id="er_200" type="number" class="field" value="${r.qty200}"/></div><div><label class="label block mb-1">300</label><input id="er_300" type="number" class="field" value="${r.qty300}"/></div></div><div><label class="label block mb-1">ДРОН</label><input id="er_drone" class="field" value="${esc(r.drone)}"/></div><div><label class="label block mb-1">БОЄПРИПАС</label><input id="er_ammo" class="field" value="${esc(r.ammo)}"/></div></div><div class="space-y-2 mt-4"><button onclick="saveEditRecord()" class="btn-stencil btn-green w-full">ЗБЕРЕГТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
+    setTimeout(() => { const f = document.getElementById('er_target'); if(f) f.focus(); }, 100);
+}
+
+async function saveEditRecord() {
+    const idx = state.pendingRecordIdx;
+    if (idx === null || idx === undefined) return;
+    const r = state.records[idx];
+    r.target = document.getElementById('er_target').value.trim();
+    r.result = document.getElementById('er_result').value.trim();
+    r.coordinates = document.getElementById('er_coord').value.trim();
+    r.qty200 = parseInt(document.getElementById('er_200').value) || 0;
+    r.qty300 = parseInt(document.getElementById('er_300').value) || 0;
+    r.drone = document.getElementById('er_drone').value.trim();
+    r.ammo = document.getElementById('er_ammo').value.trim();
+    state.pendingRecordIdx = null;
+    try { await syncRecordsToAPI(); } catch(e) { alert('Помилка: ' + e.message); }
+    closeModal(); render();
+}
+
 async function addToList(list) {
     if(state.inputVal.trim()) {
         if(!state[list].includes(state.inputVal.trim())) {
@@ -698,14 +753,19 @@ function exportPDF() {
 }
 
 function formatRecord(r) {
+    const idx = state.records.indexOf(r);
     const abbr = r.target.split(' ').slice(0, -1).join(' ');
     const num = r.target.split(' ').slice(-1)[0];
     const fullName = state.scoreTable[abbr] ? state.scoreTable[abbr].fullName : abbr;
-    return `<div class="record-card text-sm">
+    return `<div class="record-card text-sm" style="position:relative;padding-right:72px">
 <p class="stencil" style="color: var(--text)">${esc(abbr)} ${esc(num)}</p>
 <p class="stencil" style="color: var(--text)">${esc(fullName)} — ${esc(r.result)} | 200: ${r.qty200} | 300: ${r.qty300}</p>
 <p class="stencil" style="color: var(--text)">${esc(r.coordinates)} | ${esc(r.drone)} | ${esc(r.ammo)}</p>
 <p class="stencil" style="color: var(--yellow)">${r.points} балів</p>
+<div style="position:absolute;top:8px;right:8px;display:flex;gap:6px">
+  <button onclick="showEditRecordModal(${idx})" class="btn-stencil" style="padding:4px 8px;font-size:0.85em">✏</button>
+  <button onclick="showDeleteRecordModal(${idx})" class="btn-stencil btn-danger" style="padding:4px 8px;font-size:0.85em">✕</button>
+</div>
 </div>`;
 }
 
@@ -887,8 +947,8 @@ function render() {
                 <div class="report-box">${reportLines.join('\n')}</div>
             </div>` : ''}
             <div class="crate p-4">
-                <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ЗАПИСИ</h3>
-                <div class="space-y-2 max-h-96 overflow-y-auto">${dayRecs.length > 0 ? dayRecs.map(r=>formatRecord(r)).join('') : '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає записів</p>'}</div>
+                <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ВИЛЬОТИ</h3>
+                <div class="space-y-2 max-h-96 overflow-y-auto">${dayRecs.length > 0 ? dayRecs.map(r=>formatRecord(r)).join('') : '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає вильотів</p>'}</div>
             </div>
         </div>`;
     }
