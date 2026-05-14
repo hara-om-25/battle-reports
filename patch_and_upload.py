@@ -266,6 +266,13 @@ def apply_patches(html):
         'lists-save-swap'
     ))
 
+    # ── 14. Target list: "б." → "балів" ──
+    patches.append((
+        '(${targetPoints[i]} б.)',
+        '(${targetPoints[i]} балів)',
+        'target-points-label'
+    ))
+
 
 
     # ── 14. Shield logo before БОЙОВІ ЗВІТИ ──
