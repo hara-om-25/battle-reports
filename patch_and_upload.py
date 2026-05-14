@@ -279,6 +279,22 @@ def apply_patches(html):
     html = html.replace("'Stardos Stencil'", "'Tektur'")
     print(f"[OK]   Font: replaced {count} occurrence(s) of 'Stardos Stencil' with 'Tektur'")
 
+    # Remove CONFIDENTIAL image line (too large for normal patch — filter by alt text)
+    lines = html.split('\n')
+    before = len(lines)
+    lines = [l for l in lines if 'alt="CONFIDENTIAL"' not in l]
+    removed = before - len(lines)
+    html = '\n'.join(lines)
+    print(f"[OK]   Removed {removed} CONFIDENTIAL image line(s)")
+
+    # Shrink header grid from 3 to 2 columns after removing image
+    html = html.replace(
+        '<div class="grid gap-4 items-center mb-4" style="grid-template-columns: auto 1fr auto">',
+        '<div class="grid gap-4 items-center mb-4" style="grid-template-columns: 1fr auto">',
+        1
+    )
+    print("[OK]   Header grid: auto 1fr auto → 1fr auto")
+
     return html
 
 
