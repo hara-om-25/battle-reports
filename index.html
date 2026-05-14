@@ -504,14 +504,17 @@ function calculatePoints(abbr, q200, q300, result) {
 }
 
 function addTargetToForm() {
-    if(!state.form.newTarget || !state.form.newResult) {
-        alert('Виберіть ціль і результат!');
+    if(!state.form.newResult) {
+        alert('Виберіть результат!');
         return;
     }
     const abbr = state.form.newTarget;
-    if(!state.counts[abbr]) state.counts[abbr]=0;
-    state.counts[abbr]++;
-    const fullName = abbr + ' ' + state.counts[abbr];
+    let fullName = '';
+    if(abbr) {
+        if(!state.counts[abbr]) state.counts[abbr]=0;
+        state.counts[abbr]++;
+        fullName = abbr + ' ' + state.counts[abbr];
+    }
     state.form.targets.push({abbr, fullName, result: state.form.newResult});
     state.form.newTarget = '';
     state.form.newResult = '';
@@ -526,8 +529,8 @@ function removeTargetFromForm(idx) {
 }
 
 async function add() {
-    if(state.form.targets.length === 0 || !state.form.drone || !state.form.ammo) {
-        alert('Додайте хоча б одну ціль, виберіть дрон та боєприпас!');
+    if(!state.form.drone || !state.form.ammo) {
+        alert('Виберіть дрон та боєприпас!');
         return;
     }
     
@@ -695,9 +698,9 @@ function renderEditRecordModal() {
 
 function addEditTarget() {
     const er = state.editRecord;
-    if (!er || !er.newTarget || !er.newResult) return;
+    if (!er || !er.newResult) return;
     saveEditModalState();
-    const fullName = (state.scoreTable[er.newTarget] && state.scoreTable[er.newTarget].fullName) || er.newTarget;
+    const fullName = er.newTarget ? ((state.scoreTable[er.newTarget] && state.scoreTable[er.newTarget].fullName) || er.newTarget) : '';
     er.targets.push({name: fullName, result: er.newResult});
     er.newTarget = ''; er.newResult = '';
     renderEditRecordModal();
@@ -811,7 +814,7 @@ function formatRecord(r) {
     const sep = '<span style="color:var(--yellow)">, </span>';
     const dash = '<span style="color:var(--yellow)"> \u2014 </span>';
     const allParts = [
-        ...tgts.map((t,i)=>{ const name=esc(t); const res=`<span style="color:var(--khaki)">${esc(ress[i]||'')}</span>`; return name ? name+dash+res : res; }),
+        ...Array.from({length:Math.max(tgts.length,ress.length)},(_,i)=>{ const name=esc(tgts[i]||''); const res=`<span style="color:var(--khaki)">${esc(ress[i]||'')}</span>`; return name ? name+dash+res : res; }),
         r.qty200>0 ? `<span style="color:#e05050">200</span>${dash}<span style="color:#fff">${r.qty200}</span>` : '',
         r.qty300>0 ? `<span style="color:#5599dd">300</span>${dash}<span style="color:#fff">${r.qty300}</span>` : ''
     ].filter(Boolean);
