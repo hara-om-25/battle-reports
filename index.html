@@ -850,6 +850,7 @@ function render() {
         const dates = state.selReport ? [...new Set(state.records.filter(r=>r.reportNum===state.selReport).map(r=>getDateOnly(r.datetime)))].sort() : [];
         const dayRecs = state.selReport && state.selDate ? state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate) : [];
         const reportLines = dayRecs.length > 0 ? generateReport(dayRecs) : [];
+        const dayPoints = Math.round(dayRecs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));
         h += `<div class="p-4 space-y-4">
             <h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">ЗВІТИ</h1>
             <div class="grid grid-cols-2 gap-4">
@@ -864,7 +865,10 @@ function render() {
             </div>
             ${dayRecs.length > 0 ? `<div class="crate p-4">
                 <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
-                    <h3 class="stencil-shadow" style="color: var(--yellow)">ЗВІТ НА ${state.selDate}</h3>
+                    <div>
+                        <h3 class="stencil-shadow" style="color: var(--yellow)">ЗВІТ НА ${state.selDate}</h3>
+                        <p class="stencil" style="color: #ffffff; font-size: 0.75em; margin-top: 3px; letter-spacing: 0.05em;">Уражено цілей, орієнтовно на ${dayPoints} балів</p>
+                    </div>
                     <div class="flex gap-2 flex-wrap">
                         <button onclick="exportXLSX()" class="btn-stencil btn-green">XLSX</button>
                         <button onclick="exportPDF()" class="btn-stencil btn-blue">PDF</button>
