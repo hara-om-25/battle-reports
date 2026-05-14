@@ -381,7 +381,7 @@ def apply_patches(html):
         '    const idx = state.records.indexOf(r);\n'
         '    const tgts = r.target ? r.target.split(\', \') : [];\n'
         '    const ress = r.result ? r.result.split(\', \') : [];\n'
-        '    const tgtLine = tgts.map((t,i)=>`${esc(t)} — <span style="color:var(--khaki)">${esc(ress[i]||\'\')}</span>`).join(\', \');\n'
+        '    const tgtLine = tgts.map((t,i)=>`${esc(t)} — <span style="color:var(--khaki)">${esc(ress[i]||\'\')}</span>`).join(\'<span style="color:var(--yellow)">, </span>\');\n'
         '    return `<div class="record-card text-sm" style="position:relative;padding-right:80px">\n'
         '<p class="stencil" style="color:var(--text)">${tgtLine}</p>\n'
         '${(()=>{const sep=\'<span style="color:var(--yellow)"> | </span>\';const parts=[r.qty200>0?`<span style="color:var(--khaki)">200:</span><span style="color:#fff">${r.qty200}</span>`:\'\',r.qty300>0?`<span style="color:var(--khaki)">300:</span><span style="color:#fff">${r.qty300}</span>`:\'\',esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(sep);return `<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${parts}</p>`;})()}\n'
