@@ -317,18 +317,13 @@ def apply_patches(html):
         'btn-stencil-active'
     ))
 
-    # ── 17. XLSX button — add JS press handlers ──
+    # ── 17. Видаляємо кнопки XLSX та PDF (залишаємо тільки КОПІЮВАТИ) ──
     patches.append((
-        '<button onclick="exportXLSX()" class="btn-stencil btn-green">XLSX</button>',
-        '<button onclick="exportXLSX()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-green">XLSX</button>',
-        'xlsx-press'
-    ))
-
-    # ── 18. PDF button — add JS press handlers ──
-    patches.append((
-        '<button onclick="exportPDF()" class="btn-stencil btn-blue">PDF</button>',
-        '<button onclick="exportPDF()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-blue">PDF</button>',
-        'pdf-press'
+        '<button onclick="exportXLSX()" class="btn-stencil btn-green">XLSX</button>\n'
+        '                        <button onclick="exportPDF()" class="btn-stencil btn-blue">PDF</button>\n'
+        '                        <button onclick="copyReport()" class="btn-stencil btn-black">КОПІЮВАТИ</button>',
+        '<button onclick="copyReport()" class="btn-stencil btn-black">КОПІЮВАТИ</button>',
+        'remove-xlsx-pdf'
     ))
 
     # ── 19. КОПІЮВАТИ button — add JS press handlers ──
@@ -369,7 +364,7 @@ def apply_patches(html):
         'rename-zapysy-to-vyloty'
     ))
 
-    # ── 22. formatRecord — add ✕ delete and ✏ edit buttons ──
+    # ── 22. formatRecord — кожна ціль окремим рядком + кнопки дії ──
     patches.append((
         'function formatRecord(r) {\n'
         '    const abbr = r.target.split(\' \').slice(0, -1).join(\' \');\n'
@@ -384,82 +379,26 @@ def apply_patches(html):
         '}',
         'function formatRecord(r) {\n'
         '    const idx = state.records.indexOf(r);\n'
-        '    const abbr = r.target.split(\' \').slice(0, -1).join(\' \');\n'
-        '    const num = r.target.split(\' \').slice(-1)[0];\n'
-        '    const fullName = state.scoreTable[abbr] ? state.scoreTable[abbr].fullName : abbr;\n'
-        '    return `<div class="record-card text-sm" style="position:relative;padding-right:72px">\n'
-        '<p class="stencil" style="color: var(--text)">${esc(abbr)} ${esc(num)}</p>\n'
-        '<p class="stencil" style="color: var(--text)">${esc(fullName)} — ${esc(r.result)} | 200: ${r.qty200} | 300: ${r.qty300}</p>\n'
-        '<p class="stencil" style="color: var(--text)">${esc(r.coordinates)} | ${esc(r.drone)} | ${esc(r.ammo)}</p>\n'
-        '<p class="stencil" style="color: var(--yellow)">${r.points} балів</p>\n'
+        '    const tgts = r.target ? r.target.split(\', \') : [];\n'
+        '    const ress = r.result ? r.result.split(\', \') : [];\n'
+        '    const tgtLines = tgts.map((t,i)=>`<p class="stencil" style="color:var(--text)">${esc(t)} — <span style="color:var(--khaki)">${esc(ress[i]||\'\')}</span></p>`).join(\'\');\n'
+        '    return `<div class="record-card text-sm" style="position:relative;padding-right:80px">\n'
+        '${tgtLines}\n'
+        '<p class="stencil" style="color:var(--text-dim);font-size:0.85em;margin-top:4px">${esc(r.coordinates)} | ${esc(r.drone)} | ${esc(r.ammo)} | 200:${r.qty200} | 300:${r.qty300}</p>\n'
+        '<p class="stencil" style="color:var(--yellow)">${r.points} балів</p>\n'
         '<div style="position:absolute;top:8px;right:8px;display:flex;gap:6px">\n'
-        '  <button onclick="showEditRecordModal(${idx})" class="btn-stencil" style="padding:4px 8px;font-size:0.85em">✏</button>\n'
-        '  <button onclick="showDeleteRecordModal(${idx})" class="btn-stencil btn-danger" style="padding:4px 8px;font-size:0.85em">✕</button>\n'
-        '</div>\n'
-        '</div>`;\n'
+        '  <button onclick="showEditRecordModal(${idx})" class="btn-stencil" style="padding:4px 8px;font-size:0.85em">&#9998;</button>\n'
+        '  <button onclick="showDeleteRecordModal(${idx})" class="btn-stencil btn-danger" style="padding:4px 8px;font-size:0.85em">&#10005;</button>\n'
+        '</div></div>`;\n'
         '}',
         'formatRecord-with-actions'
     ))
 
-    # ── 23. Add syncRecordsToAPI + record delete/edit functions ──
+    # ── 23. syncRecordsToAPI + delete/edit вильотів (edit через дропдауни) ──
     patches.append((
-        'function closeModal() { document.getElementById(\'modal\').innerHTML = \'\'; }',
-        'function closeModal() { document.getElementById(\'modal\').innerHTML = \'\'; }\n'
-        '\n'
-        'async function syncRecordsToAPI() {\n'
-        '    await apiClear(\'ГОЛОВНА!A2:J\');\n'
-        '    if (state.records.length > 0) {\n'
-        '        const rows = state.records.map(r => [\n'
-        '            r.reportNum, r.datetime, r.target,\n'
-        '            r.qty200, r.qty300,\n'
-        '            r.coordinates, r.drone, r.ammo, r.result,\n'
-        '            r.points\n'
-        '        ]);\n'
-        '        await apiUpdate(`ГОЛОВНА!A2:J${state.records.length + 1}`, rows);\n'
-        '    }\n'
-        '}\n'
-        '\n'
-        'function showDeleteRecordModal(idx) {\n'
-        '    const r = state.records[idx];\n'
-        '    if (!r) return;\n'
-        '    state.pendingRecordIdx = idx;\n'
-        '    const modal = document.getElementById(\'modal\');\n'
-        '    modal.innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">ВИДАЛЕННЯ ВИЛЬОТУ</h2><div class="mb-4 p-3 rounded" style="background: rgba(0,0,0,0.4); border: 1px dashed var(--khaki)"><p class="stencil" style="color:var(--text)">${esc(r.target)} — ${esc(r.result)}</p><p class="stencil mt-1" style="color:var(--text-dim);font-size:0.85em">${esc(r.datetime)}</p></div><div class="space-y-2"><button onclick="confirmDeleteRecord()" class="btn-stencil btn-danger w-full">ВИДАЛИТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;\n'
-        '}\n'
-        '\n'
-        'async function confirmDeleteRecord() {\n'
-        '    const idx = state.pendingRecordIdx;\n'
-        '    if (idx === null || idx === undefined) return;\n'
-        '    state.records.splice(idx, 1);\n'
-        '    state.pendingRecordIdx = null;\n'
-        '    try { await syncRecordsToAPI(); } catch(e) { alert(\'Помилка: \' + e.message); }\n'
-        '    closeModal(); render();\n'
-        '}\n'
-        '\n'
-        'function showEditRecordModal(idx) {\n'
-        '    const r = state.records[idx];\n'
-        '    if (!r) return;\n'
-        '    state.pendingRecordIdx = idx;\n'
-        '    const modal = document.getElementById(\'modal\');\n'
-        '    modal.innerHTML = `<div class="modal-overlay"><div class="modal-box" style="max-height:90vh;overflow-y:auto"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div class="space-y-3"><div><label class="label block mb-1">ЦІЛІ</label><input id="er_target" class="field" value="${esc(r.target)}"/></div><div><label class="label block mb-1">РЕЗУЛЬТАТИ</label><input id="er_result" class="field" value="${esc(r.result)}"/></div><div><label class="label block mb-1">MGRS</label><input id="er_coord" class="field" value="${esc(r.coordinates)}"/></div><div class="grid grid-cols-2 gap-2"><div><label class="label block mb-1">200</label><input id="er_200" type="number" class="field" value="${r.qty200}"/></div><div><label class="label block mb-1">300</label><input id="er_300" type="number" class="field" value="${r.qty300}"/></div></div><div><label class="label block mb-1">ДРОН</label><input id="er_drone" class="field" value="${esc(r.drone)}"/></div><div><label class="label block mb-1">БОЄПРИПАС</label><input id="er_ammo" class="field" value="${esc(r.ammo)}"/></div></div><div class="space-y-2 mt-4"><button onclick="saveEditRecord()" class="btn-stencil btn-green w-full">ЗБЕРЕГТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;\n'
-        '    setTimeout(() => { const f = document.getElementById(\'er_target\'); if(f) f.focus(); }, 100);\n'
-        '}\n'
-        '\n'
-        'async function saveEditRecord() {\n'
-        '    const idx = state.pendingRecordIdx;\n'
-        '    if (idx === null || idx === undefined) return;\n'
-        '    const r = state.records[idx];\n'
-        '    r.target = document.getElementById(\'er_target\').value.trim();\n'
-        '    r.result = document.getElementById(\'er_result\').value.trim();\n'
-        '    r.coordinates = document.getElementById(\'er_coord\').value.trim();\n'
-        '    r.qty200 = parseInt(document.getElementById(\'er_200\').value) || 0;\n'
-        '    r.qty300 = parseInt(document.getElementById(\'er_300\').value) || 0;\n'
-        '    r.drone = document.getElementById(\'er_drone\').value.trim();\n'
-        '    r.ammo = document.getElementById(\'er_ammo\').value.trim();\n'
-        '    state.pendingRecordIdx = null;\n'
-        '    try { await syncRecordsToAPI(); } catch(e) { alert(\'Помилка: \' + e.message); }\n'
-        '    closeModal(); render();\n'
-        '}',
+        "function closeModal() { document.getElementById('modal').innerHTML = ''; }",
+        "function closeModal() { document.getElementById('modal').innerHTML = ''; }\n"
+        '\nasync function syncRecordsToAPI() {\n    await apiClear(\'ГОЛОВНА!A2:J\');\n    if (state.records.length > 0) {\n        const rows = state.records.map(r => [\n            r.reportNum, r.datetime, r.target,\n            r.qty200, r.qty300,\n            r.coordinates, r.drone, r.ammo, r.result,\n            r.points\n        ]);\n        await apiUpdate(`ГОЛОВНА!A2:J${state.records.length + 1}`, rows);\n    }\n}\n\nfunction showDeleteRecordModal(idx) {\n    const r = state.records[idx];\n    if (!r) return;\n    state.pendingRecordIdx = idx;\n    const tgts = r.target ? r.target.split(\', \') : [];\n    const ress = r.result ? r.result.split(\', \') : [];\n    const lines = tgts.map((t,i)=>`<p class=\'stencil\' style=\'color:var(--text)\'>${esc(t)} — ${esc(ress[i]||\'\')}</p>`).join(\'\');\n    document.getElementById(\'modal\').innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">ВИДАЛЕННЯ ВИЛЬОТУ</h2><div class="mb-4 p-3 rounded" style="background: rgba(0,0,0,0.4); border: 1px dashed var(--khaki)">${lines}<p class="stencil mt-1" style="color:var(--text-dim);font-size:0.85em">${esc(r.datetime)}</p></div><div class="space-y-2"><button onclick="confirmDeleteRecord()" class="btn-stencil btn-danger w-full">ВИДАЛИТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;\n}\n\nasync function confirmDeleteRecord() {\n    const idx = state.pendingRecordIdx;\n    if (idx === null || idx === undefined) return;\n    state.records.splice(idx, 1);\n    state.pendingRecordIdx = null;\n    try { await syncRecordsToAPI(); } catch(e) { alert(\'Помилка: \' + e.message); }\n    closeModal(); render();\n}\n\nfunction saveEditModalState() {\n    const er = state.editRecord;\n    if (!er) return;\n    const f = document.getElementById(\'er_coord\');\n    if (f) er.coordinates = f.value;\n}\n\nfunction showEditRecordModal(idx) {\n    const r = state.records[idx];\n    if (!r) return;\n    const tNames = r.target ? r.target.split(\', \') : [];\n    const tResults = r.result ? r.result.split(\', \') : [];\n    state.editRecord = {\n        idx,\n        targets: tNames.map((name, i) => ({name, result: tResults[i] || \'\'})),\n        coordinates: r.coordinates || \'\',\n        qty200: r.qty200 || 0,\n        qty300: r.qty300 || 0,\n        drone: r.drone || \'\',\n        ammo: r.ammo || \'\',\n        newTarget: \'\',\n        newResult: \'\'\n    };\n    renderEditRecordModal();\n}\n\nfunction renderEditRecordModal() {\n    const er = state.editRecord;\n    if (!er) return;\n    const tgtList = er.targets.length > 0\n        ? er.targets.map((t,i)=>`<div class="list-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px"><span class="stencil text-sm">${esc(t.name)} — <span style="color:var(--khaki)">${esc(t.result)}</span></span><button onclick="removeEditTarget(${i})" class="btn-stencil btn-danger" style="padding:2px 8px;font-size:12px">&#10005;</button></div>`).join(\'\')\n        : \'<p class="stencil text-sm" style="color:var(--text-dim)">Немає цілей</p>\';\n    const scoreOpts = Object.keys(state.scoreTable).map(x=>`<option value="${esc(x)}" ${er.newTarget===x?\'selected\':\'\'}>${esc(x)}</option>`).join(\'\');\n    const resOpts = state.results.map(r=>`<option value="${esc(r)}" ${er.newResult===r?\'selected\':\'\'}>${esc(r)}</option>`).join(\'\');\n    const droneOpts = state.drones.map(d=>`<option value="${esc(d)}" ${er.drone===d?\'selected\':\'\'}>${esc(d)}</option>`).join(\'\');\n    const ammoOpts = state.ammo.map(a=>`<option value="${esc(a)}" ${er.ammo===a?\'selected\':\'\'}>${esc(a)}</option>`).join(\'\');\n    const q200opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty200===n?\'selected\':\'\'}>${n}</option>`).join(\'\');\n    const q300opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty300===n?\'selected\':\'\'}>${n}</option>`).join(\'\');\n    document.getElementById(\'modal\').innerHTML = `<div class="modal-overlay"><div class="modal-box" style="max-height:90vh;overflow-y:auto"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div class="space-y-3"><div><label class="label block mb-1">ЦІЛІ</label><div class="space-y-1 mb-2">${tgtList}</div><div class="grid gap-2" style="grid-template-columns:1fr 1fr auto"><select onchange="state.editRecord.newTarget=this.value" class="field"><option value="">Ціль...</option>${scoreOpts}</select><select onchange="state.editRecord.newResult=this.value" class="field"><option value="">Результат...</option>${resOpts}</select><button onclick="addEditTarget()" class="btn-stencil btn-green" style="padding:0;font-size:22px;height:42px;min-width:42px">+</button></div></div><div><label class="label block mb-1">MGRS</label><input id="er_coord" class="field" value="${esc(er.coordinates)}" placeholder="36U UA 24232 91610"/></div><div class="grid grid-cols-2 gap-2"><div><label class="label block mb-1">200</label><select onchange="state.editRecord.qty200=parseInt(this.value)" class="field">${q200opts}</select></div><div><label class="label block mb-1">300</label><select onchange="state.editRecord.qty300=parseInt(this.value)" class="field">${q300opts}</select></div></div><div><label class="label block mb-1">ДРОН</label><select onchange="state.editRecord.drone=this.value" class="field"><option value="">Виберіть...</option>${droneOpts}</select></div><div><label class="label block mb-1">БОЄПРИПАС</label><select onchange="state.editRecord.ammo=this.value" class="field"><option value="">Виберіть...</option>${ammoOpts}</select></div></div><div class="space-y-2 mt-4"><button onclick="saveEditRecord()" class="btn-stencil btn-green w-full">ЗБЕРЕГТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;\n}\n\nfunction addEditTarget() {\n    const er = state.editRecord;\n    if (!er || !er.newTarget || !er.newResult) return;\n    saveEditModalState();\n    const fullName = (state.scoreTable[er.newTarget] && state.scoreTable[er.newTarget].fullName) || er.newTarget;\n    er.targets.push({name: fullName, result: er.newResult});\n    er.newTarget = \'\'; er.newResult = \'\';\n    renderEditRecordModal();\n}\n\nfunction removeEditTarget(i) {\n    if (!state.editRecord) return;\n    saveEditModalState();\n    state.editRecord.targets.splice(i, 1);\n    renderEditRecordModal();\n}\n\nasync function saveEditRecord() {\n    const er = state.editRecord;\n    if (!er) return;\n    saveEditModalState();\n    const r = state.records[er.idx];\n    r.target = er.targets.map(t => t.name).join(\', \');\n    r.result = er.targets.map(t => t.result).join(\', \');\n    r.coordinates = er.coordinates;\n    r.qty200 = er.qty200;\n    r.qty300 = er.qty300;\n    r.drone = er.drone;\n    r.ammo = er.ammo;\n    state.editRecord = null;\n    try { await syncRecordsToAPI(); } catch(e) { alert(\'Помилка: \' + e.message); }\n    closeModal(); render();\n}',
         'record-delete-edit-fns'
     ))
 
