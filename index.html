@@ -814,7 +814,7 @@ function formatRecord(r) {
     const sep = '<span style="color:var(--yellow)">, </span>';
     const dash = '<span style="color:var(--yellow)"> \u2014 </span>';
     const allParts = [
-        ...Array.from({length:Math.max(tgts.length,ress.length)},(_,i)=>{ const name=esc(tgts[i]||''); const res=`<span style="color:var(--khaki)">${esc(ress[i]||'')}</span>`; return name ? name+dash+res : res; }),
+        ...Array.from({length:Math.max(tgts.length,ress.length)},(_,i)=>{ const name=esc(tgts[i]||''); const rtxt=esc(ress[i]||''); return name ? name+dash+`<span style="color:var(--khaki)">${rtxt}</span>` : rtxt; }),
         r.qty200>0 ? `<span style="color:#e05050">200</span>${dash}<span style="color:#fff">${r.qty200}</span>` : '',
         r.qty300>0 ? `<span style="color:#5599dd">300</span>${dash}<span style="color:#fff">${r.qty300}</span>` : ''
     ].filter(Boolean);
