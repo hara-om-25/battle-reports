@@ -525,12 +525,14 @@ async function add() {
         return;
     }
     
-    let totalPoints = 0;
+    const _os = state.scoreTable['ОС'] || {znyshcheno:0, poshkodzheno:0};
+    const _base = (parseInt(state.form.q200)||0) * _os.znyshcheno + (parseInt(state.form.q300)||0) * _os.poshkodzheno;
+    let totalPoints = _base;
     let targetStr = '';
     let resultStr = '';
     for(let i=0; i<state.form.targets.length; i++) {
         const t = state.form.targets[i];
-        const pts = calculatePoints(t.abbr, state.form.q200, state.form.q300, t.result);
+        const pts = calculatePoints(t.abbr, 0, 0, t.result);
         totalPoints += pts;
         targetStr += (i>0?', ':'') + t.fullName;
         resultStr += (i>0?', ':'') + t.result;
@@ -754,9 +756,11 @@ function render() {
     
     if(state.page==='form') {
         if(!state.form.targets) state.form.targets = [];
-        let totalPoints = 0;
+        const _osR = state.scoreTable['ОС'] || {znyshcheno:0, poshkodzheno:0};
+        const _baseR = (parseInt(state.form.q200)||0) * _osR.znyshcheno + (parseInt(state.form.q300)||0) * _osR.poshkodzheno;
+        let totalPoints = _baseR;
         const targetPoints = state.form.targets.map(t => {
-            const pts = calculatePoints(t.abbr, state.form.q200, state.form.q300, t.result);
+            const pts = calculatePoints(t.abbr, 0, 0, t.result);
             totalPoints += pts;
             return pts;
         });
