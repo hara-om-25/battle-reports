@@ -266,7 +266,38 @@ def apply_patches(html):
         'lists-save-swap'
     ))
 
-    # ── 14. Target list: "б." → "балів" ──
+    # ── 14. nav-btn: add box-shadow + transition + active press ──
+    patches.append((
+        '    .nav-btn {\n'
+        "      font-family: 'Stardos Stencil', serif;\n"
+        '      letter-spacing: 0.1em;\n'
+        '      padding: 8px 14px;\n'
+        '      background: var(--surface);\n'
+        '      border: 1px solid var(--olive);\n'
+        '      color: var(--text-dim);\n'
+        '      border-radius: 2px;\n'
+        '      cursor: pointer;\n'
+        '    }',
+        '    .nav-btn {\n'
+        "      font-family: 'Stardos Stencil', serif;\n"
+        '      letter-spacing: 0.1em;\n'
+        '      padding: 8px 14px;\n'
+        '      background: var(--surface);\n'
+        '      border: 1px solid var(--olive);\n'
+        '      color: var(--text-dim);\n'
+        '      border-radius: 2px;\n'
+        '      cursor: pointer;\n'
+        '      box-shadow: 0 4px 0 #0d0f0b, 0 6px 12px rgba(0,0,0,0.4);\n'
+        '      transition: all 0.1s;\n'
+        '    }\n'
+        '    .nav-btn:active {\n'
+        '      transform: translateY(2px);\n'
+        '      box-shadow: 0 2px 0 #0d0f0b, 0 4px 8px rgba(0,0,0,0.4);\n'
+        '    }',
+        'nav-btn-shadow'
+    ))
+
+    # ── 15. Target list: "б." → "балів" ──
     patches.append((
         '(${targetPoints[i]} б.)',
         '(${targetPoints[i]} балів)',
