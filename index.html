@@ -782,7 +782,7 @@ function render() {
                     <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>
                 </div>
                 <div class="space-y-2" style="max-height: 150px; overflow-y: auto">
-                    ${state.form.targets.map((t, i) => `<div class="list-item" style="display:flex; justify-content:space-between; align-items:center"><span>${esc(t.fullName)} - ${esc(t.result)} (${targetPoints[i]} б.)</span><button onclick="removeTargetFromForm(${i})" class="btn-stencil" style="padding:4px 8px; font-size:12px">✕</button></div>`).join('')}
+                    ${state.form.targets.map((t, i) => `<div class="list-item" style="display:flex; justify-content:space-between; align-items:center"><span>${esc(t.fullName)} - ${esc(t.result)} (${targetPoints[i]} балів)</span><button onclick="removeTargetFromForm(${i})" class="btn-stencil" style="padding:4px 8px; font-size:12px">✕</button></div>`).join('')}
                 </div>
             </div>
             
