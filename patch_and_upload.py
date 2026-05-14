@@ -422,6 +422,10 @@ def apply_patches(html):
         "        return;\n"
         "    }",
 
+        "    if(state.form.targets.length === 0) {\n"
+        "        alert('Додайте результат вильоту, навіть якщо ціль не було уражено');\n"
+        "        return;\n"
+        "    }\n"
         "    if(!state.form.drone || !state.form.ammo) {\n"
         "        alert('Виберіть дрон та боєприпас!');\n"
         "        return;\n"
