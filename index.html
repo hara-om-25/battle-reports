@@ -865,10 +865,7 @@ function render() {
             </div>
             ${dayRecs.length > 0 ? `<div class="crate p-4">
                 <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
-                    <div>
-                        <h3 class="stencil-shadow" style="color: var(--yellow)">ЗВІТ НА ${state.selDate}</h3>
-                        <p class="stencil" style="color: #ffffff; font-size: 0.75em; margin-top: 3px; letter-spacing: 0.05em;">Уражено цілей, орієнтовно на ${dayPoints} балів</p>
-                    </div>
+                    <h3 class="stencil-shadow" style="color: var(--yellow)">ЗВІТ НА ${state.selDate} &nbsp;<span class="stencil" style="color: var(--text); font-size: 0.7em; font-weight: normal;">Уражено цілей, орієнтовно на ${dayPoints} балів</span></h3>
                     <div class="flex gap-2 flex-wrap">
                         <button onclick="exportXLSX()" class="btn-stencil btn-green">XLSX</button>
                         <button onclick="exportPDF()" class="btn-stencil btn-blue">PDF</button>
