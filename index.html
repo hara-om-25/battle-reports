@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>БОЙОВІ ЗВІТИ v76</title>
+    <title>БОЙОВІ ЗВІТИ v78</title>
     <link href="https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
@@ -391,7 +391,8 @@ async function loadDataFromAPI() {
             if (scoreRows[i] && scoreRows[i][0]) {
                 state.scoreTable[scoreRows[i][0]] = {
                     znyshcheno: parseFloat(scoreRows[i][1]) || 0,
-                    poshkodzheno: parseFloat(scoreRows[i][2]) || 0
+                    poshkodzheno: parseFloat(scoreRows[i][2]) || 0,
+                    fullName: scoreRows[i][3] || scoreRows[i][0]
                 };
             }
         }
@@ -436,6 +437,9 @@ async function loadDataFromAPI() {
         } else {
             state.report = 1; state.counts = {};
         }
+        
+        const reportTitleRow = await apiGet('звіт!B1:B1');
+        state.reportTitle = (reportTitleRow[0] && reportTitleRow[0][0]) ? String(reportTitleRow[0][0]) : '';
         
         state.loaded = true; state.page = 'form';
         render();
