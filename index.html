@@ -631,25 +631,38 @@ function generateReport(dayRecs) {
     lines.push('Доповідаю!');
     const date = getDateOnly(dayRecs[0].datetime);
     const reportTitle = state.reportTitle || 'ТГ невідомий';
+    const totalPoints = Math.round(dayRecs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));
     lines.push(date+'р. '+reportTitle+' здійснено '+dayRecs.length+' бойових вильотів.');
+    lines.push('Вражено, орієнтовно на '+totalPoints+' балів, а саме:');
     lines.push('');
-    
-    const grouped = {};
+
+    // ОС: рахуємо суму колонок 200 і 300 по всіх записах дня
+    const hasOs = dayRecs.some(r => r.target.split(', ').some(t => t.trim().toLowerCase().startsWith('ос')));
+    const osSum200 = dayRecs.reduce((s, r) => s + (parseInt(r.qty200) || 0), 0);
+    const osSum300 = dayRecs.reduce((s, r) => s + (parseInt(r.qty300) || 0), 0);
+
+    // Інші цілі: групуємо за (тип + результат), рахуємо кількість записів
+    const otherGrouped = {};
     dayRecs.forEach(r => {
-        const abbr = r.target.split(' ').slice(0, -1).join(' ');
-        const result = r.result;
-        if (result === 'знищено' || result === 'пошкоджено') {
-            const key = abbr + ' ' + result;
-            grouped[key] = (grouped[key] || 0) + 1;
-        }
+        const targets = r.target.split(', ');
+        const results = r.result.split(', ');
+        targets.forEach((tgt, idx) => {
+            const tgtTrim = tgt.trim();
+            const res = (results[idx] || '').trim();
+            if (!tgtTrim.toLowerCase().startsWith('ос') && (res === 'знищено' || res === 'пошкоджено')) {
+                const abbr = tgtTrim.split(' ')[0].toUpperCase();
+                const key = abbr + ' ' + res;
+                otherGrouped[key] = (otherGrouped[key] || 0) + 1;
+            }
+        });
     });
-    
-    let i = 1;
-    Object.entries(grouped).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => {
-        lines.push(i+'. '+k+' - '+v+' шт.');
-        i++;
-    });
-    
+
+    const resultLines = [];
+    if (hasOs && osSum200 > 0) resultLines.push('ОС знищено - ' + osSum200 + ' шт.');
+    if (hasOs && osSum300 > 0) resultLines.push('ОС пошкоджено - ' + osSum300 + ' шт.');
+    Object.entries(otherGrouped).forEach(([k, v]) => resultLines.push(k + ' - ' + v + ' шт.'));
+
+    resultLines.forEach((l, i) => lines.push((i + 1) + '. ' + l));
     lines.push('');
     lines.push('🫡🤝🇺🇦');
     return lines;
