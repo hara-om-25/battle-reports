@@ -529,6 +529,10 @@ function removeTargetFromForm(idx) {
 }
 
 async function add() {
+    if(state.form.targets.length === 0) {
+        alert('Додайте результат вильоту, навіть якщо ціль не було уражено');
+        return;
+    }
     if(!state.form.drone || !state.form.ammo) {
         alert('Виберіть дрон та боєприпас!');
         return;
