@@ -680,7 +680,8 @@ function showEditRecordModal(idx) {
         drone: r.drone || '',
         ammo: r.ammo || '',
         newTarget: '',
-        newResult: ''
+        newResult: '',
+        _orig: JSON.stringify({targets:tNames.map((n,i)=>({name:n,result:tResults[i]||''})),coordinates:r.coordinates||'',qty200:r.qty200||0,qty300:r.qty300||0,drone:r.drone||'',ammo:r.ammo||''})
     };
     renderEditRecordModal();
 }
@@ -688,6 +689,8 @@ function showEditRecordModal(idx) {
 function renderEditRecordModal() {
     const er = state.editRecord;
     if (!er) return;
+    const _dirty = !er._orig || JSON.stringify({targets:er.targets,coordinates:er.coordinates,qty200:er.qty200,qty300:er.qty300,drone:er.drone,ammo:er.ammo})!==er._orig;
+    const _dim = _dirty ? ''  : 'opacity:0.35;filter:saturate(0.25)';
     const tgtList = er.targets.length > 0
         ? er.targets.map((t,i)=>`<div class="list-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px"><span class="stencil text-sm">${esc(t.name)} — <span style="color:var(--khaki)">${esc(t.result)}</span></span><button onclick="removeEditTarget(${i})" class="btn-stencil btn-danger" style="padding:2px 8px;font-size:12px">&#10005;</button></div>`).join('')
         : '<p class="stencil text-sm" style="color:var(--text-dim)">Немає цілей</p>';
@@ -697,7 +700,16 @@ function renderEditRecordModal() {
     const ammoOpts = state.ammo.map(a=>`<option value="${esc(a)}" ${er.ammo===a?'selected':''}>${esc(a)}</option>`).join('');
     const q200opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty200===n?'selected':''}>${n}</option>`).join('');
     const q300opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty300===n?'selected':''}>${n}</option>`).join('');
-    document.getElementById('modal').innerHTML = `<div class="modal-overlay"><div class="modal-box" style="max-height:90vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 class="stencil-shadow text-xl" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div style="display:flex;gap:6px"><button onclick="saveEditRecord()" class="btn-stencil btn-green" style="padding:6px 14px;font-size:0.9em">&#10003;</button><button onclick="closeModal()" class="btn-stencil btn-danger" style="padding:6px 14px;font-size:0.9em">&#10005;</button></div></div><div class="space-y-3"><div><label class="label block mb-1">ЦІЛІ</label><div class="space-y-1 mb-2">${tgtList}</div><div class="grid gap-2" style="grid-template-columns:1fr 1fr auto"><select onchange="state.editRecord.newTarget=this.value" class="field"><option value="">Ціль...</option>${scoreOpts}</select><select onchange="state.editRecord.newResult=this.value" class="field"><option value="">Результат...</option>${resOpts}</select><button onclick="addEditTarget()" class="btn-stencil btn-green" style="padding:0;font-size:22px;height:42px;min-width:42px">+</button></div></div><div><label class="label block mb-1">MGRS</label><input id="er_coord" class="field" value="${esc(er.coordinates)}" placeholder="36U UA 24232 91610"/></div><div class="grid grid-cols-2 gap-2"><div><label class="label block mb-1">200</label><select onchange="state.editRecord.qty200=parseInt(this.value)" class="field">${q200opts}</select></div><div><label class="label block mb-1">300</label><select onchange="state.editRecord.qty300=parseInt(this.value)" class="field">${q300opts}</select></div></div><div><label class="label block mb-1">ДРОН</label><select onchange="state.editRecord.drone=this.value" class="field"><option value="">Виберіть...</option>${droneOpts}</select></div><div><label class="label block mb-1">БОЄПРИПАС</label><select onchange="state.editRecord.ammo=this.value" class="field"><option value="">Виберіть...</option>${ammoOpts}</select></div></div><div class="space-y-2 mt-4"><button onclick="saveEditRecord()" class="btn-stencil btn-green w-full">ЗБЕРЕГТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
+    document.getElementById('modal').innerHTML = `<div class="modal-overlay"><div class="modal-box" style="max-height:90vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 class="stencil-shadow text-xl" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div style="display:flex;gap:6px"><button id="edit-save-top" onclick="saveEditRecord()" class="btn-stencil btn-green" style="padding:6px 14px;font-size:0.9em;${_dim}">&#10003;</button><button onclick="closeModal()" class="btn-stencil btn-danger" style="padding:6px 14px;font-size:0.9em">&#10005;</button></div></div><div class="space-y-3"><div><label class="label block mb-1">ЦІЛІ</label><div class="space-y-1 mb-2">${tgtList}</div><div class="grid gap-2" style="grid-template-columns:1fr 1fr auto"><select onchange="state.editRecord.newTarget=this.value" class="field"><option value="">Ціль...</option>${scoreOpts}</select><select onchange="state.editRecord.newResult=this.value" class="field"><option value="">Результат...</option>${resOpts}</select><button onclick="addEditTarget()" class="btn-stencil btn-green" style="padding:0;font-size:22px;height:42px;min-width:42px">+</button></div></div><div><label class="label block mb-1">MGRS</label><input id="er_coord" oninput="saveEditModalState();checkEditDirty()" class="field" value="${esc(er.coordinates)}" placeholder="36U UA 24232 91610"/></div><div class="grid grid-cols-2 gap-2"><div><label class="label block mb-1">200</label><select onchange="state.editRecord.qty200=parseInt(this.value);checkEditDirty()" class="field">${q200opts}</select></div><div><label class="label block mb-1">300</label><select onchange="state.editRecord.qty300=parseInt(this.value);checkEditDirty()" class="field">${q300opts}</select></div></div><div><label class="label block mb-1">ДРОН</label><select onchange="state.editRecord.drone=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${droneOpts}</select></div><div><label class="label block mb-1">БОЄПРИПАС</label><select onchange="state.editRecord.ammo=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${ammoOpts}</select></div></div><div class="space-y-2 mt-4"><button onclick="saveEditRecord()" class="btn-stencil btn-green w-full">ЗБЕРЕГТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
+}
+
+function checkEditDirty() {
+    saveEditModalState();
+    const er = state.editRecord;
+    if (!er || !er._orig) return;
+    const dirty = JSON.stringify({targets:er.targets,coordinates:er.coordinates,qty200:er.qty200,qty300:er.qty300,drone:er.drone,ammo:er.ammo})!==er._orig;
+    const btn = document.getElementById('edit-save-top');
+    if (btn) { btn.style.opacity = dirty ? ''  : '0.35'; btn.style.filter = dirty ? ''  : 'saturate(0.25)'; }
 }
 
 function addEditTarget() {
