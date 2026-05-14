@@ -812,8 +812,8 @@ function formatRecord(r) {
     const dash = '<span style="color:var(--yellow)"> \u2014 </span>';
     const allParts = [
         ...tgts.map((t,i)=>{ const name=esc(t); const res=`<span style="color:var(--khaki)">${esc(ress[i]||'')}</span>`; return name ? name+dash+res : res; }),
-        r.qty200>0 ? `200${dash}<span style="color:var(--khaki)">${r.qty200}</span>` : '',
-        r.qty300>0 ? `300${dash}<span style="color:var(--khaki)">${r.qty300}</span>` : ''
+        r.qty200>0 ? `<span style="color:#e05050">200</span>${dash}<span style="color:#fff">${r.qty200}</span>` : '',
+        r.qty300>0 ? `<span style="color:#5599dd">300</span>${dash}<span style="color:#fff">${r.qty300}</span>` : ''
     ].filter(Boolean);
     const tgtLine = allParts.join(sep);
     const ysep = '<span style="color:var(--yellow)"> | </span>';
