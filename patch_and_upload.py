@@ -384,7 +384,7 @@ def apply_patches(html):
         '    const tgtLine = tgts.map((t,i)=>`${esc(t)} — <span style="color:var(--khaki)">${esc(ress[i]||\'\')}</span>`).join(\', \');\n'
         '    return `<div class="record-card text-sm" style="position:relative;padding-right:80px">\n'
         '<p class="stencil" style="color:var(--text)">${tgtLine}</p>\n'
-        '<p class="stencil" style="color:var(--text-dim);font-size:0.85em;margin-top:4px">${esc(r.coordinates)} | ${esc(r.drone)} | ${esc(r.ammo)} | 200:${r.qty200} | 300:${r.qty300}</p>\n'
+        '${(()=>{ const m=[r.qty200>0?"200:"+r.qty200:"",r.qty300>0?"300:"+r.qty300:"",esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(" | "); return `<p class="stencil" style="color:var(--text-dim);font-size:0.85em;margin-top:4px">${m}</p>`; })()}\n'
         '<p class="stencil" style="color:var(--yellow)">${r.points} балів</p>\n'
         '<div style="position:absolute;top:8px;right:8px;display:flex;gap:6px">\n'
         '  <button onclick="showEditRecordModal(${idx})" class="btn-stencil" style="padding:4px 8px;font-size:0.85em">&#9998;</button>\n'
