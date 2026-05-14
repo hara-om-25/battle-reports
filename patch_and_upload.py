@@ -250,6 +250,22 @@ def apply_patches(html):
     )
     patches.append((old_btn, new_btn, 'add-btn'))
 
+    # ── 12. Swap ammo/results columns on load (B=results, C=ammo) ──
+    patches.append((
+        '            if (row[1]) state.ammo.push(row[1]);\n'
+        '            if (row[2]) state.results.push(row[2]);',
+        '            if (row[1]) state.results.push(row[1]);\n'
+        '            if (row[2]) state.ammo.push(row[2]);',
+        'lists-load-swap'
+    ))
+
+    # ── 13. Swap ammo/results columns on save (B=results, C=ammo) ──
+    patches.append((
+        "            rows.push([state.drones[i] || '', state.ammo[i] || '', state.results[i] || '']);",
+        "            rows.push([state.drones[i] || '', state.results[i] || '', state.ammo[i] || '']);",
+        'lists-save-swap'
+    ))
+
     # Apply patches
     for old, new, name in patches:
         if old not in html:
