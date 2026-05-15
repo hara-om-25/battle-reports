@@ -104,7 +104,7 @@ def apply_patches(html):
         "    const reportTitle = state.reportTitle || 'ТГ невідомий';\n"
         '    const totalPoints = Math.round(dayRecs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));\n'
         "    lines.push(date+'р. '+reportTitle+' здійснено '+dayRecs.length+' бойових вильотів.');\n"
-        "    lines.push('Вражено, орієнтовно на '+totalPoints+' балів, а саме:');\n"
+        "    lines.push('Уражено, орієнтовно на '+totalPoints+' балів');\n"
         "    lines.push('');\n"
         "    const hasOs = dayRecs.some(r => r.target.split(', ').some(t => t.trim().toLowerCase().startsWith('ос')));\n"
         '    const osSum200 = dayRecs.reduce((s, r) => s + (parseInt(r.qty200) || 0), 0);\n'
@@ -434,6 +434,13 @@ def apply_patches(html):
         'add-target-optional'
     ))
 
+    # ── 28. report-box font +1px ──
+    patches.append((
+        '      font-size: 0.9em;\n    }\n    .modal-overlay {',
+        '      font-size: calc(0.9em + 1px);\n    }\n    .modal-overlay {',
+        'report-box-font'
+    ))
+
     # Apply patches
     for old, new, name in patches:
         if old not in html:
@@ -462,6 +469,44 @@ def apply_patches(html):
         1
     )
     print("[OK]   Header grid: auto 1fr auto → 1fr auto")
+
+    # ── ЗВІТ НА header: Уражено... зліва від заголовку ──
+    _btn = (
+        '<button onclick="copyReport()" '
+        'onmousedown="this.classList.add(\'active\')" '
+        'onmouseup="this.classList.remove(\'active\')" '
+        'ontouchstart="this.classList.add(\'active\')" '
+        'ontouchend="this.classList.remove(\'active\')" '
+        'class="btn-stencil btn-black">КОПІЮВАТИ</button>'
+    )
+    _old_zvit = (
+        '<h3 class="stencil-shadow" style="color: var(--yellow)">ЗВІТ НА ${state.selDate}</h3>\n'
+        '                    <div class="flex gap-2 flex-wrap">\n'
+        '                        ' + _btn + '\n'
+        '                    </div>\n'
+        '                </div>\n'
+        '                <div class="report-box">${reportLines.join(\'\\n\')}</div>'
+    )
+    _new_zvit = (
+        '<div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap">\n'
+        '                        <span class="stencil" style="color:var(--khaki)">'
+        'Уражено, орієнтовно на '
+        '${Math.round(dayRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0))} балів'
+        '</span>\n'
+        '                        <h3 class="stencil-shadow" style="color: var(--yellow)">ЗВІТ НА ${state.selDate}</h3>\n'
+        '                    </div>\n'
+        '                    <div class="flex gap-2 flex-wrap">\n'
+        '                        ' + _btn + '\n'
+        '                    </div>\n'
+        '                </div>\n'
+        '                <div class="report-box">'
+        "${reportLines.filter(l=>!l.startsWith('Уражено')).join('\\n')}</div>"
+    )
+    if _old_zvit in html:
+        html = html.replace(_old_zvit, _new_zvit, 1)
+        print("[OK]   ЗВІТ НА header: Уражено... зліва")
+    else:
+        print("[FAIL] ЗВІТ НА header: old string not found")
 
     return html
 
