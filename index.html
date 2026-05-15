@@ -432,9 +432,9 @@ async function loadDataFromAPI() {
         state.drones = []; state.ammo = []; state.results = [];
         for (let i = 1; i < listRows.length; i++) {
             const row = listRows[i] || [];
-            if (row[0]) state.drones.push(row[0]);
-            if (row[1]) state.results.push(row[1]);
-            if (row[2]) state.ammo.push(row[2]);
+            if (row[0]) state.drones.push(row[0].trim());
+            if (row[1]) state.results.push(row[1].trim());
+            if (row[2]) state.ammo.push(row[2].trim());
         }
         
         const mainRows = await apiGet('ГОЛОВНА');
@@ -449,8 +449,8 @@ async function loadDataFromAPI() {
                     qty200: parseInt(row[3]) || 0,
                     qty300: parseInt(row[4]) || 0,
                     coordinates: row[5] || '',
-                    drone: row[6] || '',
-                    ammo: row[7] || '',
+                    drone: (row[6] || '').trim(),
+                    ammo: (row[7] || '').trim(),
                     result: row[8] || '',
                     points: parseFloat(row[9]) || 0
                 });
@@ -727,8 +727,10 @@ const tgtList = er.targets.length > 0
         : '<p class="stencil text-sm" style="color:var(--text-dim)">Немає цілей</p>';
     const scoreOpts = Object.keys(state.scoreTable).map(x=>`<option value="${esc(x)}" ${er.newTarget===x?'selected':''}>${esc(x)}</option>`).join('');
     const resOpts = state.results.map(r=>`<option value="${esc(r)}" ${er.newResult===r?'selected':''}>${esc(r)}</option>`).join('');
-    const droneOpts = state.drones.map(d=>`<option value="${esc(d)}" ${er.drone===d?'selected':''}>${esc(d)}</option>`).join('');
-    const ammoOpts = state.ammo.map(a=>`<option value="${esc(a)}" ${er.ammo===a?'selected':''}>${esc(a)}</option>`).join('');
+    const _droneInList=state.drones.some(d=>d===er.drone);
+    const droneOpts=(er.drone&&!_droneInList?[`<option value="${esc(er.drone)}" selected>${esc(er.drone)}</option>`]:[]).concat(state.drones.map(d=>`<option value="${esc(d)}" ${er.drone===d?'selected':''}>${esc(d)}</option>`)).join('');
+    const _ammoInList=state.ammo.some(a=>a===er.ammo);
+    const ammoOpts=(er.ammo&&!_ammoInList?[`<option value="${esc(er.ammo)}" selected>${esc(er.ammo)}</option>`]:[]).concat(state.ammo.map(a=>`<option value="${esc(a)}" ${er.ammo===a?'selected':''}>${esc(a)}</option>`)).join('');
     const q200opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty200===n?'selected':''}>${n}</option>`).join('');
     const q300opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty300===n?'selected':''}>${n}</option>`).join('');
     document.getElementById('modal').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box" style="max-height:90vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 class="stencil-shadow text-xl" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div style="display:flex;gap:6px"><button id="edit-save-top" onclick="saveEditRecord()" class="btn-stencil btn-green" style="padding:6px 14px;font-size:0.9em;${_dim}">&#10003;</button><button onclick="closeModal()" class="btn-stencil" style="padding:6px 14px;font-size:0.9em;opacity:0.6">&#10005;</button></div></div><div class="space-y-3"><div><label class="label block mb-1">ЦІЛІ</label><div class="space-y-1 mb-2">${tgtList}</div><div class="grid gap-2" style="grid-template-columns:1fr 1fr auto"><select onchange="state.editRecord.newTarget=this.value" class="field"><option value="">Ціль...</option>${scoreOpts}</select><select onchange="state.editRecord.newResult=this.value" class="field"><option value="">Результат...</option>${resOpts}</select><button onclick="addEditTarget()" class="btn-stencil btn-green" style="padding:0;font-size:22px;height:42px;min-width:42px">+</button></div></div><div><label class="label block mb-1">MGRS</label><input id="er_coord" oninput="saveEditModalState();checkEditDirty()" class="field" value="${esc(er.coordinates)}" placeholder="36U UA 24232 91610"/></div><div class="grid grid-cols-2 gap-2"><div><label class="label block mb-1">200</label><select onchange="state.editRecord.qty200=parseInt(this.value);checkEditDirty()" class="field">${q200opts}</select></div><div><label class="label block mb-1">300</label><select onchange="state.editRecord.qty300=parseInt(this.value);checkEditDirty()" class="field">${q300opts}</select></div></div><div><label class="label block mb-1">ДРОН</label><select onchange="state.editRecord.drone=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${droneOpts}</select></div><div><label class="label block mb-1">БОЄПРИПАС</label><select onchange="state.editRecord.ammo=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${ammoOpts}</select></div></div><div class="space-y-2 mt-4"><button id="edit-save-bottom" onclick="saveEditRecord()" class="btn-stencil btn-green w-full" style="${_dim}">ЗБЕРЕГТИ</button></div></div></div>`;
