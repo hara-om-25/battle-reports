@@ -647,7 +647,7 @@ function showDeleteRecordModal(idx) {
     const tgts = r.target ? r.target.split(', ') : [];
     const ress = r.result ? r.result.split(', ') : [];
     const lines = tgts.map((t,i)=>`<p class='stencil' style='color:var(--text)'>${esc(t)} — ${esc(ress[i]||'')}</p>`).join('');
-    document.getElementById('modal').innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">ВИДАЛЕННЯ ВИЛЬОТУ</h2><div class="mb-4 p-3 rounded" style="background: rgba(0,0,0,0.4); border: 1px dashed var(--khaki)">${lines}<p class="stencil mt-1" style="color:var(--text-dim);font-size:0.85em">${esc(r.datetime)}</p></div><div class="space-y-2"><button onclick="confirmDeleteRecord()" class="btn-stencil btn-danger w-full">ВИДАЛИТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
+    document.getElementById('modal').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">ВИДАЛЕННЯ ВИЛЬОТУ</h2><div class="mb-4 p-3 rounded" style="background: rgba(0,0,0,0.4); border: 1px dashed var(--khaki)">${lines}<p class="stencil mt-1" style="color:var(--text-dim);font-size:0.85em">${esc(r.datetime)}</p></div><div class="space-y-2"><button onclick="confirmDeleteRecord()" class="btn-stencil btn-danger w-full">ВИДАЛИТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
 }
 
 async function confirmDeleteRecord() {
