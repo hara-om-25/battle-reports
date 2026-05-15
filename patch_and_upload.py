@@ -219,8 +219,7 @@ def apply_patches(html):
     new_stats = (
         '            <div class="mb-4 stencil" style="font-size:1.15em; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap">\n'
         '                <span><span style="color:var(--khaki)">СЬОГОДНІ:</span> <span style="color:var(--text)">${todayDate}</span></span>\n'
-        '                <span><span style="color:var(--khaki)">ВИЛЬОТІВ:</span> <span style="color:var(--text)">${todayCount}</span></span>\n'
-        '                <span><span style="color:var(--khaki)">БАЛІВ ЗА СЬОГОДНІ:</span> <span style="color:var(--text)">${todayPoints}</span></span>\n'
+        '                <span style="color:var(--khaki)">ЗА ЗВІТНІЙ ПЕРІОД ЗДІЙСНЕНО <span style="color:var(--text)">${state.records.filter(r=>r.reportNum===state.report).length}</span> ВИЛЬОТІВ, ОРІЄНТОВНО НА <span style="color:var(--text)">${Math.round(state.records.filter(r=>r.reportNum===state.report).reduce((s,r)=>s+r.points,0))}</span> БАЛІВ</span>\n'
         '            </div>'
     )
     patches.append((old_stats, new_stats, 'stats-block'))
