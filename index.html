@@ -205,6 +205,8 @@
       white-space: pre-wrap;
       font-size: calc(0.9em + 1px);
     }
+    .zvity-wrap { max-width: 80%; margin: 0 auto; }
+    @media (max-width: 640px) { .zvity-wrap { max-width: 100%; } }
     .modal-overlay {
       position: fixed; inset: 0;
       background: rgba(0,0,0,0.7);
@@ -1010,7 +1012,7 @@ function render() {
         const dates = state.selReport ? [...new Set(state.records.filter(r=>r.reportNum===state.selReport).map(r=>getDateOnly(r.datetime)))].sort() : [];
         const dayRecs = state.selReport && state.selDate ? state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate) : [];
         const reportLines = dayRecs.length > 0 ? generateReport(dayRecs) : [];
-        h += `<div class="p-4 space-y-4" style="max-width:80%;margin:0 auto">
+        h += `<div class="p-4 space-y-4 zvity-wrap">
             <h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">ЗВІТИ</h1>
             <div class="grid grid-cols-2 gap-4">
                 <div class="crate p-4">
