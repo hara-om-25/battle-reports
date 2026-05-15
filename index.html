@@ -767,7 +767,7 @@ function generateReport(dayRecs) {
     const reportTitle = state.reportTitle || 'ТГ невідомий';
     const totalPoints = Math.round(dayRecs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));
     lines.push(date+'р. '+reportTitle+' здійснено '+dayRecs.length+' бойових вильотів.');
-    lines.push('Уражено, орієнтовно на '+totalPoints+' балів');
+    lines.push('Уражено орієнтовно на '+totalPoints+' балів');
     lines.push('');
     const hasOs = dayRecs.some(r => r.target.split(', ').some(t => t.trim().toLowerCase().startsWith('ос')));
     const osSum200 = dayRecs.reduce((s, r) => s + (parseInt(r.qty200) || 0), 0);
@@ -1018,7 +1018,7 @@ function render() {
                 <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
                     <div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap">
                         <h3 class="stencil-shadow" style="color: var(--yellow)">ДОПОВІДЬ НА ${state.selDate}</h3>
-                        <span class="stencil" style="color:var(--khaki)">Уражено, орієнтовно на ${Math.round(dayRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0))} балів</span>
+                        <span class="stencil" style="color:var(--khaki)">Уражено орієнтовно на ${Math.round(dayRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0))} балів</span>
                     </div>
                     <div class="flex gap-2 flex-wrap">
                         <button onclick="copyReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button>
