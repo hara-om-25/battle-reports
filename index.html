@@ -926,12 +926,12 @@ function render() {
                 <button onclick="newReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-danger">🚩 НОВИЙ ЗВІТ</button>
             </div>
             <div class="mb-4 stencil" style="font-size:1.15em; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap">
-                <span><span style="color:var(--khaki)">СЬОГОДНІ:</span> <span style="color:var(--text)">${todayDate}</span></span>
                 <span style="color:var(--khaki)">ЗА ЗВІТНІЙ ПЕРІОД ЗДІЙСНЕНО <span style="color:var(--text)">${state.records.filter(r=>r.reportNum===state.report).length}</span> ВИЛЬОТІВ, ОРІЄНТОВНО НА <span style="color:var(--text)">${Math.round(state.records.filter(r=>r.reportNum===state.report).reduce((s,r)=>s+r.points,0))}</span> БАЛІВ</span>
             </div>
             
             <div class="mb-6" style="border-top: 1px dashed var(--khaki); padding-top: 16px; margin-top: 16px">
                 <div class="stencil" style="display:flex; align-items:center; gap:2em; margin-bottom:8px; color:var(--khaki)">
+                    <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>
                     <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>
                     <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>
                 </div>
