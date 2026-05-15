@@ -441,6 +441,15 @@ def apply_patches(html):
         'report-box-font'
     ))
 
+    # ── 30. ЗВІТИ page: max-width 80% ──
+    patches.append((
+        'h += `<div class="p-4 space-y-4">\n'
+        '            <h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">ЗВІТИ</h1>',
+        'h += `<div class="p-4 space-y-4" style="max-width:80%">\n'
+        '            <h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">ЗВІТИ</h1>',
+        'zvity-max-width'
+    ))
+
     # Apply patches
     for old, new, name in patches:
         if old not in html:
