@@ -617,6 +617,67 @@ def apply_patches(html):
         'add-edit-target-numbering'
     ))
 
+    # ── 43. Edit modal: inline dropdowns per target row ──
+    _tgtlist_old = (
+        'const tgtList = er.targets.length > 0\n'
+        '        ? er.targets.map((t,i)=>`<div class="list-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px"><span class="stencil text-sm">${esc(t.name)} \u2014 <span style=\"color:var(--khaki)\">${esc(t.result)}</span></span><button onclick=\"removeEditTarget(${i})\" class=\"btn-stencil btn-danger\" style=\"padding:2px 8px;font-size:12px\">&#10005;</button></div>`).join(\'\')\n'
+        "        : '<p class=\"stencil text-sm\" style=\"color:var(--text-dim)\">Немає цілей</p>';"
+    )
+    _tgtlist_new = (
+        'const _getEA = (nm) => { const _p=nm.trim().split(\' \'),_l=_p[_p.length-1],_r=/^\\d+$/.test(_l)?_p.slice(0,-1).join(\' \'):nm.trim(),_u=_r.toUpperCase(); return Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})(); };\n'
+        'const tgtList = er.targets.length > 0\n'
+        '        ? er.targets.map((t,i)=>{ const _ca=_getEA(t.name); const _so=Object.keys(state.scoreTable).map(x=>`<option value=\"${esc(x)}\" ${_ca===x?\'selected\':\'\'}>${esc(x)}</option>`).join(\'\'); const _ro=state.results.map(r=>`<option value=\"${esc(r)}\" ${t.result===r?\'selected\':\'\'}>${esc(r)}</option>`).join(\'\'); return `<div class=\"list-item\" style=\"display:flex;gap:4px;align-items:center;padding:4px 6px\"><select onchange=\"changeEditTargetCil(${i},this.value)\" class=\"field\" style=\"flex:1;min-width:0;font-size:0.82em;padding:3px 6px\"><option value=\"\">Ціль...</option>${_so}</select><select onchange=\"changeEditTargetResult(${i},this.value)\" class=\"field\" style=\"flex:1;min-width:0;font-size:0.82em;padding:3px 6px\"><option value=\"\">Результат...</option>${_ro}</select><button onclick=\"removeEditTarget(${i})\" class=\"btn-stencil btn-danger\" style=\"padding:2px 8px;font-size:12px\">&#10005;</button></div>`; }).join(\'\')\n'
+        "        : '<p class=\"stencil text-sm\" style=\"color:var(--text-dim)\">Немає цілей</p>';"
+    )
+    patches.append((_tgtlist_old, _tgtlist_new, 'edit-target-inline-dropdowns'))
+
+    # ── 44. Add changeEditTargetCil + changeEditTargetResult functions ──
+    patches.append((
+        'function removeEditTarget(i) {',
+        'function changeEditTargetCil(i, newAbbr) {\n'
+        '    const er = state.editRecord;\n'
+        '    if (!er || !newAbbr) return;\n'
+        "    const _gA = s => { const _p=s.trim().split(' '),_l=_p[_p.length-1],_r=/^\\d+$/.test(_l)?_p.slice(0,-1).join(' '):s.trim(),_u=_r.toUpperCase(); return (Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})()).toUpperCase(); };\n"
+        "    const _gN = s => { const _p=s.trim().split(' '),_l=_p[_p.length-1]; return /^\\d+$/.test(_l)?parseInt(_l):0; };\n"
+        '    let maxN = 0;\n'
+        "    state.records.filter((r,ri)=>r.reportNum===state.report&&ri!==er.idx).forEach(r=>{\n"
+        "        (r.target||'').split(', ').forEach(t=>{if(_gA(t)===newAbbr.toUpperCase())maxN=Math.max(maxN,_gN(t));});\n"
+        '    });\n'
+        "    er.targets.filter((_,ti)=>ti!==i).forEach(t=>{if(_gA(t.name)===newAbbr.toUpperCase())maxN=Math.max(maxN,_gN(t.name));});\n"
+        "    er.targets[i].name = newAbbr + ' ' + (maxN + 1);\n"
+        '    checkEditDirty();\n'
+        '    renderEditRecordModal();\n'
+        '}\n'
+        '\n'
+        'function changeEditTargetResult(i, newResult) {\n'
+        '    const er = state.editRecord;\n'
+        '    if (!er || !newResult) return;\n'
+        '    er.targets[i].result = newResult;\n'
+        '    checkEditDirty();\n'
+        '}\n'
+        '\n'
+        'function removeEditTarget(i) {',
+        'change-edit-target-cil-result'
+    ))
+
+    # ── 45. saveEditRecord: recalculate points ──
+    patches.append((
+        "    r.ammo = er.ammo;\n"
+        "    state.editRecord = null;\n"
+        "    try { await syncRecordsToAPI(); }",
+
+        "    r.ammo = er.ammo;\n"
+        "    const _osE=state.scoreTable['\u041e\u0421']||{znyshcheno:0,poshkodzheno:0};\n"
+        "    let _ptsE=(parseInt(er.qty200)||0)*_osE.znyshcheno+(parseInt(er.qty300)||0)*_osE.poshkodzheno;\n"
+        "    er.targets.forEach(t=>{const _p=t.name.trim().split(' '),_l=_p[_p.length-1],_r=/^\\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.name.trim(),_u=_r.toUpperCase();const _ab=Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})();const _sc=state.scoreTable[_ab];if(_sc)_ptsE+=t.result===\'\u0437\u043d\u0438\u0449\u0435\u043d\u043e\'?_sc.znyshcheno:t.result===\'\u043f\u043e\u0448\u043a\u043e\u0434\u0436\u0435\u043d\u043e\'?_sc.poshkodzheno:0;});\n"
+        "    r.points=Math.round(_ptsE*100)/100;\n"
+        "    state.editRecord = null;\n"
+        "    try { await syncRecordsToAPI(); }",
+
+        'save-edit-recalc-points'
+    ))
+
+
     # Apply patches
     for old, new, name in patches:
         if old not in html:
