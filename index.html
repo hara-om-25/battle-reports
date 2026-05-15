@@ -721,8 +721,9 @@ function renderEditRecordModal() {
     if (!er) return;
     const _dirty = !er._orig || JSON.stringify({targets:er.targets,coordinates:er.coordinates,qty200:er.qty200,qty300:er.qty300,drone:er.drone,ammo:er.ammo})!==er._orig;
     const _dim = _dirty ? ''  : 'opacity:0.35;filter:saturate(0.25)';
-    const tgtList = er.targets.length > 0
-        ? er.targets.map((t,i)=>`<div class="list-item" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px"><span class="stencil text-sm">${esc(t.name)} — <span style="color:var(--khaki)">${esc(t.result)}</span></span><button onclick="removeEditTarget(${i})" class="btn-stencil btn-danger" style="padding:2px 8px;font-size:12px">&#10005;</button></div>`).join('')
+    const _getEA = (nm) => { const _p=nm.trim().split(' '),_l=_p[_p.length-1],_r=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):nm.trim(),_u=_r.toUpperCase(); return Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})(); };
+const tgtList = er.targets.length > 0
+        ? er.targets.map((t,i)=>{ const _ca=_getEA(t.name); const _so=Object.keys(state.scoreTable).map(x=>`<option value="${esc(x)}" ${_ca===x?'selected':''}>${esc(x)}</option>`).join(''); const _ro=state.results.map(r=>`<option value="${esc(r)}" ${t.result===r?'selected':''}>${esc(r)}</option>`).join(''); return `<div class="list-item" style="display:flex;gap:4px;align-items:center;padding:4px 6px"><select onchange="changeEditTargetCil(${i},this.value)" class="field" style="flex:1;min-width:0;font-size:0.82em;padding:3px 6px"><option value="">Ціль...</option>${_so}</select><select onchange="changeEditTargetResult(${i},this.value)" class="field" style="flex:1;min-width:0;font-size:0.82em;padding:3px 6px"><option value="">Результат...</option>${_ro}</select><button onclick="removeEditTarget(${i})" class="btn-stencil btn-danger" style="padding:2px 8px;font-size:12px">&#10005;</button></div>`; }).join('')
         : '<p class="stencil text-sm" style="color:var(--text-dim)">Немає цілей</p>';
     const scoreOpts = Object.keys(state.scoreTable).map(x=>`<option value="${esc(x)}" ${er.newTarget===x?'selected':''}>${esc(x)}</option>`).join('');
     const resOpts = state.results.map(r=>`<option value="${esc(r)}" ${er.newResult===r?'selected':''}>${esc(r)}</option>`).join('');
@@ -764,6 +765,28 @@ function addEditTarget() {
     renderEditRecordModal();
 }
 
+function changeEditTargetCil(i, newAbbr) {
+    const er = state.editRecord;
+    if (!er || !newAbbr) return;
+    const _gA = s => { const _p=s.trim().split(' '),_l=_p[_p.length-1],_r=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):s.trim(),_u=_r.toUpperCase(); return (Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})()).toUpperCase(); };
+    const _gN = s => { const _p=s.trim().split(' '),_l=_p[_p.length-1]; return /^\d+$/.test(_l)?parseInt(_l):0; };
+    let maxN = 0;
+    state.records.filter((r,ri)=>r.reportNum===state.report&&ri!==er.idx).forEach(r=>{
+        (r.target||'').split(', ').forEach(t=>{if(_gA(t)===newAbbr.toUpperCase())maxN=Math.max(maxN,_gN(t));});
+    });
+    er.targets.filter((_,ti)=>ti!==i).forEach(t=>{if(_gA(t.name)===newAbbr.toUpperCase())maxN=Math.max(maxN,_gN(t.name));});
+    er.targets[i].name = newAbbr + ' ' + (maxN + 1);
+    checkEditDirty();
+    renderEditRecordModal();
+}
+
+function changeEditTargetResult(i, newResult) {
+    const er = state.editRecord;
+    if (!er || !newResult) return;
+    er.targets[i].result = newResult;
+    checkEditDirty();
+}
+
 function removeEditTarget(i) {
     if (!state.editRecord) return;
     saveEditModalState();
@@ -783,6 +806,10 @@ async function saveEditRecord() {
     r.qty300 = er.qty300;
     r.drone = er.drone;
     r.ammo = er.ammo;
+    const _osE=state.scoreTable['ОС']||{znyshcheno:0,poshkodzheno:0};
+    let _ptsE=(parseInt(er.qty200)||0)*_osE.znyshcheno+(parseInt(er.qty300)||0)*_osE.poshkodzheno;
+    er.targets.forEach(t=>{const _p=t.name.trim().split(' '),_l=_p[_p.length-1],_r=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.name.trim(),_u=_r.toUpperCase();const _ab=Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})();const _sc=state.scoreTable[_ab];if(_sc)_ptsE+=t.result==='знищено'?_sc.znyshcheno:t.result==='пошкоджено'?_sc.poshkodzheno:0;});
+    r.points=Math.round(_ptsE*100)/100;
     state.editRecord = null;
     try { await syncRecordsToAPI(); } catch(e) { alert('Помилка: ' + e.message); }
     closeModal(); render();
