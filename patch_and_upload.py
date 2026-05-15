@@ -293,6 +293,8 @@ def apply_patches(html):
         '    .nav-btn:active, .nav-btn.pressing {\n'
         '      transform: translateY(2px);\n'
         '      box-shadow: 0 2px 0 #2d3818, 0 4px 8px rgba(0,0,0,0.4);\n'
+        '      background: var(--olive-dark);\n'
+        '      color: var(--text);\n'
         '    }',
         'nav-btn-shadow'
     ))
@@ -351,7 +353,7 @@ def apply_patches(html):
     ))
     patches.append((
         '<button onclick="logout()" class="nav-btn logout">ВИЙТИ</button>',
-        '<button onclick="loadDataFromAPI()" onmousedown="this.classList.add(\'pressing\')" onmouseup="this.classList.remove(\'pressing\')" ontouchstart="this.classList.add(\'pressing\')" ontouchend="this.classList.remove(\'pressing\')" class="nav-btn" style="padding:7px 9px;font-size:1.15em;letter-spacing:0;line-height:1" title="Синхронізація">↻</button><button onclick="logout()" onmousedown="this.classList.add(\'pressing\')" onmouseup="this.classList.remove(\'pressing\')" ontouchstart="this.classList.add(\'pressing\')" ontouchend="this.classList.remove(\'pressing\')" class="nav-btn logout">ВИЙТИ</button>',
+        '<button onclick="loadDataFromAPI()" onmousedown="this.classList.add(\'pressing\')" onmouseup="this.classList.remove(\'pressing\')" ontouchstart="this.classList.add(\'pressing\')" ontouchend="this.classList.remove(\'pressing\')" class="nav-btn" style="padding:4px 8px;font-size:1.55em;letter-spacing:0;line-height:1" title="Синхронізація">↻</button><button onclick="logout()" onmousedown="this.classList.add(\'pressing\')" onmouseup="this.classList.remove(\'pressing\')" ontouchstart="this.classList.add(\'pressing\')" ontouchend="this.classList.remove(\'pressing\')" class="nav-btn logout">ВИЙТИ</button>',
         'nav-logout-press'
     ))
 
