@@ -679,6 +679,43 @@ def apply_patches(html):
         'save-edit-recalc-points'
     ))
 
+    # ── 46. Trim drone/ammo/results when loading from СПИСКИ ──
+    patches.append((
+        '        if (row[0]) state.drones.push(row[0]);\n'
+        '            if (row[1]) state.results.push(row[1]);\n'
+        '            if (row[2]) state.ammo.push(row[2]);',
+
+        '        if (row[0]) state.drones.push(row[0].trim());\n'
+        '            if (row[1]) state.results.push(row[1].trim());\n'
+        '            if (row[2]) state.ammo.push(row[2].trim());',
+
+        'lists-load-trim'
+    ))
+
+    # ── 47. Trim drone/ammo when loading from ГОЛОВНА ──
+    patches.append((
+        "                    drone: row[6] || '',\n"
+        "                    ammo: row[7] || '',",
+
+        "                    drone: (row[6] || '').trim(),\n"
+        "                    ammo: (row[7] || '').trim(),",
+
+        'records-load-trim'
+    ))
+
+    # ── 48. Edit modal: show stored drone/ammo even if not in list ──
+    patches.append((
+        "    const droneOpts = state.drones.map(d=>`<option value=\"${esc(d)}\" ${er.drone===d?'selected':''}>${esc(d)}</option>`).join('');\n"
+        "    const ammoOpts = state.ammo.map(a=>`<option value=\"${esc(a)}\" ${er.ammo===a?'selected':''}>${esc(a)}</option>`).join('');",
+
+        "    const _droneInList=state.drones.some(d=>d===er.drone);\n"
+        "    const droneOpts=(er.drone&&!_droneInList?[`<option value=\"${esc(er.drone)}\" selected>${esc(er.drone)}</option>`]:[]).concat(state.drones.map(d=>`<option value=\"${esc(d)}\" ${er.drone===d?'selected':''}>${esc(d)}</option>`)).join('');\n"
+        "    const _ammoInList=state.ammo.some(a=>a===er.ammo);\n"
+        "    const ammoOpts=(er.ammo&&!_ammoInList?[`<option value=\"${esc(er.ammo)}\" selected>${esc(er.ammo)}</option>`]:[]).concat(state.ammo.map(a=>`<option value=\"${esc(a)}\" ${er.ammo===a?'selected':''}>${esc(a)}</option>`)).join('');",
+
+        'edit-drone-ammo-fallback'
+    ))
+
 
     # Apply patches
     for old, new, name in patches:
