@@ -837,7 +837,7 @@ function formatRecord(r) {
     const tgtLine = allParts.join(sep);
     const ysep = '<span style="color:var(--yellow)"> | </span>';
     const meta = [esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(ysep);
-    return `<div class="record-card text-sm" style="position:relative;padding-right:80px">
+    return `<div class="record-card text-sm" style="position:relative;padding-right:80px;font-size:calc(0.875rem + 1px)">
 <p class="stencil" style="color:var(--text)">${tgtLine}</p>
 ${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}
 <p class="stencil" style="color:var(--yellow)">${r.points} балів</p>
@@ -1016,8 +1016,8 @@ function render() {
             ${dayRecs.length > 0 ? `<div class="crate p-4">
                 <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
                     <div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap">
-                        <span class="stencil" style="color:var(--khaki)">Уражено, орієнтовно на ${Math.round(dayRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0))} балів</span>
                         <h3 class="stencil-shadow" style="color: var(--yellow)">ЗВІТ НА ${state.selDate}</h3>
+                        <span class="stencil" style="color:var(--khaki)">Уражено, орієнтовно на ${Math.round(dayRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0))} балів</span>
                     </div>
                     <div class="flex gap-2 flex-wrap">
                         <button onclick="copyReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button>
