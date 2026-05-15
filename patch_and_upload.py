@@ -450,6 +450,23 @@ def apply_patches(html):
         'zvity-max-width'
     ))
 
+
+    # ── 31. Lists page modals: click-outside-to-close ──
+    patches.append((
+        'modal.innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">В ЯКИЙ СПИСОК ДОДАТИ?',
+        'modal.innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">В ЯКИЙ СПИСОК ДОДАТИ?',
+        'lists-modal-add-click-outside'
+    ))
+    patches.append((
+        'modal.innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">РЕДАГУВАННЯ</h2>',
+        'modal.innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">РЕДАГУВАННЯ</h2>',
+        'lists-modal-edit-click-outside'
+    ))
+    patches.append((
+        'modal.innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">ВИДАЛЕННЯ</h2>',
+        'modal.innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">ВИДАЛЕННЯ</h2>',
+        'lists-modal-delete-click-outside'
+    ))
     # Apply patches
     for old, new, name in patches:
         if old not in html:
