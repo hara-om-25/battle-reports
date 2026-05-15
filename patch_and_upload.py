@@ -540,6 +540,83 @@ def apply_patches(html):
         'sync-on-shield-click'
     ))
 
+    # ── 40. state.counts init — properly parse multi-target records ──
+    patches.append((
+        '            state.counts = {};\n'
+        '            reportRecs.forEach(r => {\n'
+        '                const abbr = r.target.split(\' \').slice(0, -1).join(\' \');\n'
+        '                state.counts[abbr] = (state.counts[abbr] || 0) + 1;\n'
+        '            });',
+
+        '            state.counts = {};\n'
+        '            reportRecs.forEach(r => {\n'
+        '                (r.target||\'\').split(\', \').forEach(t => {\n'
+        '                    const _p=t.trim().split(\' \'),_l=_p[_p.length-1];\n'
+        '                    const _n=/^\\d+$/.test(_l)?parseInt(_l):0;\n'
+        '                    const _a=/^\\d+$/.test(_l)?_p.slice(0,-1).join(\' \'):t.trim();\n'
+        '                    if(!_a)return;\n'
+        '                    const _u=_a.toUpperCase();\n'
+        '                    const _k=Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_a.toLowerCase();for(const[_ka,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _ka;return _a;})();\n'
+        '                    if(_k)state.counts[_k]=Math.max(state.counts[_k]||0,_n);\n'
+        '                });\n'
+        '            });',
+
+        'counts-init-multi-target'
+    ))
+
+    # ── 41. removeTargetFromForm — don't decrement (prevent number reuse) ──
+    patches.append((
+        'function removeTargetFromForm(idx) {\n'
+        '    const t = state.form.targets[idx];\n'
+        '    if(t && state.counts[t.abbr]) state.counts[t.abbr]--;\n'
+        '    state.form.targets.splice(idx, 1);\n'
+        '    render();\n'
+        '}',
+
+        'function removeTargetFromForm(idx) {\n'
+        '    state.form.targets.splice(idx, 1);\n'
+        '    render();\n'
+        '}',
+
+        'remove-target-no-decrement'
+    ))
+
+    # ── 42. addEditTarget — assign next unique number per report ──
+    patches.append((
+        'function addEditTarget() {\n'
+        '    const er = state.editRecord;\n'
+        '    if (!er || !er.newResult) return;\n'
+        '    saveEditModalState();\n'
+        "    const fullName = er.newTarget ? ((state.scoreTable[er.newTarget] && state.scoreTable[er.newTarget].fullName) || er.newTarget) : '';\n"
+        '    er.targets.push({name: fullName, result: er.newResult});\n'
+        "    er.newTarget = ''; er.newResult = '';\n"
+        '    renderEditRecordModal();\n'
+        '}',
+
+        'function addEditTarget() {\n'
+        '    const er = state.editRecord;\n'
+        '    if (!er || !er.newResult) return;\n'
+        '    saveEditModalState();\n'
+        '    const abbr = er.newTarget;\n'
+        "    let name = '';\n"
+        '    if (abbr) {\n'
+        '        let maxN = 0;\n'
+        "        const _gA = s => { const _p=s.split(' '),_l=_p[_p.length-1],_r=/^\\d+$/.test(_l)?_p.slice(0,-1).join(' '):s,_u=_r.toUpperCase(); return (Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})()).toUpperCase(); };\n"
+        "        const _gN = s => { const _p=s.split(' '),_l=_p[_p.length-1]; return /^\\d+$/.test(_l)?parseInt(_l):0; };\n"
+        '        state.records.filter((r,i)=>r.reportNum===state.report&&i!==er.idx).forEach(r=>{\n'
+        "            (r.target||'').split(', ').forEach(t=>{ if(_gA(t.trim())===abbr.toUpperCase())maxN=Math.max(maxN,_gN(t.trim())); });\n"
+        '        });\n'
+        "        er.targets.forEach(t=>{ if(_gA(t.name.trim())===abbr.toUpperCase())maxN=Math.max(maxN,_gN(t.name.trim())); });\n"
+        "        name = abbr + ' ' + (maxN + 1);\n"
+        '    }\n'
+        '    er.targets.push({name, result: er.newResult});\n'
+        "    er.newTarget = ''; er.newResult = '';\n"
+        '    renderEditRecordModal();\n'
+        '}',
+
+        'add-edit-target-numbering'
+    ))
+
     # Apply patches
     for old, new, name in patches:
         if old not in html:
