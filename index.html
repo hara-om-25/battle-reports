@@ -823,7 +823,7 @@ function exportPDF() {
     setTimeout(() => printWindow.print(), 250);
 }
 
-function formatRecord(r) {
+function formatRecord(r, num) {
     const idx = state.records.indexOf(r);
     const tgts = r.target ? r.target.split(', ') : [];
     const ress = r.result ? r.result.split(', ') : [];
@@ -837,13 +837,14 @@ function formatRecord(r) {
     const tgtLine = allParts.join(sep);
     const ysep = '<span style="color:var(--yellow)"> | </span>';
     const meta = [esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(ysep);
-    return `<div class="record-card text-sm" style="position:relative;padding-right:80px;font-size:calc(0.875rem + 1px)">
+    return `<div class="record-card text-sm" style="position:relative;padding-left:42px;padding-right:46px;font-size:calc(0.875rem + 1px)">
+<div style="position:absolute;left:0;top:0;bottom:0;width:34px;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--khaki);background:rgba(0,0,0,0.25)"><span class="stencil" style="color:var(--yellow)">${num}</span></div>
 <p class="stencil" style="color:var(--text)">${tgtLine}</p>
 ${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}
 <p class="stencil" style="color:var(--yellow)">${r.points} балів</p>
-<div style="position:absolute;top:8px;right:8px;display:flex;gap:6px">
-  <button onclick="showEditRecordModal(${idx})" class="btn-stencil" style="padding:4px 8px;font-size:0.85em">&#9998;</button>
-  <button onclick="showDeleteRecordModal(${idx})" class="btn-stencil btn-danger" style="padding:4px 8px;font-size:0.85em">&#10005;</button>
+<div style="position:absolute;top:6px;right:6px;display:flex;flex-direction:column;gap:4px">
+  <button onclick="showDeleteRecordModal(${idx})" class="btn-stencil btn-danger" style="padding:3px 7px;font-size:0.85em">&#10005;</button>
+  <button onclick="showEditRecordModal(${idx})" class="btn-stencil" style="padding:3px 7px;font-size:0.85em">&#9998;</button>
 </div></div>`;
 }
 
@@ -1016,7 +1017,7 @@ function render() {
             ${dayRecs.length > 0 ? `<div class="crate p-4">
                 <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
                     <div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap">
-                        <h3 class="stencil-shadow" style="color: var(--yellow)">ЗВІТ НА ${state.selDate}</h3>
+                        <h3 class="stencil-shadow" style="color: var(--yellow)">ДОПОВІДЬ НА ${state.selDate}</h3>
                         <span class="stencil" style="color:var(--khaki)">Уражено, орієнтовно на ${Math.round(dayRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0))} балів</span>
                     </div>
                     <div class="flex gap-2 flex-wrap">
@@ -1027,7 +1028,7 @@ function render() {
             </div>` : ''}
             <div class="crate p-4">
                 <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ВИЛЬОТИ</h3>
-                <div class="space-y-2 max-h-96 overflow-y-auto">${dayRecs.length > 0 ? dayRecs.map(r=>formatRecord(r)).join('') : '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає вильотів</p>'}</div>
+                <div class="space-y-2 max-h-96 overflow-y-auto">${dayRecs.length > 0 ? dayRecs.map((r,i)=>formatRecord(r,i+1)).join('') : '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає вильотів</p>'}</div>
             </div>
         </div>`;
     }
