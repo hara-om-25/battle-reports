@@ -474,6 +474,33 @@ def apply_patches(html):
         '<span style="color: var(--khaki); font-size: 1.15em;margin-left:1.5em">${esc(state.user)}</span>',
         'header-user-tab'
     ))
+
+    # ── 33. btn-danger active state ──
+    patches.append((
+        '    .btn-danger {\n'
+        '      background: var(--danger);\n'
+        '      border-color: var(--danger-bright);\n'
+        '      box-shadow: 0 4px 0 #3d1810, 0 6px 12px rgba(0,0,0,0.4);\n'
+        '    }',
+        '    .btn-danger {\n'
+        '      background: var(--danger);\n'
+        '      border-color: var(--danger-bright);\n'
+        '      box-shadow: 0 4px 0 #3d1810, 0 6px 12px rgba(0,0,0,0.4);\n'
+        '    }\n'
+        '    .btn-danger.active {\n'
+        '      background: #c43a20;\n'
+        '      border-color: #e05535;\n'
+        '      box-shadow: 0 2px 0 #3d1810, 0 4px 8px rgba(0,0,0,0.4);\n'
+        '    }',
+        'btn-danger-active'
+    ))
+
+    # ── 34. НОВИЙ ЗВІТ button press effect ──
+    patches.append((
+        '<button onclick="newReport()" class="btn-stencil btn-danger">🚩 НОВИЙ ЗВІТ</button>',
+        '<button onclick="newReport()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-danger">🚩 НОВИЙ ЗВІТ</button>',
+        'new-report-press'
+    ))
     # Apply patches
     for old, new, name in patches:
         if old not in html:
