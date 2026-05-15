@@ -279,7 +279,12 @@ def apply_patches(html):
         '    .nav-btn {\n'
         "      font-family: 'Stardos Stencil', serif;\n"
         '      letter-spacing: 0.1em;\n'
-        '      padding: 8px 14px;\n'
+        '      padding: 0 14px;\n'
+        '      height: 40px;\n'
+        '      box-sizing: border-box;\n'
+        '      display: inline-flex;\n'
+        '      align-items: center;\n'
+        '      justify-content: center;\n'
         '      background: var(--surface);\n'
         '      border: 1px solid var(--olive);\n'
         '      color: var(--text-dim);\n'
@@ -351,7 +356,7 @@ def apply_patches(html):
     ))
     patches.append((
         '<button onclick="logout()" class="nav-btn logout">ВИЙТИ</button>',
-        '<button onclick="loadDataFromAPI()" onmousedown="this.classList.add(\'pressing\')" onmouseup="this.classList.remove(\'pressing\')" ontouchstart="this.classList.add(\'pressing\')" ontouchend="this.classList.remove(\'pressing\')" class="nav-btn" style="padding:8px;font-size:1.7em;letter-spacing:0;line-height:1;color:var(--yellow);display:flex;align-items:center" title="Синхронізація">↻</button><button onclick="logout()" onmousedown="this.classList.add(\'pressing\')" onmouseup="this.classList.remove(\'pressing\')" ontouchstart="this.classList.add(\'pressing\')" ontouchend="this.classList.remove(\'pressing\')" class="nav-btn logout">ВИЙТИ</button>',
+        '<button onclick="loadDataFromAPI()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-yellow-dim" style="font-size:1.5em;letter-spacing:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box" title="Синхронізація">↻</button><button onclick="logout()" onmousedown="this.classList.add(\'pressing\')" onmouseup="this.classList.remove(\'pressing\')" ontouchstart="this.classList.add(\'pressing\')" ontouchend="this.classList.remove(\'pressing\')" class="nav-btn logout">ВИЙТИ</button>',
         'nav-logout-press'
     ))
 
