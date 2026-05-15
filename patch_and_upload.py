@@ -362,7 +362,7 @@ def apply_patches(html):
         '<h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ЗАПИСИ</h3>\n'
         '                <div class="space-y-2 max-h-96 overflow-y-auto">${dayRecs.length > 0 ? dayRecs.map(r=>formatRecord(r)).join(\'\') : \'<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає записів</p>\'}</div>',
         '<h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ВИЛЬОТИ</h3>\n'
-        '                <div class="space-y-2 max-h-96 overflow-y-auto">${dayRecs.length > 0 ? dayRecs.map((r,i)=>formatRecord(r,i+1)).join(\'\') : \'<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає вильотів</p>\'}</div>',
+        '                <div class="space-y-2">${dayRecs.length > 0 ? dayRecs.map((r,i)=>formatRecord(r,i+1)).join(\'\') : \'<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає вильотів</p>\'}</div>',
         'rename-zapysy-to-vyloty'
     ))
 
