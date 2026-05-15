@@ -196,7 +196,7 @@
       border-radius: 2px;
       color: var(--text);
       white-space: pre-wrap;
-      font-size: 0.9em;
+      font-size: calc(0.9em + 1px);
     }
     .modal-overlay {
       position: fixed; inset: 0;
@@ -767,7 +767,7 @@ function generateReport(dayRecs) {
     const reportTitle = state.reportTitle || 'ТГ невідомий';
     const totalPoints = Math.round(dayRecs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));
     lines.push(date+'р. '+reportTitle+' здійснено '+dayRecs.length+' бойових вильотів.');
-    lines.push('Вражено, орієнтовно на '+totalPoints+' балів, а саме:');
+    lines.push('Уражено, орієнтовно на '+totalPoints+' балів');
     lines.push('');
     const hasOs = dayRecs.some(r => r.target.split(', ').some(t => t.trim().toLowerCase().startsWith('ос')));
     const osSum200 = dayRecs.reduce((s, r) => s + (parseInt(r.qty200) || 0), 0);
@@ -1015,12 +1015,15 @@ function render() {
             </div>
             ${dayRecs.length > 0 ? `<div class="crate p-4">
                 <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
-                    <h3 class="stencil-shadow" style="color: var(--yellow)">ЗВІТ НА ${state.selDate}</h3>
+                    <div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap">
+                        <span class="stencil" style="color:var(--khaki)">Уражено, орієнтовно на ${Math.round(dayRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0))} балів</span>
+                        <h3 class="stencil-shadow" style="color: var(--yellow)">ЗВІТ НА ${state.selDate}</h3>
+                    </div>
                     <div class="flex gap-2 flex-wrap">
                         <button onclick="copyReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button>
                     </div>
                 </div>
-                <div class="report-box">${reportLines.join('\n')}</div>
+                <div class="report-box">${reportLines.filter(l=>!l.startsWith('Уражено')).join('\n')}</div>
             </div>` : ''}
             <div class="crate p-4">
                 <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ВИЛЬОТИ</h3>
