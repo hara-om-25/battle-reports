@@ -104,7 +104,7 @@ def apply_patches(html):
         "    const reportTitle = state.reportTitle || 'ТГ невідомий';\n"
         '    const totalPoints = Math.round(dayRecs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));\n'
         "    lines.push(date+'р. '+reportTitle+' здійснено '+dayRecs.length+' бойових вильотів.');\n"
-        "    lines.push('Уражено, орієнтовно на '+totalPoints+' балів');\n"
+        "    lines.push('Уражено орієнтовно на '+totalPoints+' балів');\n"
         "    lines.push('');\n"
         "    const hasOs = dayRecs.some(r => r.target.split(', ').some(t => t.trim().toLowerCase().startsWith('ос')));\n"
         '    const osSum200 = dayRecs.reduce((s, r) => s + (parseInt(r.qty200) || 0), 0);\n'
@@ -500,7 +500,7 @@ def apply_patches(html):
         '<div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap">\n'
         '                        <h3 class="stencil-shadow" style="color: var(--yellow)">ДОПОВІДЬ НА ${state.selDate}</h3>\n'
         '                        <span class="stencil" style="color:var(--khaki)">'
-        'Уражено, орієнтовно на '
+        'Уражено орієнтовно на '
         '${Math.round(dayRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0))} балів'
         '</span>\n'
         '                    </div>\n'
