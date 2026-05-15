@@ -117,16 +117,18 @@ def apply_patches(html):
         '            const tgtTrim = tgt.trim();\n'
         "            const res = (results[idx] || '').trim();\n"
         "            if (!tgtTrim.toLowerCase().startsWith('ос') && (res === 'знищено' || res === 'пошкоджено')) {\n"
-        "                const _fw=tgtTrim.split(' ')[0].toUpperCase();const _fk=Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_fw);const _lo=tgtTrim.toLowerCase();const abbr=_fk?_fk.toUpperCase():(()=>{for(const[a,d]of Object.entries(state.scoreTable))if(d.fullName&&d.fullName.toLowerCase()===_lo)return a.toUpperCase();return _fw;})();\n"
-        "                const key = abbr + ' ' + res;\n"
-        '                otherGrouped[key] = (otherGrouped[key] || 0) + 1;\n'
+        "                const _tP=tgtTrim.split(' '),_tL=_tP[_tP.length-1];\n"
+        "                const abbrDisp=/^\\d+$/.test(_tL)?_tP.slice(0,-1).join(' '):tgtTrim;\n"
+        "                const key=abbrDisp.toUpperCase()+' '+res;\n"
+        "                if(!otherGrouped[key])otherGrouped[key]={d:abbrDisp,r:res,n:0};\n"
+        "                otherGrouped[key].n++;\n"
         '            }\n'
         '        });\n'
         '    });\n'
         '    const resultLines = [];\n'
         "    if (hasOs && osSum200 > 0) resultLines.push('ОС знищено - ' + osSum200 + ' шт.');\n"
         "    if (hasOs && osSum300 > 0) resultLines.push('ОС пошкоджено - ' + osSum300 + ' шт.');\n"
-        "    Object.entries(otherGrouped).forEach(([k, v]) => resultLines.push(k + ' - ' + v + ' шт.'));\n"
+        "    Object.entries(otherGrouped).forEach(([k, v]) => resultLines.push(v.d + ' ' + v.r + ' - ' + v.n + ' шт.'));\n"
         "    resultLines.forEach((l, i) => lines.push((i + 1) + '. ' + l));\n"
         "    lines.push('');\n"
         "    lines.push('🫡🤝🇺🇦');\n"
