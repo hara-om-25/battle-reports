@@ -351,7 +351,7 @@ def apply_patches(html):
     ))
     patches.append((
         '<button onclick="logout()" class="nav-btn logout">ВИЙТИ</button>',
-        '<button onclick="logout()" onmousedown="this.classList.add(\'pressing\')" onmouseup="this.classList.remove(\'pressing\')" ontouchstart="this.classList.add(\'pressing\')" ontouchend="this.classList.remove(\'pressing\')" class="nav-btn logout">ВИЙТИ</button>',
+        '<button onclick="loadDataFromAPI()" onmousedown="this.classList.add(\'pressing\')" onmouseup="this.classList.remove(\'pressing\')" ontouchstart="this.classList.add(\'pressing\')" ontouchend="this.classList.remove(\'pressing\')" class="nav-btn" style="padding:7px 9px;font-size:1.15em;letter-spacing:0;line-height:1" title="Синхронізація">↻</button><button onclick="logout()" onmousedown="this.classList.add(\'pressing\')" onmouseup="this.classList.remove(\'pressing\')" ontouchstart="this.classList.add(\'pressing\')" ontouchend="this.classList.remove(\'pressing\')" class="nav-btn logout">ВИЙТИ</button>',
         'nav-logout-press'
     ))
 
