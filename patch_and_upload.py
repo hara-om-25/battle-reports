@@ -201,10 +201,7 @@ def apply_patches(html):
         '                <h2 class="stencil-shadow text-3xl" style="color: var(--yellow)">ЗВІТ №${state.report}</h2>\n'
     )
     new_header = (
-        '                <div class="flex items-center" style="gap:4em">\n'
-        '                    <h2 class="stencil-shadow text-3xl" style="color: var(--yellow)">ЗВІТ №${state.report}</h2>\n'
-        '                    <span class="stencil" style="font-size:1.265em"><span style="color:var(--khaki)">БАЛІВ ЗА ЗВІТ:</span> <span style="color:var(--yellow)">${reportTotalPoints}</span></span>\n'
-        '                </div>\n'
+        '                <h2 class="stencil-shadow text-3xl" style="color: var(--yellow)">ЗВІТ №${state.report}</h2>\n'
     )
     patches.append((old_header, new_header, 'zvit-header'))
 
@@ -218,7 +215,7 @@ def apply_patches(html):
     )
     new_stats = (
         '            <div class="mb-4 stencil" style="font-size:calc(1.15em - 1px); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap">\n'
-        '                <span style="color:var(--khaki)">ЗА ЗВІТНІЙ ПЕРІОД ЗДІЙСНЕНО <span style="color:var(--text)">${state.records.filter(r=>r.reportNum===state.report).length}</span> ВИЛЬОТІВ, ОРІЄНТОВНО НА <span style="color:var(--text)">${Math.round(state.records.filter(r=>r.reportNum===state.report).reduce((s,r)=>s+r.points,0))}</span> БАЛІВ</span>\n'
+        '                <span style="color:var(--khaki)">ЗА ЗВІТНІЙ ПЕРІОД ЗДІЙСНЕНО <span style="color:var(--yellow)">${state.records.filter(r=>r.reportNum===state.report).length}</span> ВИЛЬОТІВ, ОРІЄНТОВНО НА <span style="color:var(--yellow)">${Math.round(state.records.filter(r=>r.reportNum===state.report).reduce((s,r)=>s+r.points,0))}</span> БАЛІВ</span>\n'
         '            </div>'
     )
     patches.append((old_stats, new_stats, 'stats-block'))
