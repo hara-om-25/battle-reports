@@ -447,7 +447,7 @@ def apply_patches(html):
     patches.append((
         'h += `<div class="p-4 space-y-4">\n'
         '            <h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">ЗВІТИ</h1>',
-        'h += `<div class="p-4 space-y-4" style="max-width:80%;margin:0 auto">\n'
+        'h += `<div class="p-4 space-y-4 zvity-wrap">\n'
         '            <h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">ЗВІТИ</h1>',
         'zvity-max-width'
     ))
@@ -509,6 +509,15 @@ def apply_patches(html):
         '<h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ЗВІТИ</h3>',
         '<h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ЗВІТИ В TRINITY</h3>',
         'zvity-panel-label'
+    ))
+
+    # ── 36. zvity-wrap responsive class ──
+    patches.append((
+        '    .modal-overlay {',
+        '    .zvity-wrap { max-width: 80%; margin: 0 auto; }\n'
+        '    @media (max-width: 640px) { .zvity-wrap { max-width: 100%; } }\n'
+        '    .modal-overlay {',
+        'zvity-wrap-css'
     ))
     # Apply patches
     for old, new, name in patches:
