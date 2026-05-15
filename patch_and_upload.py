@@ -501,6 +501,13 @@ def apply_patches(html):
         '<button onclick="newReport()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-danger">🚩 НОВИЙ ЗВІТ</button>',
         'new-report-press'
     ))
+
+    # ── 35. ЗВІТИ panel label ──
+    patches.append((
+        '<h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ЗВІТИ</h3>',
+        '<h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ЗВІТИ В TRINITY</h3>',
+        'zvity-panel-label'
+    ))
     # Apply patches
     for old, new, name in patches:
         if old not in html:
