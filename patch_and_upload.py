@@ -218,7 +218,6 @@ def apply_patches(html):
     )
     new_stats = (
         '            <div class="mb-4 stencil" style="font-size:1.15em; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap">\n'
-        '                <span><span style="color:var(--khaki)">СЬОГОДНІ:</span> <span style="color:var(--text)">${todayDate}</span></span>\n'
         '                <span style="color:var(--khaki)">ЗА ЗВІТНІЙ ПЕРІОД ЗДІЙСНЕНО <span style="color:var(--text)">${state.records.filter(r=>r.reportNum===state.report).length}</span> ВИЛЬОТІВ, ОРІЄНТОВНО НА <span style="color:var(--text)">${Math.round(state.records.filter(r=>r.reportNum===state.report).reduce((s,r)=>s+r.points,0))}</span> БАЛІВ</span>\n'
         '            </div>'
     )
@@ -233,6 +232,7 @@ def apply_patches(html):
     new_targets = (
         '            <div class="mb-6" style="border-top: 1px dashed var(--khaki); padding-top: 16px; margin-top: 16px">\n'
         '                <div class="stencil" style="display:flex; align-items:center; gap:2em; margin-bottom:8px; color:var(--khaki)">\n'
+        '                    <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>\n'
         '                    <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>\n'
         '                    <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>\n'
         '                </div>\n'
