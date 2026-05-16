@@ -873,7 +873,8 @@ def apply_patches(html):
         '                `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?fields=sheets.properties.title`,\n'
         '                { headers: { \'Authorization\': `Bearer ${state.token}` } }\n'
         '            ).then(r => r.json());\n'
-        '            state.archiveSheets = (_ar.sheets||[]).map(s=>s.properties.title).filter(t=>/копі/i.test(t));\n'
+        '            const _skip=new Set([\'ГОЛОВНА\',\'СПИСКИ\',\'е бали\',\'звіт\']);\n'
+        '            state.archiveSheets = (_ar.sheets||[]).map(s=>s.properties.title).filter(t=>!_skip.has(t));\n'
         '        } catch(e) {\n'
         '            alert(\'Помилка завантаження архіву: \' + e.message);\n'
         '        } finally {\n'
@@ -947,7 +948,7 @@ def apply_patches(html):
         "            <h1 class=\"stencil-shadow text-3xl px-2\" style=\"color:var(--yellow)\">АРХІВ</h1>\n"
         "            <div class=\"crate p-4\">\n"
         "                <h3 class=\"stencil-shadow mb-3\" style=\"color:var(--yellow)\">ЗВІТИ</h3>\n"
-        "                <div class=\"flex flex-wrap gap-2\">${state.archiveLoading&&!state.selArchive?'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Завантаження...</p>':state.archiveSheets.map((s,i)=>{const _dl=s.match(/\\d{1,2}[.\\/]\\d{1,2}[.\\/]\\d{2,4}/)?.[0]||s;return `<button onclick=\"loadArchiveSheet(state.archiveSheets[${i}])\" onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-archive ${state.selArchive===s?'active':''}\">${esc(_dl)}</button>`;}).join('')||'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає архівних звітів</p>'}</div>\n"
+        "                <div class=\"flex flex-wrap gap-2\">${state.archiveLoading&&!state.selArchive?'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Завантаження...</p>':state.archiveSheets.map((s,i)=>{const _dl=/^\\d/.test(s)?s:(s.match(/\\d{1,2}[-.\\/]\\d{1,2}[-.\\/]\\d{2,4}/)||[s])[0];return `<button onclick=\"loadArchiveSheet(state.archiveSheets[${i}])\" onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-archive ${state.selArchive===s?'active':''}\">${esc(_dl)}</button>`;}).join('')||'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає архівних звітів</p>'}</div>\n"
         "            </div>\n"
         "            ${state.selArchive?`<div class=\"crate p-4\"><div style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px\"><h3 class=\"stencil-shadow\" style=\"color:var(--yellow)\">${esc(state.selArchive)}</h3>${_acRecs.length>0?`<div class=\"stencil\" style=\"font-size:calc(1.15em - 1px);display:flex;flex-wrap:wrap;gap:2px 20px\"><span style=\"color:var(--khaki);white-space:nowrap\">ВИЛЬОТІВ:&nbsp;<span style=\"color:var(--yellow)\">${_acRecs.length}</span></span><span style=\"color:var(--khaki);white-space:nowrap\">БАЛІВ:&nbsp;<span style=\"color:var(--yellow)\">${_acTotal}</span></span></div>`:''}</div>${state.archiveLoading?'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Завантаження...</p>':_acGroups||'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає вильотів</p>'}</div>`:''}\n"
         "        </div>`;\n"
