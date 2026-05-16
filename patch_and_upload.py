@@ -760,7 +760,7 @@ def apply_patches(html):
         "        h+=`<div class=\"p-4 space-y-4 zvity-wrap\">\n"
         "            <div style=\"display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px\">\n"
         "                <h1 class=\"stencil-shadow text-3xl\" style=\"color:var(--yellow)\">ВИЛЬОТИ</h1>\n"
-        "                ${_vyRecs.length>0?`<span class=\"stencil\" style=\"color:var(--khaki)\">Всього: <span style=\"color:var(--text)\">${_vyRecs.length}</span>&nbsp;|&nbsp;Балів: <span style=\"color:var(--text)\">${_vyTotal}</span></span>`:''}\n"
+        "                ${_vyRecs.length>0?`<div class=\"stencil\" style=\"font-size:calc(1.15em - 1px);margin-top:6px\"><span style=\"color:var(--khaki)\">ВИЛЬОТІВ ЗА ЗВІТ:&nbsp;<span style=\"color:var(--yellow)\">${_vyRecs.length}</span>&nbsp;&nbsp;|&nbsp;&nbsp;БАЛІВ ЗА ЗВІТ:&nbsp;<span style=\"color:var(--yellow)\">${_vyTotal}</span></span></div>`:''}\n"
         "            </div>\n"
         "            ${_vyGroups||'<div class=\"crate p-4\"><p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає вильотів у поточному звіті</p></div>'}\n"
         "        </div>`;\n"
