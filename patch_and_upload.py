@@ -771,6 +771,194 @@ def apply_patches(html):
         'vyloty-page-render'
     ))
 
+    # ── 52. Archive CSS classes ──
+    patches.append((
+        '    .btn-yellow-dim.active {\n'
+        '      background: var(--yellow);\n'
+        '      border-color: #f4d942;\n'
+        '      box-shadow: 0 4px 0 var(--yellow-dim), 0 6px 12px rgba(0,0,0,0.4);\n'
+        '    }',
+
+        '    .btn-yellow-dim.active {\n'
+        '      background: var(--yellow);\n'
+        '      border-color: #f4d942;\n'
+        '      box-shadow: 0 4px 0 var(--yellow-dim), 0 6px 12px rgba(0,0,0,0.4);\n'
+        '    }\n'
+        '    .nav-btn-archive {\n'
+        '      background: #2a2a2a;\n'
+        '      border-color: #444;\n'
+        '      color: var(--text-dim);\n'
+        '      box-shadow: 0 4px 0 #111, 0 6px 12px rgba(0,0,0,0.4);\n'
+        '    }\n'
+        '    .nav-btn-archive.pressing, .nav-btn-archive.active {\n'
+        '      background: #555;\n'
+        '      border-color: #666;\n'
+        '      color: var(--text);\n'
+        '      box-shadow: 0 2px 0 #111, 0 4px 8px rgba(0,0,0,0.4);\n'
+        '    }\n'
+        '    .btn-archive {\n'
+        '      background: #2a2a2a;\n'
+        '      border-color: #444;\n'
+        '      color: var(--text-dim);\n'
+        '      box-shadow: 0 4px 0 #111, 0 6px 8px rgba(0,0,0,0.4);\n'
+        '      text-shadow: none;\n'
+        '    }\n'
+        '    .btn-archive:active, .btn-archive.active {\n'
+        '      background: #555;\n'
+        '      border-color: #666;\n'
+        '      color: var(--text);\n'
+        '      transform: translateY(2px);\n'
+        '      box-shadow: 0 2px 0 #111, 0 4px 6px rgba(0,0,0,0.4);\n'
+        '    }',
+
+        'archive-css'
+    ))
+
+    # ── 53. nav: АРХІВ button before ВИЙТИ ──
+    patches.append((
+        '<button onclick="logout()" '
+        "onmousedown=\"this.classList.add('pressing')\" "
+        "onmouseup=\"this.classList.remove('pressing')\" "
+        "ontouchstart=\"this.classList.add('pressing')\" "
+        "ontouchend=\"this.classList.remove('pressing')\" "
+        'class="nav-btn logout">ВИЙТИ</button>',
+
+        '<button onclick="goToArchive()" '
+        "onmousedown=\"this.classList.add('pressing')\" "
+        "onmouseup=\"this.classList.remove('pressing')\" "
+        "ontouchstart=\"this.classList.add('pressing')\" "
+        "ontouchend=\"this.classList.remove('pressing')\" "
+        "class=\"nav-btn nav-btn-archive ${state.page==='archive'?'active':''}\">АРХІВ</button>"
+        '<button onclick="logout()" '
+        "onmousedown=\"this.classList.add('pressing')\" "
+        "onmouseup=\"this.classList.remove('pressing')\" "
+        "ontouchstart=\"this.classList.add('pressing')\" "
+        "ontouchend=\"this.classList.remove('pressing')\" "
+        'class="nav-btn logout">ВИЙТИ</button>',
+
+        'nav-archive-btn'
+    ))
+
+    # ── 54. state: add archive fields ──
+    patches.append((
+        'selReport: null, selDate: null, selVylotyDate: null,',
+        'selReport: null, selDate: null, selVylotyDate: null,'
+        ' archiveSheets: [], selArchive: null, archiveRecs: [], archiveLoading: false,',
+        'state-archive'
+    ))
+
+    # ── 55. logout: reset archive state ──
+    patches.append((
+        "state.scoreTable = {}; state.drones = []; state.ammo = []; state.results = [];  state.records = [];\n"
+        "    state.loaded = false; state.page = 'login';",
+
+        "state.scoreTable = {}; state.drones = []; state.ammo = []; state.results = [];  state.records = [];\n"
+        "    state.archiveSheets = []; state.selArchive = null; state.archiveRecs = []; state.archiveLoading = false;\n"
+        "    state.loaded = false; state.page = 'login';",
+
+        'logout-archive-reset'
+    ))
+
+    # ── 56. archive functions: goToArchive, loadArchiveSheet ──
+    patches.append((
+        'async function loadDataFromAPI() {',
+
+        'async function goToArchive() {\n'
+        '    state.page = \'archive\';\n'
+        '    if (!state.archiveSheets.length) {\n'
+        '        state.archiveLoading = true;\n'
+        '        render();\n'
+        '        try {\n'
+        '            const _ar = await fetch(\n'
+        '                `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?fields=sheets.properties.title`,\n'
+        '                { headers: { \'Authorization\': `Bearer ${state.token}` } }\n'
+        '            ).then(r => r.json());\n'
+        '            const _skip = new Set([\'ГОЛОВНА\',\'СПИСКИ\',\'е бали\',\'звіт\']);\n'
+        '            state.archiveSheets = (_ar.sheets||[]).map(s=>s.properties.title).filter(t=>!_skip.has(t));\n'
+        '        } catch(e) {\n'
+        '            alert(\'Помилка завантаження архіву: \' + e.message);\n'
+        '        } finally {\n'
+        '            state.archiveLoading = false;\n'
+        '        }\n'
+        '    }\n'
+        '    render();\n'
+        '}\n'
+        '\n'
+        'async function loadArchiveSheet(name) {\n'
+        '    state.selArchive = name;\n'
+        '    state.archiveLoading = true;\n'
+        '    render();\n'
+        '    try {\n'
+        '        const rows = await apiGet(name);\n'
+        '        state.archiveRecs = [];\n'
+        '        for (let i = 1; i < rows.length; i++) {\n'
+        '            const row = rows[i] || [];\n'
+        '            if (row[0] || row[2]) {\n'
+        '                state.archiveRecs.push({\n'
+        '                    reportNum: parseInt(row[0])||0,\n'
+        '                    datetime: row[1]||\'\'  ,\n'
+        '                    target: row[2]||\'\'  ,\n'
+        '                    qty200: parseInt(row[3])||0,\n'
+        '                    qty300: parseInt(row[4])||0,\n'
+        '                    coordinates: row[5]||\'\'  ,\n'
+        '                    drone: (row[6]||\'\'  ).trim(),\n'
+        '                    ammo: (row[7]||\'\'  ).trim(),\n'
+        '                    result: row[8]||\'\'  ,\n'
+        '                    points: parseFloat(row[9])||0\n'
+        '                });\n'
+        '            }\n'
+        '        }\n'
+        '    } catch(e) {\n'
+        '        alert(\'Помилка: \' + e.message);\n'
+        '    } finally {\n'
+        '        state.archiveLoading = false;\n'
+        '        render();\n'
+        '    }\n'
+        '}\n'
+        '\n'
+        'async function loadDataFromAPI() {',
+
+        'archive-functions'
+    ))
+
+    # ── 57. render: archive page ──
+    patches.append((
+        "    if(state.page==='vyloty') {",
+
+        "    if(state.page==='archive') {\n"
+        "        const _acFmt=(r,num)=>{\n"
+        "            const tgts=r.target?r.target.split(', '):[];\n"
+        "            const ress=r.result?r.result.split(', '):[];\n"
+        "            const sep='<span style=\"color:var(--yellow)\">, </span>';\n"
+        "            const dash='<span style=\"color:var(--yellow)\"> \\u2014 </span>';\n"
+        "            const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,i)=>{const t=esc(tgts[i]||'');const rv=esc(ress[i]||'');return t?t+dash+`<span style=\"color:var(--khaki)\">${rv}</span>`:rv;}),r.qty200>0?`<span style=\"color:#e05050\">200</span>${dash}<span style=\"color:#fff\">${r.qty200}</span>`:'',r.qty300>0?`<span style=\"color:#5599dd\">300</span>${dash}<span style=\"color:#fff\">${r.qty300}</span>`:'' ].filter(Boolean);\n"
+        "            const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join('<span style=\"color:var(--yellow)\"> | </span>');\n"
+        "            return `<div class=\"record-card text-sm\" style=\"position:relative;padding-left:62px;font-size:calc(0.875rem + 1px)\"><div style=\"position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center\"><span class=\"stencil\" style=\"color:var(--yellow);font-size:1.6em;line-height:1\">${num}</span></div><p class=\"stencil\" style=\"color:var(--text)\">${parts.join(sep)}</p>${meta?`<p class=\"stencil\" style=\"color:var(--text-dim);font-size:0.92em;margin-top:4px\">${meta}</p>`:''}<p class=\"stencil\" style=\"color:var(--yellow)\">${r.points} балів</p></div>`;\n"
+        "        };\n"
+        "        const _acRecs=state.archiveRecs;\n"
+        "        const _acDates=[...new Set(_acRecs.map(r=>getDateOnly(r.datetime)))].sort();\n"
+        "        let _acN=0;\n"
+        "        const _acTotal=Math.round(_acRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n"
+        "        const _acGroups=_acDates.map(d=>{\n"
+        "            const dR=_acRecs.filter(r=>getDateOnly(r.datetime)===d);\n"
+        "            const dPts=Math.round(dR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n"
+        "            return `<div class=\"crate p-4\"><div style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px\"><h3 class=\"stencil-shadow\" style=\"color:var(--yellow)\">${d}</h3><span class=\"stencil\" style=\"color:var(--khaki)\">Вильотів:&nbsp;<span style=\"color:var(--text)\">${dR.length}</span>&nbsp;|&nbsp;Балів:&nbsp;<span style=\"color:var(--text)\">${dPts}</span></span></div><div class=\"space-y-2\">${dR.map(r=>_acFmt(r,++_acN)).join('')}</div></div>`;\n"
+        "        }).join('');\n"
+        "        h+=`<div class=\"p-4 space-y-4 zvity-wrap\">\n"
+        "            <h1 class=\"stencil-shadow text-3xl px-2\" style=\"color:var(--yellow)\">АРХІВ</h1>\n"
+        "            <div class=\"crate p-4\">\n"
+        "                <h3 class=\"stencil-shadow mb-3\" style=\"color:var(--yellow)\">ЗВІТИ</h3>\n"
+        "                <div class=\"flex flex-wrap gap-2\">${state.archiveLoading&&!state.selArchive?'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Завантаження...</p>':state.archiveSheets.map((s,i)=>`<button onclick=\"loadArchiveSheet(state.archiveSheets[${i}])\" onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-archive ${state.selArchive===s?'active':''}\">${esc(s)}</button>`).join('')||'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає архівних звітів</p>'}</div>\n"
+        "            </div>\n"
+        "            ${state.selArchive?`<div class=\"crate p-4\"><div style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px\"><h3 class=\"stencil-shadow\" style=\"color:var(--yellow)\">${esc(state.selArchive)}</h3>${_acRecs.length>0?`<div class=\"stencil\" style=\"font-size:calc(1.15em - 1px);display:flex;flex-wrap:wrap;gap:2px 20px\"><span style=\"color:var(--khaki);white-space:nowrap\">ВИЛЬОТІВ:&nbsp;<span style=\"color:var(--yellow)\">${_acRecs.length}</span></span><span style=\"color:var(--khaki);white-space:nowrap\">БАЛІВ:&nbsp;<span style=\"color:var(--yellow)\">${_acTotal}</span></span></div>`:''}</div>${state.archiveLoading?'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Завантаження...</p>':_acGroups||'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає вильотів</p>'}</div>`:''}\n"
+        "        </div>`;\n"
+        "    }\n"
+        "\n"
+        "    if(state.page==='vyloty') {",
+
+        'archive-page-render'
+    ))
+
 
     # Apply patches
     for old, new, name in patches:
