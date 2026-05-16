@@ -1162,39 +1162,38 @@ function render() {
     
     if(state.page==='archive') {
         const _arBtns=state.archiveSheets.map(s=>{const _dl=/^\d/.test(s)?s:(s.match(/\d{1,2}[-.\/]\d{1,2}[-.\/]\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';return `<button onclick="loadArchiveSheet('${esc(s)}')" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-archive ${_act}">${esc(_dl)}</button>`;}).join('')||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p>';
-        let _arRecs='';
+        let _arContent='';
         if(state.selArchive){
             if(state.archiveLoading){
-                _arRecs='<p class="stencil text-center py-4" style="color:var(--text-dim)">Завантаження...</p>';
-            } else if(!state.archiveRecs.length){
-                _arRecs='<p class="stencil text-center py-4" style="color:var(--text-dim)">Немає записів</p>';
+                _arContent='<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Завантаження...</p></div>';
             } else {
+                const _arDates=[...new Set(state.archiveRecs.map(r=>getDateOnly(r.datetime)))].sort();
+                const _arTotal=Math.round(state.archiveRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                 const _sep='<span style="color:var(--yellow)">, </span>';
-                const _dash='<span style="color:var(--yellow)"> — </span>';
+                const _dash='<span style="color:var(--yellow)"> \u2014 </span>';
                 const _ysep='<span style="color:var(--yellow)"> | </span>';
-                _arRecs=state.archiveRecs.map((r,i)=>{
-                    const tgts=r.target?r.target.split(', '):[];
-                    const ress=r.result?r.result.split(', '):[];
-                    const parts=Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{
-                        const n=esc(tgts[j]||'');const rv=esc(ress[j]||'');
-                        return n?n+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;
-                    }).filter(Boolean);
-                    const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
-                    return `<div class="record-card text-sm" style="position:relative;padding-left:62px">
-                        <div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center">
-                            <span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${i+1}</span>
-                        </div>
-                        <p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>
-                        ${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}
-                        <p class="stencil" style="color:var(--yellow)">${r.points} балів</p>
-                    </div>`;
+                let _arNum=0;
+                const _arGroups=_arDates.map(d=>{
+                    const dayR=state.archiveRecs.filter(r=>getDateOnly(r.datetime)===d);
+                    const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+                    const cards=dayR.map(r=>{
+                        const n=++_arNum;
+                        const tgts=r.target?r.target.split(', '):[];
+                        const ress=r.result?r.result.split(', '):[];
+                        const parts=Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');return tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;}).filter(Boolean);
+                        const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
+                        return `<div class="record-card text-sm" style="position:relative;padding-left:62px;font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}<p class="stencil" style="color:var(--yellow)">${r.points} балів</p></div>`;
+                    }).join('');
+                    return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
                 }).join('');
+                const _arHeader=state.archiveRecs.length>0?`<div class="stencil" style="font-size:calc(1.15em - 1px);margin-top:6px;display:flex;flex-wrap:wrap;gap:2px 20px"><span style="color:var(--khaki);white-space:nowrap">ВИЛЬОТІВ ЗА ЗВІТ:&nbsp;<span style="color:var(--yellow)">${state.archiveRecs.length}</span></span><span style="color:var(--khaki);white-space:nowrap">БАЛІВ ЗА ЗВІТ:&nbsp;<span style="color:var(--yellow)">${_arTotal}</span></span></div>`:'';
+                _arContent=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px"><h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">${esc(state.selArchive)}</h1>${_arHeader}</div>${_arGroups||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає записів</p></div>'}`;
             }
         }
         h+=`<div class="p-4 space-y-4 zvity-wrap">
             <h1 class="stencil-shadow text-3xl px-2" style="color:var(--yellow)">АРХІВ</h1>
             <div class="crate p-4"><div class="flex flex-wrap gap-2">${state.archiveLoading&&!state.selArchive?'<p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p>':_arBtns}</div></div>
-            ${state.selArchive?`<div class="crate p-4 space-y-2">${_arRecs}</div>`:''}
+            ${state.selArchive?_arContent:''}
         </div>`;
     }
 
