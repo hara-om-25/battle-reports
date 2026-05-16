@@ -478,7 +478,7 @@ def apply_patches(html):
     # ── 32. Header: tab before user email ──
     patches.append((
         '<span style="color: var(--khaki); font-size: 1.15em">${esc(state.user)}</span>',
-        '<span style="color: var(--khaki); font-size: 1.15em;margin-left:1.5em">${esc(state.user)}</span>',
+        '<span style="color: var(--khaki); font-size: 1.15em;margin-left:0.5em">${esc(state.user)}</span>',
         'header-user-tab'
     ))
 
