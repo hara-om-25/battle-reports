@@ -135,12 +135,17 @@
       box-shadow: 0 4px 0 #111, 0 6px 8px rgba(0,0,0,0.4);
       text-shadow: none;
     }
-    .btn-archive:active, .btn-archive.active {
+    .btn-archive:active, .btn-archive.pressing {
       background: #555;
       border-color: #666;
       color: var(--text);
       transform: translateY(2px);
       box-shadow: 0 2px 0 #111, 0 4px 6px rgba(0,0,0,0.4);
+    }
+    .btn-archive.active {
+      background: #555;
+      border-color: #666;
+      color: var(--text);
     }
     .btn-submit {
       background: var(--olive-dark);
@@ -1166,7 +1171,7 @@ function render() {
     }
     
     if(state.page==='archive') {
-        const _arBtns=state.archiveSheets.map(s=>{const _dl=/^\d/.test(s)?s:(s.match(/\d{1,2}[-.\/]\d{1,2}[-.\/]\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';return `<button onclick="loadArchiveSheet('${esc(s)}')" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-archive ${_act}">${esc(_dl)}</button>`;}).join('')||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p>';
+        const _arBtns=state.archiveSheets.map(s=>{const _dl=/^\d/.test(s)?s:(s.match(/\d{1,2}[-.\/]\d{1,2}[-.\/]\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';return `<button onclick="loadArchiveSheet('${esc(s)}')" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil btn-archive ${_act}">${esc(_dl)}</button>`;}).join('')||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p>';
         let _arContent='';
         if(state.selArchive){
             if(state.archiveLoading){
