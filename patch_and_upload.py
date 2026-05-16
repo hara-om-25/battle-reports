@@ -785,16 +785,28 @@ def apply_patches(html):
         '      box-shadow: 0 4px 0 var(--yellow-dim), 0 6px 12px rgba(0,0,0,0.4);\n'
         '    }\n'
         '    .nav-btn-archive {\n'
+        "      font-family: 'Tektur', serif;\n"
+        '      letter-spacing: 0.1em;\n'
+        '      padding: 0 14px;\n'
+        '      height: 40px;\n'
+        '      box-sizing: border-box;\n'
+        '      display: inline-flex;\n'
+        '      align-items: center;\n'
+        '      justify-content: center;\n'
         '      background: #3d3d3d;\n'
-        '      border-color: #555;\n'
+        '      border: 1px solid #555;\n'
         '      color: #b0b0a0;\n'
+        '      border-radius: 2px;\n'
+        '      cursor: pointer;\n'
         '      box-shadow: 0 4px 0 #1a1a1a, 0 6px 12px rgba(0,0,0,0.4);\n'
+        '      transition: all 0.1s;\n'
         '    }\n'
         '    .nav-btn-archive.pressing, .nav-btn-archive.active {\n'
+        '      transform: translateY(2px);\n'
         '      background: #666;\n'
-        '      border-color: #666;\n'
-        '      color: var(--text);\n'
-        '      box-shadow: 0 2px 0 #111, 0 4px 8px rgba(0,0,0,0.4);\n'
+        '      border-color: #777;\n'
+        '      color: #d9d6c4;\n'
+        '      box-shadow: 0 2px 0 #1a1a1a, 0 4px 8px rgba(0,0,0,0.4);\n'
         '    }\n'
         '    .btn-archive {\n'
         '      background: #2a2a2a;\n'
@@ -828,7 +840,7 @@ def apply_patches(html):
         "onmouseup=\"this.classList.remove('pressing')\" "
         "ontouchstart=\"this.classList.add('pressing')\" "
         "ontouchend=\"this.classList.remove('pressing')\" "
-        "class=\"nav-btn nav-btn-archive ${state.page==='archive'?'active':''}\">АРХІВ</button>"
+        "class=\"nav-btn-archive ${state.page==='archive'?'active':''}\">АРХІВ</button>"
         '<button onclick="logout()" '
         "onmousedown=\"this.classList.add('pressing')\" "
         "onmouseup=\"this.classList.remove('pressing')\" "
@@ -873,8 +885,7 @@ def apply_patches(html):
         '                `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?fields=sheets.properties.title`,\n'
         '                { headers: { \'Authorization\': `Bearer ${state.token}` } }\n'
         '            ).then(r => r.json());\n'
-        '            const _skip=new Set([\'ГОЛОВНА\',\'СПИСКИ\',\'е бали\',\'звіт\']);\n'
-        '            state.archiveSheets = (_ar.sheets||[]).map(s=>s.properties.title).filter(t=>!_skip.has(t));\n'
+        '            state.archiveSheets = (_ar.sheets||[]).map(s=>s.properties.title).filter(t=>/^\\d/.test(t));\n'
         '        } catch(e) {\n'
         '            alert(\'Помилка завантаження архіву: \' + e.message);\n'
         '        } finally {\n'
@@ -926,31 +937,11 @@ def apply_patches(html):
         "    if(state.page==='vyloty') {",
 
         "    if(state.page==='archive') {\n"
-        "        const _acFmt=(r,num)=>{\n"
-        "            const tgts=r.target?r.target.split(', '):[];\n"
-        "            const ress=r.result?r.result.split(', '):[];\n"
-        "            const sep='<span style=\"color:var(--yellow)\">, </span>';\n"
-        "            const dash='<span style=\"color:var(--yellow)\"> \\u2014 </span>';\n"
-        "            const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,i)=>{const t=esc(tgts[i]||'');const rv=esc(ress[i]||'');return t?t+dash+`<span style=\"color:var(--khaki)\">${rv}</span>`:rv;}),r.qty200>0?`<span style=\"color:#e05050\">200</span>${dash}<span style=\"color:#fff\">${r.qty200}</span>`:'',r.qty300>0?`<span style=\"color:#5599dd\">300</span>${dash}<span style=\"color:#fff\">${r.qty300}</span>`:'' ].filter(Boolean);\n"
-        "            const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join('<span style=\"color:var(--yellow)\"> | </span>');\n"
-        "            return `<div class=\"record-card text-sm\" style=\"position:relative;padding-left:62px;font-size:calc(0.875rem + 1px)\"><div style=\"position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center\"><span class=\"stencil\" style=\"color:var(--yellow);font-size:1.6em;line-height:1\">${num}</span></div><p class=\"stencil\" style=\"color:var(--text)\">${parts.join(sep)}</p>${meta?`<p class=\"stencil\" style=\"color:var(--text-dim);font-size:0.92em;margin-top:4px\">${meta}</p>`:''}<p class=\"stencil\" style=\"color:var(--yellow)\">${r.points} балів</p></div>`;\n"
-        "        };\n"
-        "        const _acRecs=state.archiveRecs;\n"
-        "        const _acDates=[...new Set(_acRecs.map(r=>getDateOnly(r.datetime)))].sort();\n"
-        "        let _acN=0;\n"
-        "        const _acTotal=Math.round(_acRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n"
-        "        const _acGroups=_acDates.map(d=>{\n"
-        "            const dR=_acRecs.filter(r=>getDateOnly(r.datetime)===d);\n"
-        "            const dPts=Math.round(dR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n"
-        "            return `<div class=\"crate p-4\"><div style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px\"><h3 class=\"stencil-shadow\" style=\"color:var(--yellow)\">${d}</h3><span class=\"stencil\" style=\"color:var(--khaki)\">Вильотів:&nbsp;<span style=\"color:var(--text)\">${dR.length}</span>&nbsp;|&nbsp;Балів:&nbsp;<span style=\"color:var(--text)\">${dPts}</span></span></div><div class=\"space-y-2\">${dR.map(r=>_acFmt(r,++_acN)).join('')}</div></div>`;\n"
-        "        }).join('');\n"
         "        h+=`<div class=\"p-4 space-y-4 zvity-wrap\">\n"
         "            <h1 class=\"stencil-shadow text-3xl px-2\" style=\"color:var(--yellow)\">АРХІВ</h1>\n"
         "            <div class=\"crate p-4\">\n"
-        "                <h3 class=\"stencil-shadow mb-3\" style=\"color:var(--yellow)\">ЗВІТИ</h3>\n"
-        "                <div class=\"flex flex-wrap gap-2\">${state.archiveLoading&&!state.selArchive?'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Завантаження...</p>':state.archiveSheets.map((s,i)=>{const _dl=/^\\d/.test(s)?s:(s.match(/\\d{1,2}[-.\\/]\\d{1,2}[-.\\/]\\d{2,4}/)||[s])[0];return `<button onclick=\"loadArchiveSheet(state.archiveSheets[${i}])\" onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-archive ${state.selArchive===s?'active':''}\">${esc(_dl)}</button>`;}).join('')||'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає архівних звітів</p>'}</div>\n"
+        "                <div class=\"flex flex-wrap gap-2\">${state.archiveLoading?'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Завантаження...</p>':state.archiveSheets.map((s,i)=>{const _dl=/^\\d/.test(s)?s:(s.match(/\\d{1,2}[-.\\/]\\d{1,2}[-.\\/]\\d{2,4}/)||[s])[0];return `<button onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-archive\">${esc(_dl)}</button>`;}).join('')||'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає архівних звітів</p>'}</div>\n"
         "            </div>\n"
-        "            ${state.selArchive?`<div class=\"crate p-4\"><div style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px\"><h3 class=\"stencil-shadow\" style=\"color:var(--yellow)\">${esc(state.selArchive)}</h3>${_acRecs.length>0?`<div class=\"stencil\" style=\"font-size:calc(1.15em - 1px);display:flex;flex-wrap:wrap;gap:2px 20px\"><span style=\"color:var(--khaki);white-space:nowrap\">ВИЛЬОТІВ:&nbsp;<span style=\"color:var(--yellow)\">${_acRecs.length}</span></span><span style=\"color:var(--khaki);white-space:nowrap\">БАЛІВ:&nbsp;<span style=\"color:var(--yellow)\">${_acTotal}</span></span></div>`:''}</div>${state.archiveLoading?'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Завантаження...</p>':_acGroups||'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає вильотів</p>'}</div>`:''}\n"
         "        </div>`;\n"
         "    }\n"
         "\n"
