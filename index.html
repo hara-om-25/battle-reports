@@ -100,16 +100,28 @@
       box-shadow: 0 4px 0 var(--yellow-dim), 0 6px 12px rgba(0,0,0,0.4);
     }
     .nav-btn-archive {
+      font-family: 'Tektur', serif;
+      letter-spacing: 0.1em;
+      padding: 0 14px;
+      height: 40px;
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       background: #3d3d3d;
-      border-color: #555;
+      border: 1px solid #555;
       color: #b0b0a0;
+      border-radius: 2px;
+      cursor: pointer;
       box-shadow: 0 4px 0 #1a1a1a, 0 6px 12px rgba(0,0,0,0.4);
+      transition: all 0.1s;
     }
     .nav-btn-archive.pressing, .nav-btn-archive.active {
+      transform: translateY(2px);
       background: #666;
-      border-color: #666;
-      color: var(--text);
-      box-shadow: 0 2px 0 #111, 0 4px 8px rgba(0,0,0,0.4);
+      border-color: #777;
+      color: #d9d6c4;
+      box-shadow: 0 2px 0 #1a1a1a, 0 4px 8px rgba(0,0,0,0.4);
     }
     .btn-archive {
       background: #2a2a2a;
@@ -448,8 +460,7 @@ async function goToArchive() {
                 `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?fields=sheets.properties.title`,
                 { headers: { 'Authorization': `Bearer ${state.token}` } }
             ).then(r => r.json());
-            const _skip=new Set(['ГОЛОВНА','СПИСКИ','е бали','звіт']);
-            state.archiveSheets = (_ar.sheets||[]).map(s=>s.properties.title).filter(t=>!_skip.has(t));
+            state.archiveSheets = (_ar.sheets||[]).map(s=>s.properties.title).filter(t=>/^\d/.test(t));
         } catch(e) {
             alert('Помилка завантаження архіву: ' + e.message);
         } finally {
@@ -1046,7 +1057,7 @@ function render() {
                 <button onclick="state.page='vyloty';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='vyloty'?'active':''}">ВИЛЬОТИ</button>
                 <button onclick="state.page='reports';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='reports'?'active':''}">ЗВІТИ</button>
                 <button onclick="state.page='lists';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='lists'?'active':''}">СПИСКИ</button>
-                <button onclick="loadDataFromAPI()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="font-size:1.5em;letter-spacing:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box" title="Синхронізація">↻</button><button onclick="goToArchive()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn nav-btn-archive ${state.page==='archive'?'active':''}">АРХІВ</button><button onclick="logout()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn logout">ВИЙТИ</button>
+                <button onclick="loadDataFromAPI()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="font-size:1.5em;letter-spacing:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box" title="Синхронізація">↻</button><button onclick="goToArchive()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn-archive ${state.page==='archive'?'active':''}">АРХІВ</button><button onclick="logout()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn logout">ВИЙТИ</button>
             </div>
         </div>
     </nav>`;
@@ -1150,31 +1161,11 @@ function render() {
     }
     
     if(state.page==='archive') {
-        const _acFmt=(r,num)=>{
-            const tgts=r.target?r.target.split(', '):[];
-            const ress=r.result?r.result.split(', '):[];
-            const sep='<span style="color:var(--yellow)">, </span>';
-            const dash='<span style="color:var(--yellow)"> \u2014 </span>';
-            const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,i)=>{const t=esc(tgts[i]||'');const rv=esc(ress[i]||'');return t?t+dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;}),r.qty200>0?`<span style="color:#e05050">200</span>${dash}<span style="color:#fff">${r.qty200}</span>`:'',r.qty300>0?`<span style="color:#5599dd">300</span>${dash}<span style="color:#fff">${r.qty300}</span>`:'' ].filter(Boolean);
-            const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join('<span style="color:var(--yellow)"> | </span>');
-            return `<div class="record-card text-sm" style="position:relative;padding-left:62px;font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${num}</span></div><p class="stencil" style="color:var(--text)">${parts.join(sep)}</p>${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}<p class="stencil" style="color:var(--yellow)">${r.points} балів</p></div>`;
-        };
-        const _acRecs=state.archiveRecs;
-        const _acDates=[...new Set(_acRecs.map(r=>getDateOnly(r.datetime)))].sort();
-        let _acN=0;
-        const _acTotal=Math.round(_acRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
-        const _acGroups=_acDates.map(d=>{
-            const dR=_acRecs.filter(r=>getDateOnly(r.datetime)===d);
-            const dPts=Math.round(dR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
-            return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів:&nbsp;<span style="color:var(--text)">${dR.length}</span>&nbsp;|&nbsp;Балів:&nbsp;<span style="color:var(--text)">${dPts}</span></span></div><div class="space-y-2">${dR.map(r=>_acFmt(r,++_acN)).join('')}</div></div>`;
-        }).join('');
         h+=`<div class="p-4 space-y-4 zvity-wrap">
             <h1 class="stencil-shadow text-3xl px-2" style="color:var(--yellow)">АРХІВ</h1>
             <div class="crate p-4">
-                <h3 class="stencil-shadow mb-3" style="color:var(--yellow)">ЗВІТИ</h3>
-                <div class="flex flex-wrap gap-2">${state.archiveLoading&&!state.selArchive?'<p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p>':state.archiveSheets.map((s,i)=>{const _dl=/^\d/.test(s)?s:(s.match(/\d{1,2}[-.\/]\d{1,2}[-.\/]\d{2,4}/)||[s])[0];return `<button onclick="loadArchiveSheet(state.archiveSheets[${i}])" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-archive ${state.selArchive===s?'active':''}">${esc(_dl)}</button>`;}).join('')||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p>'}</div>
+                <div class="flex flex-wrap gap-2">${state.archiveLoading?'<p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p>':state.archiveSheets.map((s,i)=>{const _dl=/^\d/.test(s)?s:(s.match(/\d{1,2}[-.\/]\d{1,2}[-.\/]\d{2,4}/)||[s])[0];return `<button onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-archive">${esc(_dl)}</button>`;}).join('')||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p>'}</div>
             </div>
-            ${state.selArchive?`<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px"><h3 class="stencil-shadow" style="color:var(--yellow)">${esc(state.selArchive)}</h3>${_acRecs.length>0?`<div class="stencil" style="font-size:calc(1.15em - 1px);display:flex;flex-wrap:wrap;gap:2px 20px"><span style="color:var(--khaki);white-space:nowrap">ВИЛЬОТІВ:&nbsp;<span style="color:var(--yellow)">${_acRecs.length}</span></span><span style="color:var(--khaki);white-space:nowrap">БАЛІВ:&nbsp;<span style="color:var(--yellow)">${_acTotal}</span></span></div>`:''}</div>${state.archiveLoading?'<p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p>':_acGroups||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає вильотів</p>'}</div>`:''}
         </div>`;
     }
 
