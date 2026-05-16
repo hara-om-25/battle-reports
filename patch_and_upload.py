@@ -716,6 +716,61 @@ def apply_patches(html):
         'edit-drone-ammo-fallback'
     ))
 
+    # ── 49. state: add selVylotyDate field ──
+    patches.append((
+        "    selReport: null, selDate: null,",
+        "    selReport: null, selDate: null, selVylotyDate: null,",
+        'state-selvyloty'
+    ))
+
+    # ── 50. nav: add ВИЛЬОТИ button between ФОРМА and ЗВІТИ ──
+    patches.append((
+        "class=\"nav-btn ${state.page==='form'?'active':''}\">"
+        "ФОРМА</button>\n"
+        "                <button onclick=\"state.page='reports';render()\"",
+
+        "class=\"nav-btn ${state.page==='form'?'active':''}\">"
+        "ФОРМА</button>\n"
+        "                <button onclick=\"state.page='vyloty';render()\""
+        " onmousedown=\"this.classList.add('pressing')\""
+        " onmouseup=\"this.classList.remove('pressing')\""
+        " ontouchstart=\"this.classList.add('pressing')\""
+        " ontouchend=\"this.classList.remove('pressing')\""
+        " class=\"nav-btn ${state.page==='vyloty'?'active':''}\">ВИЛЬОТИ</button>\n"
+        "                <button onclick=\"state.page='reports';render()\"",
+
+        'nav-vyloty-btn'
+    ))
+
+    # ── 51. render: page 'vyloty' ──
+    patches.append((
+        "    if(state.page==='reports') {",
+
+        "    if(state.page==='vyloty') {\n"
+        "        const _vyRecs=state.records.filter(r=>r.reportNum===state.report);\n"
+        "        const _vyDates=[...new Set(_vyRecs.map(r=>getDateOnly(r.datetime)))].sort();\n"
+        "        const _vyTotal=Math.round(_vyRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n"
+        "        let _vyNum=0;\n"
+        "        const _vyGroups=_vyDates.map(d=>{\n"
+        "            const dayR=_vyRecs.filter(r=>getDateOnly(r.datetime)===d);\n"
+        "            const cards=dayR.map(r=>formatRecord(r,++_vyNum)).join('');\n"
+        "            const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n"
+        "            return `<div class=\"crate p-4\"><div style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px\"><h3 class=\"stencil-shadow\" style=\"color:var(--yellow)\">${d}</h3><span class=\"stencil\" style=\"color:var(--khaki)\">Вильотів: <span style=\"color:var(--text)\">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style=\"color:var(--text)\">${dayPts}</span></span></div><div class=\"space-y-2\">${cards}</div></div>`;\n"
+        "        }).join('');\n"
+        "        h+=`<div class=\"p-4 space-y-4 zvity-wrap\">\n"
+        "            <div style=\"display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px\">\n"
+        "                <h1 class=\"stencil-shadow text-3xl\" style=\"color:var(--yellow)\">ВИЛЬОТИ</h1>\n"
+        "                ${_vyRecs.length>0?`<span class=\"stencil\" style=\"color:var(--khaki)\">Всього: <span style=\"color:var(--text)\">${_vyRecs.length}</span>&nbsp;|&nbsp;Балів: <span style=\"color:var(--text)\">${_vyTotal}</span></span>`:''}\n"
+        "            </div>\n"
+        "            ${_vyGroups||'<div class=\"crate p-4\"><p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає вильотів у поточному звіті</p></div>'}\n"
+        "        </div>`;\n"
+        "    }\n"
+        "\n"
+        "    if(state.page==='reports') {",
+
+        'vyloty-page-render'
+    ))
+
 
     # Apply patches
     for old, new, name in patches:
