@@ -793,8 +793,8 @@ def apply_patches(html):
         '      display: inline-flex;\n'
         '      align-items: center;\n'
         '      justify-content: center;\n'
-        '      background: #2d2d2d;\n'
-        '      border: 1px solid #444;\n'
+        '      background: #3a3a3a;\n'
+        '      border: 1px solid #4e4e4e;\n'
         '      color: #b0b0a0;\n'
         '      border-radius: 2px;\n'
         '      cursor: pointer;\n'
@@ -937,11 +937,40 @@ def apply_patches(html):
         "    if(state.page==='vyloty') {",
 
         "    if(state.page==='archive') {\n"
+        "        const _arBtns=state.archiveSheets.map(s=>{const _dl=/^\\d/.test(s)?s:(s.match(/\\d{1,2}[-.\\/]\\d{1,2}[-.\\/]\\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';return `<button onclick=\"loadArchiveSheet('${esc(s)}')\" onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-archive ${_act}\">${esc(_dl)}</button>`;}).join('')||'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає архівних звітів</p>';\n"
+        "        let _arRecs='';\n"
+        "        if(state.selArchive){\n"
+        "            if(state.archiveLoading){\n"
+        "                _arRecs='<p class=\"stencil text-center py-4\" style=\"color:var(--text-dim)\">Завантаження...</p>';\n"
+        "            } else if(!state.archiveRecs.length){\n"
+        "                _arRecs='<p class=\"stencil text-center py-4\" style=\"color:var(--text-dim)\">Немає записів</p>';\n"
+        "            } else {\n"
+        "                const _sep='<span style=\"color:var(--yellow)\">, </span>';\n"
+        "                const _dash='<span style=\"color:var(--yellow)\"> — </span>';\n"
+        "                const _ysep='<span style=\"color:var(--yellow)\"> | </span>';\n"
+        "                _arRecs=state.archiveRecs.map((r,i)=>{\n"
+        "                    const tgts=r.target?r.target.split(', '):[];\n"
+        "                    const ress=r.result?r.result.split(', '):[];\n"
+        "                    const parts=Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{\n"
+        "                        const n=esc(tgts[j]||'');const rv=esc(ress[j]||'');\n"
+        "                        return n?n+_dash+`<span style=\"color:var(--khaki)\">${rv}</span>`:rv;\n"
+        "                    }).filter(Boolean);\n"
+        "                    const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);\n"
+        "                    return `<div class=\"record-card text-sm\" style=\"position:relative;padding-left:62px\">\n"
+        "                        <div style=\"position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center\">\n"
+        "                            <span class=\"stencil\" style=\"color:var(--yellow);font-size:1.6em;line-height:1\">${i+1}</span>\n"
+        "                        </div>\n"
+        "                        <p class=\"stencil\" style=\"color:var(--text)\">${parts.join(_sep)}</p>\n"
+        "                        ${meta?`<p class=\"stencil\" style=\"color:var(--text-dim);font-size:0.92em;margin-top:4px\">${meta}</p>`:''}\n"
+        "                        <p class=\"stencil\" style=\"color:var(--yellow)\">${r.points} балів</p>\n"
+        "                    </div>`;\n"
+        "                }).join('');\n"
+        "            }\n"
+        "        }\n"
         "        h+=`<div class=\"p-4 space-y-4 zvity-wrap\">\n"
         "            <h1 class=\"stencil-shadow text-3xl px-2\" style=\"color:var(--yellow)\">АРХІВ</h1>\n"
-        "            <div class=\"crate p-4\">\n"
-        "                <div class=\"flex flex-wrap gap-2\">${state.archiveLoading?'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Завантаження...</p>':state.archiveSheets.map((s,i)=>{const _dl=/^\\d/.test(s)?s:(s.match(/\\d{1,2}[-.\\/]\\d{1,2}[-.\\/]\\d{2,4}/)||[s])[0];return `<button onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-archive\">${esc(_dl)}</button>`;}).join('')||'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає архівних звітів</p>'}</div>\n"
-        "            </div>\n"
+        "            <div class=\"crate p-4\"><div class=\"flex flex-wrap gap-2\">${state.archiveLoading&&!state.selArchive?'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Завантаження...</p>':_arBtns}</div></div>\n"
+        "            ${state.selArchive?`<div class=\"crate p-4 space-y-2\">${_arRecs}</div>`:''}\n"
         "        </div>`;\n"
         "    }\n"
         "\n"
