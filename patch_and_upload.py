@@ -820,12 +820,17 @@ def apply_patches(html):
         '      box-shadow: 0 4px 0 #111, 0 6px 8px rgba(0,0,0,0.4);\n'
         '      text-shadow: none;\n'
         '    }\n'
-        '    .btn-archive:active, .btn-archive.active {\n'
+        '    .btn-archive:active, .btn-archive.pressing {\n'
         '      background: #555;\n'
         '      border-color: #666;\n'
         '      color: var(--text);\n'
         '      transform: translateY(2px);\n'
         '      box-shadow: 0 2px 0 #111, 0 4px 6px rgba(0,0,0,0.4);\n'
+        '    }\n'
+        '    .btn-archive.active {\n'
+        '      background: #555;\n'
+        '      border-color: #666;\n'
+        '      color: var(--text);\n'
         '    }',
 
         'archive-css'
@@ -942,7 +947,7 @@ def apply_patches(html):
         "    if(state.page==='vyloty') {",
 
         "    if(state.page==='archive') {\n"
-        "        const _arBtns=state.archiveSheets.map(s=>{const _dl=/^\\d/.test(s)?s:(s.match(/\\d{1,2}[-.\\/]\\d{1,2}[-.\\/]\\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';return `<button onclick=\"loadArchiveSheet('${esc(s)}')\" onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-archive ${_act}\">${esc(_dl)}</button>`;}).join('')||'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає архівних звітів</p>';\n"
+        "        const _arBtns=state.archiveSheets.map(s=>{const _dl=/^\\d/.test(s)?s:(s.match(/\\d{1,2}[-.\\/]\\d{1,2}[-.\\/]\\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';return `<button onclick=\"loadArchiveSheet('${esc(s)}')\" onmousedown=\"this.classList.add('pressing')\" onmouseup=\"this.classList.remove('pressing')\" ontouchstart=\"this.classList.add('pressing')\" ontouchend=\"this.classList.remove('pressing')\" class=\"btn-stencil btn-archive ${_act}\">${esc(_dl)}</button>`;}).join('')||'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає архівних звітів</p>';\n"
         "        let _arContent='';\n"
         "        if(state.selArchive){\n"
         "            if(state.archiveLoading){\n"
