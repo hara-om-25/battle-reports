@@ -1114,7 +1114,7 @@ function render() {
             </div>
             
             <div class="space-y-4">
-                <div class="grid gap-3" style="grid-template-columns: 1fr 1fr auto">
+                <div class="grid gap-3" style="grid-template-columns: 1fr 1fr">
                     <div>
                         <label class="label block mb-2">ЦІЛЬ</label>
                         <select onchange="state.form.newTarget=this.value; render()" class="field">
@@ -1124,13 +1124,13 @@ function render() {
                     </div>
                     <div>
                         <label class="label block mb-2">РЕЗУЛЬТАТ</label>
-                        <select onchange="state.form.newResult=this.value; render()" class="field">
+                        <div style="display:flex;gap:4px;align-items:stretch;overflow:visible;padding-bottom:4px">
+                        <select onchange="state.form.newResult=this.value; render()" class="field" style="flex:1;min-width:0">
                             <option value="">Виберіть...</option>
                             ${state.results.map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
                         </select>
-                    </div>
-                    <div style="display:flex; align-items:flex-end">
-                        <button onclick="addTargetToForm()" class="btn-stencil btn-green w-full" style="aspect-ratio:1; padding:0; font-size:24px; height:42px">+</button>
+                        <button onclick="addTargetToForm()" onmousedown="this.style.background='#5a8a5a';this.style.transform='translateY(2px)'" onmouseup="this.style.background='';this.style.transform=''" ontouchstart="this.style.background='#5a8a5a';this.style.transform='translateY(2px)'" ontouchend="this.style.background='';this.style.transform=''" class="btn-stencil btn-green" style="padding:0;font-size:24px;flex-shrink:0;width:42px;align-self:stretch;margin-top:2px;margin-bottom:2px">+</button>
+                        </div>
                     </div>
                 </div>
                 
