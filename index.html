@@ -311,7 +311,7 @@ let state = {
     scoreTable: {}, drones: [], ammo: [], results: [], records: [],
     report: 1, counts: {},
     form: {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:''},
-    selReport: null, selDate: null, selVylotyDate: null, archiveSheets: [], selArchive: null, archiveRecs: [], archiveLoading: false,
+    selReport: null, selDate: null, selVylotyDate: null, archiveSheets: [], selArchive: null, archiveRecs: [], archiveLoading: false, pvr: [],
     inputVal: '', inputList: null, inputIdx: null, editVal: ''
 };
 
@@ -395,7 +395,7 @@ function logout() {
     sessionStorage.removeItem('email');
     state.token = null; state.user = null;
     state.scoreTable = {}; state.drones = []; state.ammo = []; state.results = [];  state.records = [];
-    state.archiveSheets = []; state.selArchive = null; state.archiveRecs = []; state.archiveLoading = false;
+    state.archiveSheets = []; state.selArchive = null; state.archiveRecs = []; state.archiveLoading = false; state.pvr = [];
     state.loaded = false; state.page = 'login';
     render();
 }
@@ -471,6 +471,20 @@ async function goToArchive() {
                 { headers: { 'Authorization': `Bearer ${state.token}` } }
             ).then(r => r.json());
             state.archiveSheets = (_ar.sheets||[]).map(s=>s.properties.title).filter(t=>/^\d/.test(t));
+            const _pvRows = await apiGet('СПИСКИ');
+            const _pvHdr = _pvRows[0] || [];
+            state.pvr = [3,4,5,6].map(ci=>{
+                const name=(_pvHdr[ci]||''  ).trim();
+                if(!name) return null;
+                const map={};
+                for(let i=1;i<_pvRows.length;i++){
+                    const row=_pvRows[i]||[];
+                    const ammo=(row[2]||''  ).trim();
+                    const val=(row[ci]||''  ).toString().trim().replace(',','.');
+                    if(ammo&&val&&val!=='0'){const c=parseFloat(val);if(c)map[ammo]=c;}
+                }
+                return Object.keys(map).length?{name,map}:null;
+            }).filter(Boolean);
         } catch(e) {
             alert('Помилка завантаження архіву: ' + e.message);
         } finally {
@@ -1197,7 +1211,17 @@ function render() {
                     return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
                 }).join('');
                 const _arHeader=state.archiveRecs.length>0?`<div class="stencil" style="font-size:calc(1.15em - 1px);margin-top:6px;display:flex;flex-wrap:wrap;gap:2px 20px"><span style="color:var(--khaki);white-space:nowrap">ВИЛЬОТІВ ЗА ЗВІТ:&nbsp;<span style="color:var(--yellow)">${state.archiveRecs.length}</span></span><span style="color:var(--khaki);white-space:nowrap">БАЛІВ ЗА ЗВІТ:&nbsp;<span style="color:var(--yellow)">${_arTotal}</span></span></div>`:'';
-                _arContent=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px"><h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">${esc(state.selArchive)}</h1>${_arHeader}</div>${_arGroups||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає записів</p></div>'}`;
+                const _drnCnt={};state.archiveRecs.forEach(r=>{if(r.drone)_drnCnt[r.drone]=(_drnCnt[r.drone]||0)+1;});
+                const _ammoCnt={};state.archiveRecs.forEach(r=>{if(r.ammo)_ammoCnt[r.ammo]=(_ammoCnt[r.ammo]||0)+1;});
+                const _resCnt={};state.archiveRecs.forEach(r=>{if(r.result)r.result.split(', ').forEach(x=>{x=x.trim();if(x)_resCnt[x]=(_resCnt[x]||0)+1;});});
+                const _row=(label,val)=>`<div class="stencil" style="display:flex;justify-content:space-between;padding:2px 0"><span style="color:var(--text)">${label}</span><span style="color:var(--yellow)">${val}</span></div>`;
+                const _sec=(title,rows)=>rows?`<div><p class="stencil" style="color:var(--khaki);font-size:0.85em;letter-spacing:0.08em;margin-bottom:4px">${title}</p>${rows}</div>`:'';
+                const _drnRows=Object.entries(_drnCnt).sort((a,b)=>b[1]-a[1]).map(([d,c])=>_row(esc(d),c)).join('');
+                const _ammoRows=Object.entries(_ammoCnt).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_row(esc(a),c)).join('');
+                const _pvrRows=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_ammoCnt[am]||0)*cf,0);return tot?_row(esc(pvr.name),tot+' кг'):'';}).filter(Boolean).join('');
+                const _resRows=Object.entries(_resCnt).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c)).join('');
+                const _statsBlock=state.archiveRecs.length>0?`<div class="crate p-4"><div class="space-y-3">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}${_sec('РЕЗУЛЬТАТИ',_resRows)}</div></div>`:'';
+                _arContent=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px"><h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">${esc(state.selArchive)}</h1>${_arHeader}</div>${_statsBlock}${_arGroups||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає записів</p></div>'}`;
             }
         }
         h+=`<div class="p-4 space-y-4 zvity-wrap">
