@@ -1026,10 +1026,11 @@ def apply_patches(html):
 
     # ── 59. zvity page: СТАТИСТИКА block before ВИЛЬОТИ ──
     patches.append((
-        '<h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ВИЛЬОТИ</h3>\n'
+        '            <div class="crate p-4">\n'
+        '                <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ВИЛЬОТИ</h3>\n'
         '                <div class="space-y-2">${dayRecs.length > 0 ? dayRecs.map((r,i)=>formatRecord(r,i+1)).join(\'\') : \'<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає вильотів</p>\'}</div>',
 
-        '${(()=>{'
+        '            ${(()=>{'
         'const _sr=state.selDate?dayRecs:(state.selReport?state.records.filter(r=>r.reportNum===state.selReport):[]);'
         'if(!_sr.length)return \'\';'
         'const _dc={};_sr.forEach(r=>{if(r.drone)_dc[r.drone]=(_dc[r.drone]||0)+1;});'
@@ -1045,7 +1046,8 @@ def apply_patches(html):
         '+\'<div class="crate p-4"><div class="flex flex-wrap gap-4">\''
         '+\'<div class="space-y-3" style="flex:2 1 220px">\'+_sec(\'ДРОНИ\',_dr)+_sec(\'БОЄПРИПАСИ\',_ar)+_sec(\'ПВР\',_pr)+\'</div>\''
         '+\'<div style="flex:3 1 280px">\'+_sec(\'РЕЗУЛЬТАТИ\',_rr)+\'</div></div></div>\';})()} \n'
-        '<h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ВИЛЬОТИ</h3>\n'
+        '            <div class="crate p-4">\n'
+        '                <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ВИЛЬОТИ</h3>\n'
         '                <div class="space-y-2">${dayRecs.length > 0 ? dayRecs.map((r,i)=>formatRecord(r,i+1)).join(\'\') : \'<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає вильотів</p>\'}</div>',
 
         'zvity-stats-block'
