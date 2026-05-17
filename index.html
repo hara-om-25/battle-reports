@@ -659,6 +659,16 @@ function removeTargetFromForm(idx) {
     render();
 }
 
+function _freqSort(list, field) {
+    const cnt = {};
+    state.records.forEach(r => { const v = r[field]; if (v) cnt[v] = (cnt[v]||0)+1; });
+    return [...list].sort((a,b) => (cnt[b]||0)-(cnt[a]||0));
+}
+function _freqSortResults(list) {
+    const cnt = {};
+    state.records.forEach(r => { if (r.result) r.result.split(', ').forEach(x => { x=x.trim(); if(x) cnt[x]=(cnt[x]||0)+1; }); });
+    return [...list].sort((a,b) => (cnt[b]||0)-(cnt[a]||0));
+}
 function copyPrev() {
     const _recs = state.records.filter(r => r.reportNum === state.report);
     if (!_recs.length) return;
@@ -837,9 +847,9 @@ const tgtList = er.targets.length > 0
     const scoreOpts = Object.keys(state.scoreTable).map(x=>`<option value="${esc(x)}" ${er.newTarget===x?'selected':''}>${esc(x)}</option>`).join('');
     const resOpts = state.results.map(r=>`<option value="${esc(r)}" ${er.newResult===r?'selected':''}>${esc(r)}</option>`).join('');
     const _droneInList=state.drones.some(d=>d===er.drone);
-    const droneOpts=(er.drone&&!_droneInList?[`<option value="${esc(er.drone)}" selected>${esc(er.drone)}</option>`]:[]).concat(state.drones.map(d=>`<option value="${esc(d)}" ${er.drone===d?'selected':''}>${esc(d)}</option>`)).join('');
+    const droneOpts=(er.drone&&!_droneInList?[`<option value="${esc(er.drone)}" selected>${esc(er.drone)}</option>`]:[]).concat(_freqSort(state.drones,'drone').map(d=>`<option value="${esc(d)}" ${er.drone===d?'selected':''}>${esc(d)}</option>`)).join('');
     const _ammoInList=state.ammo.some(a=>a===er.ammo);
-    const ammoOpts=(er.ammo&&!_ammoInList?[`<option value="${esc(er.ammo)}" selected>${esc(er.ammo)}</option>`]:[]).concat(state.ammo.map(a=>`<option value="${esc(a)}" ${er.ammo===a?'selected':''}>${esc(a)}</option>`)).join('');
+    const ammoOpts=(er.ammo&&!_ammoInList?[`<option value="${esc(er.ammo)}" selected>${esc(er.ammo)}</option>`]:[]).concat(_freqSort(state.ammo,'ammo').map(a=>`<option value="${esc(a)}" ${er.ammo===a?'selected':''}>${esc(a)}</option>`)).join('');
     const q200opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty200===n?'selected':''}>${n}</option>`).join('');
     const q300opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty300===n?'selected':''}>${n}</option>`).join('');
     document.getElementById('modal').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box" style="max-height:90vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 class="stencil-shadow text-xl" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div style="display:flex;gap:6px"><button id="edit-save-top" onclick="saveEditRecord()" class="btn-stencil btn-green" style="padding:6px 14px;font-size:0.9em;${_dim}">&#10003;</button><button onclick="closeModal()" class="btn-stencil" style="padding:6px 14px;font-size:0.9em;opacity:0.6">&#10005;</button></div></div><div class="space-y-3"><div><label class="label block mb-1">ЦІЛІ</label><div class="space-y-1 mb-2">${tgtList}</div><div class="grid gap-2" style="grid-template-columns:1fr 1fr auto"><select onchange="state.editRecord.newTarget=this.value" class="field"><option value="">Ціль...</option>${scoreOpts}</select><select onchange="state.editRecord.newResult=this.value" class="field"><option value="">Результат...</option>${resOpts}</select><button onclick="addEditTarget()" class="btn-stencil btn-green" style="padding:0;font-size:22px;height:42px;min-width:42px">+</button></div></div><div><label class="label block mb-1">MGRS</label><input id="er_coord" oninput="saveEditModalState();checkEditDirty()" class="field" value="${esc(er.coordinates)}" placeholder="36U UA 24232 91610"/></div><div class="grid grid-cols-2 gap-2"><div><label class="label block mb-1">200</label><select onchange="state.editRecord.qty200=parseInt(this.value);checkEditDirty()" class="field">${q200opts}</select></div><div><label class="label block mb-1">300</label><select onchange="state.editRecord.qty300=parseInt(this.value);checkEditDirty()" class="field">${q300opts}</select></div></div><div><label class="label block mb-1">ДРОН</label><select onchange="state.editRecord.drone=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${droneOpts}</select></div><div><label class="label block mb-1">БОЄПРИПАС</label><select onchange="state.editRecord.ammo=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${ammoOpts}</select></div></div><div class="space-y-2 mt-4"><button id="edit-save-bottom" onclick="saveEditRecord()" class="btn-stencil btn-green w-full" style="${_dim}">ЗБЕРЕГТИ</button></div></div></div>`;
@@ -1127,7 +1137,7 @@ function render() {
                         <div style="display:flex;gap:4px;align-items:stretch;overflow:visible;padding-bottom:4px">
                         <select onchange="state.form.newResult=this.value; render()" class="field" style="flex:1;min-width:0">
                             <option value="">Виберіть...</option>
-                            ${state.results.map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
+                            ${_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
                         </select>
                         <button onclick="addTargetToForm()" onmousedown="this.style.background='#5a8a5a';this.style.transform='translateY(2px)'" onmouseup="this.style.background='';this.style.transform=''" ontouchstart="this.style.background='#5a8a5a';this.style.transform='translateY(2px)'" ontouchend="this.style.background='';this.style.transform=''" class="btn-stencil btn-green" style="padding:0;font-size:24px;flex-shrink:0;width:42px;align-self:stretch;margin-top:2px;margin-bottom:2px">+</button>
                         </div>
@@ -1161,14 +1171,14 @@ function render() {
                         <label class="label block mb-2">ДРОН</label>
                         <select onchange="state.form.drone=this.value;render()" class="field">
                             <option value="">Виберіть...</option>
-                            ${state.drones.map(d=>`<option value="${esc(d)}" ${state.form.drone===d?'selected':''}>${esc(d)}</option>`).join('')}
+                            ${_freqSort(state.drones,'drone').map(d=>`<option value="${esc(d)}" ${state.form.drone===d?'selected':''}>${esc(d)}</option>`).join('')}
                         </select>
                     </div>
                     <div>
                         <label class="label block mb-2">БОЄПРИПАС</label>
                         <select onchange="state.form.ammo=this.value;render()" class="field">
                             <option value="">Виберіть...</option>
-                            ${state.ammo.map(a=>`<option value="${esc(a)}" ${state.form.ammo===a?'selected':''}>${esc(a)}</option>`).join('')}
+                            ${_freqSort(state.ammo,'ammo').map(a=>`<option value="${esc(a)}" ${state.form.ammo===a?'selected':''}>${esc(a)}</option>`).join('')}
                         </select>
                     </div>
                 </div>
