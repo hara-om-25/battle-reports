@@ -1085,9 +1085,9 @@ def apply_patches(html):
         '                <div class="space-y-2" style="max-height: 150px; overflow-y: auto">',
 
         '                <div class="stencil" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:var(--khaki)">\n'
-        '                    <div style="display:flex;gap:2em;align-items:center">\n'
-        '                        <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>\n'
-        '                        <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>\n'
+        '                    <div style="display:flex;align-items:center">\n'
+        '                        <span style="margin-right:0.3em">СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>\n'
+        '                        <span style="margin-right:2em">ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>\n'
         '                        <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>\n'
         '                    </div>\n'
         '                    <button onclick="copyPrev()" '
