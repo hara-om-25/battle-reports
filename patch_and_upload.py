@@ -1080,13 +1080,12 @@ def apply_patches(html):
         '                <div class="space-y-2" style="max-height: 150px; overflow-y: auto">',
 
         '                    <div style="display:flex;align-items:center;gap:1em">\n'
-        '                        ${state.records.filter(r=>r.reportNum===state.report).length?'
-        '\'<button onclick="copyPrev()" '
+        '                        <button onclick="copyPrev()" '
         'onmousedown="this.classList.add(\'pressing\')" '
         'onmouseup="this.classList.remove(\'pressing\')" '
         'ontouchstart="this.classList.add(\'pressing\')" '
         'ontouchend="this.classList.remove(\'pressing\')" '
-        'class="btn-stencil" style="font-size:0.78em;padding:3px 10px;opacity:0.85">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>\':\'\'}' + '\n'
+        'class="btn-stencil" style="font-size:0.78em;padding:3px 10px;opacity:0.85">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>\n'
         '                        <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>\n'
         '                    </div>\n'
         '                </div>\n'
