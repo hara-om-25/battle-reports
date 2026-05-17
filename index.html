@@ -1106,7 +1106,7 @@ function render() {
                         <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:1em">
-                        ${state.records.filter(r=>r.reportNum===state.report).length?'<button onclick="copyPrev()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil" style="font-size:0.78em;padding:3px 10px;opacity:0.85">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>':''}
+                        <button onclick="copyPrev()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil" style="font-size:0.78em;padding:3px 10px;opacity:0.85">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>
                         <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>
                     </div>
                 </div>
