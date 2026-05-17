@@ -1052,6 +1052,68 @@ def apply_patches(html):
         'zvity-stats-block'
     ))
 
+    # ── 60. form: copyPrev() function ──
+    patches.append((
+        'async function add() {\n'
+        '    if(state.form.targets.length === 0) {\n'
+        '        alert(\'Додайте результат вильоту, навіть якщо ціль не було уражено\');',
+
+        'function copyPrev() {\n'
+        '    const _recs = state.records.filter(r => r.reportNum === state.report);\n'
+        '    if (!_recs.length) return;\n'
+        '    const _last = _recs[_recs.length - 1];\n'
+        '    if (_last.drone) state.form.drone = _last.drone;\n'
+        '    if (_last.ammo) state.form.ammo = _last.ammo;\n'
+        '    render();\n'
+        '}\n'
+        'async function add() {\n'
+        '    if(state.form.targets.length === 0) {\n'
+        '        alert(\'Додайте результат вильоту, навіть якщо ціль не було уражено\');',
+
+        'form-copy-prev-fn'
+    ))
+
+    # ── 61. form: "КОПІЮВАТИ ПОПЕРЕДНІЙ" button in ЦІЛІ/БАЛІВ row ──
+    patches.append((
+        '                    <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>\n'
+        '                </div>\n'
+        '                <div class="space-y-2" style="max-height: 150px; overflow-y: auto">',
+
+        '                    <div style="display:flex;align-items:center;gap:1em">\n'
+        '                        ${state.records.filter(r=>r.reportNum===state.report).length?'
+        '\'<button onclick="copyPrev()" '
+        'onmousedown="this.classList.add(\'pressing\')" '
+        'onmouseup="this.classList.remove(\'pressing\')" '
+        'ontouchstart="this.classList.add(\'pressing\')" '
+        'ontouchend="this.classList.remove(\'pressing\')" '
+        'class="btn-stencil" style="font-size:0.78em;padding:3px 10px;opacity:0.85">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>\':\'\'}' + '\n'
+        '                        <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>\n'
+        '                    </div>\n'
+        '                </div>\n'
+        '                <div class="space-y-2" style="max-height: 150px; overflow-y: auto">',
+
+        'form-copy-prev-btn'
+    ))
+
+    # ── 62. form: paste-from-clipboard button beside MGRS input ──
+    patches.append((
+        '                        <label class="label block mb-2">MGRS</label>\n'
+        '                        <input type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="field" />',
+
+        '                        <label class="label block mb-2">MGRS</label>\n'
+        '                        <div style="display:flex;gap:4px;align-items:stretch">\n'
+        '                        <input id="form-coord" type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="field" style="flex:1;min-width:0" />\n'
+        '                        <button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();state.form.coord=v;const el=document.getElementById(\'form-coord\');if(el)el.value=v;}).catch(()=>{})" '
+        'onmousedown="this.classList.add(\'pressing\')" '
+        'onmouseup="this.classList.remove(\'pressing\')" '
+        'ontouchstart="this.classList.add(\'pressing\')" '
+        'ontouchend="this.classList.remove(\'pressing\')" '
+        'class="btn-stencil" style="padding:0 10px;font-size:18px;flex-shrink:0" title="Вставити з буфера">&#x2398;</button>\n'
+        '                        </div>',
+
+        'mgrs-paste-btn'
+    ))
+
 
     # Apply patches
     for old, new, name in patches:
