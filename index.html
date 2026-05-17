@@ -1100,15 +1100,13 @@ function render() {
             </div>
             
             <div class="mb-6" style="border-top: 1px dashed var(--khaki); padding-top: 16px; margin-top: 16px">
-                <div class="stencil" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; color:var(--khaki)">
-                    <div style="display:flex;gap:2em">
+                <div class="stencil" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:var(--khaki)">
+                    <div style="display:flex;gap:2em;align-items:center">
+                        <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>
                         <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>
                         <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>
                     </div>
-                    <div style="display:flex;align-items:center;gap:1em">
-                        <button onclick="copyPrev()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil" style="font-size:0.78em;padding:3px 10px;opacity:0.85">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>
-                        <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>
-                    </div>
+                    <button onclick="copyPrev()" onmousedown="this.style.background='#9a9070';this.style.transform='translateY(2px)'" onmouseup="this.style.background='';this.style.transform=''" ontouchstart="this.style.background='#9a9070';this.style.transform='translateY(2px)'" ontouchend="this.style.background='';this.style.transform=''" class="btn-stencil" style="font-size:0.78em;padding:3px 10px">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>
                 </div>
                 <div class="space-y-2" style="max-height: 150px; overflow-y: auto">
                     ${state.form.targets.map((t, i) => `<div class="list-item" style="display:flex; justify-content:space-between; align-items:center"><span>${esc(t.fullName)} - ${esc(t.result)} (${targetPoints[i]} балів)</span><button onclick="removeTargetFromForm(${i})" class="btn-stencil" style="padding:4px 8px; font-size:12px">✕</button></div>`).join('')}
