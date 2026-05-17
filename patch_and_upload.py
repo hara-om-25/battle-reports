@@ -1075,19 +1075,27 @@ def apply_patches(html):
 
     # ── 61. form: "КОПІЮВАТИ ПОПЕРЕДНІЙ" button in ЦІЛІ/БАЛІВ row ──
     patches.append((
+        '                <div class="stencil" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; color:var(--khaki)">\n'
+        '                    <div style="display:flex;gap:2em">\n'
+        '                        <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>\n'
+        '                        <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>\n'
+        '                    </div>\n'
         '                    <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>\n'
         '                </div>\n'
         '                <div class="space-y-2" style="max-height: 150px; overflow-y: auto">',
 
-        '                    <div style="display:flex;align-items:center;gap:1em">\n'
-        '                        <button onclick="copyPrev()" '
-        'onmousedown="this.classList.add(\'pressing\')" '
-        'onmouseup="this.classList.remove(\'pressing\')" '
-        'ontouchstart="this.classList.add(\'pressing\')" '
-        'ontouchend="this.classList.remove(\'pressing\')" '
-        'class="btn-stencil" style="font-size:0.78em;padding:3px 10px;opacity:0.85">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>\n'
+        '                <div class="stencil" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:var(--khaki)">\n'
+        '                    <div style="display:flex;gap:2em;align-items:center">\n'
         '                        <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>\n'
+        '                        <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>\n'
+        '                        <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>\n'
         '                    </div>\n'
+        '                    <button onclick="copyPrev()" '
+        'onmousedown="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
+        'onmouseup="this.style.background=\'\';this.style.transform=\'\'" '
+        'ontouchstart="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
+        'ontouchend="this.style.background=\'\';this.style.transform=\'\'" '
+        'class="btn-stencil" style="font-size:0.78em;padding:3px 10px">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>\n'
         '                </div>\n'
         '                <div class="space-y-2" style="max-height: 150px; overflow-y: auto">',
 
