@@ -896,20 +896,6 @@ def apply_patches(html):
         '                { headers: { \'Authorization\': `Bearer ${state.token}` } }\n'
         '            ).then(r => r.json());\n'
         '            state.archiveSheets = (_ar.sheets||[]).map(s=>s.properties.title).filter(t=>/^\\d/.test(t));\n'
-        '            const _pvRows = await apiGet(\'СПИСКИ\');\n'
-        '            const _pvHdr = _pvRows[0] || [];\n'
-        '            state.pvr = [3,4,5,6].map(ci=>{\n'
-        '                const name=(_pvHdr[ci]||\'\'  ).trim();\n'
-        '                if(!name) return null;\n'
-        '                const map={};\n'
-        '                for(let i=1;i<_pvRows.length;i++){\n'
-        '                    const row=_pvRows[i]||[];\n'
-        '                    const ammo=(row[2]||\'\'  ).trim();\n'
-        '                    const val=(row[ci]||\'\'  ).toString().trim().replace(\',\',\'.\');\n'
-        '                    if(ammo&&val&&val!==\'0\'){const c=parseFloat(val);if(c)map[ammo]=c;}\n'
-        '                }\n'
-        '                return Object.keys(map).length?{name,map}:null;\n'
-        '            }).filter(Boolean);\n'
         '        } catch(e) {\n'
         '            alert(\'Помилка завантаження архіву: \' + e.message);\n'
         '        } finally {\n'
@@ -1010,6 +996,59 @@ def apply_patches(html):
         "    if(state.page==='vyloty') {",
 
         'archive-page-render'
+    ))
+
+    # ── 58. Load PVR data from СПИСКИ header row in loadDataFromAPI ──
+    patches.append((
+        '            if (row[2]) state.ammo.push(row[2].trim());\n'
+        '        }\n'
+        '        \n'
+        '        const mainRows = await apiGet(\'ГОЛОВНА\');',
+
+        '            if (row[2]) state.ammo.push(row[2].trim());\n'
+        '        }\n'
+        '        const _pvHdr=listRows[0]||[];'
+        'state.pvr=[3,4,5,6].map(ci=>{'
+        'const name=(_pvHdr[ci]||\'\').trim();if(!name)return null;'
+        'const map={};'
+        'for(let i=1;i<listRows.length;i++){'
+        'const row=listRows[i]||[];'
+        'const ammo=(row[2]||\'\').trim();'
+        'const val=(row[ci]||\'\').toString().trim().replace(\',\',\'.\');'
+        'if(ammo&&val&&val!==\'0\'){const c=parseFloat(val);if(c)map[ammo]=c;}'
+        '}'
+        'return Object.keys(map).length?{name,map}:null;'
+        '}).filter(Boolean);\n'
+        '        const mainRows = await apiGet(\'ГОЛОВНА\');',
+
+        'pvr-load-from-lists'
+    ))
+
+    # ── 59. zvity page: СТАТИСТИКА block before ВИЛЬОТИ ──
+    patches.append((
+        '<h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ВИЛЬОТИ</h3>\n'
+        '                <div class="space-y-2">${dayRecs.length > 0 ? dayRecs.map((r,i)=>formatRecord(r,i+1)).join(\'\') : \'<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає вильотів</p>\'}</div>',
+
+        '${(()=>{'
+        'const _sr=state.selDate?dayRecs:(state.selReport?state.records.filter(r=>r.reportNum===state.selReport):[]);'
+        'if(!_sr.length)return \'\';'
+        'const _dc={};_sr.forEach(r=>{if(r.drone)_dc[r.drone]=(_dc[r.drone]||0)+1;});'
+        'const _ac={};_sr.forEach(r=>{if(r.ammo)_ac[r.ammo]=(_ac[r.ammo]||0)+1;});'
+        'const _rc={};_sr.forEach(r=>{if(r.result)r.result.split(\', \').forEach(x=>{x=x.trim();if(x)_rc[x]=(_rc[x]||0)+1;});});'
+        'const _row=(l,v,s=\'\')=>\'<p class="stencil" style="color:var(--text);margin:1px 0">\'+l+\' <span style="color:var(--yellow)">— \'+v+s+\'</span></p>\';'
+        'const _sec=(t,rows)=>rows?\'<div><p class="stencil" style="color:var(--khaki);font-size:calc(0.85em + 2px);letter-spacing:0.08em;margin-bottom:4px">\'+t+\'</p>\'+rows+\'</div>\':\'\';'
+        'const _dr=Object.entries(_dc).sort((a,b)=>b[1]-a[1]).map(([d,c])=>_row(esc(d),c,\' шт\')).join(\'\');'
+        'const _ar=Object.entries(_ac).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_row(esc(a),c,\' шт\')).join(\'\');'
+        'const _pr=(state.pvr||[]).map(pvr=>{const t=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_ac[am]||0)*cf,0);return t?_row(esc(pvr.name),t+\' кг\'):\'\';}).filter(Boolean).join(\'\');'
+        'const _rr=Object.entries(_rc).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,\' разів\')).join(\'\');'
+        'return \'<h2 class="stencil-shadow text-xl px-2" style="color:var(--yellow)">СТАТИСТИКА</h2>\''
+        '+\'<div class="crate p-4"><div class="flex flex-wrap gap-4">\''
+        '+\'<div class="space-y-3" style="flex:2 1 220px">\'+_sec(\'ДРОНИ\',_dr)+_sec(\'БОЄПРИПАСИ\',_ar)+_sec(\'ПВР\',_pr)+\'</div>\''
+        '+\'<div style="flex:3 1 280px">\'+_sec(\'РЕЗУЛЬТАТИ\',_rr)+\'</div></div></div>\';})()} \n'
+        '<h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ВИЛЬОТИ</h3>\n'
+        '                <div class="space-y-2">${dayRecs.length > 0 ? dayRecs.map((r,i)=>formatRecord(r,i+1)).join(\'\') : \'<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає вильотів</p>\'}</div>',
+
+        'zvity-stats-block'
     ))
 
 
