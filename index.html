@@ -1139,7 +1139,7 @@ function render() {
                         <label class="label block mb-2">MGRS</label>
                         <div style="display:flex;gap:4px;align-items:stretch">
                         <input id="form-coord" type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="field" style="flex:1;min-width:0" />
-                        <button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();state.form.coord=v;const el=document.getElementById('form-coord');if(el)el.value=v;}).catch(()=>{})" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil" style="padding:0 10px;font-size:18px;flex-shrink:0" title="Вставити з буфера">&#x2398;</button>
+                        <button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();state.form.coord=v;const el=document.getElementById('form-coord');if(el)el.value=v;}).catch(()=>{})" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil" style="padding:0 6px;font-size:12px;flex-shrink:0;min-width:28px;height:auto;align-self:stretch" title="Вставити з буфера">&#x2398;</button>
                         </div>
                     </div>
                     <div>
