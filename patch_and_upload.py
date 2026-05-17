@@ -1115,7 +1115,7 @@ def apply_patches(html):
         'onmouseup="this.style.background=\'\';this.style.transform=\'\'" '
         'ontouchstart="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
         'ontouchend="this.style.background=\'\';this.style.transform=\'\'" '
-        'class="btn-stencil" style="padding:0;font-size:16px;flex-shrink:0;align-self:stretch;aspect-ratio:1" title="Вставити з буфера">&#x2398;</button>\n'
+        'class="btn-stencil" style="padding:0;font-size:16px;flex-shrink:0;width:42px;height:42px" title="Вставити з буфера">&#x2398;</button>\n'
         '                        </div>',
 
         'mgrs-paste-btn'
