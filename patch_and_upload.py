@@ -1179,6 +1179,18 @@ def apply_patches(html):
     patches.append((
         'function copyPrev() {\n',
 
+        'function _freqSortTargets(list) {\n'
+        '    const cnt = {};\n'
+        '    state.records.forEach(r => {\n'
+        '        if (!r.target) return;\n'
+        '        r.target.split(\', \').forEach(t => {\n'
+        '            const p = t.trim().split(\' \');\n'
+        '            const abbr = (/^\\d+$/.test(p[p.length-1]) ? p.slice(0,-1).join(\' \') : t.trim()).toUpperCase();\n'
+        '            if (abbr) cnt[abbr] = (cnt[abbr]||0)+1;\n'
+        '        });\n'
+        '    });\n'
+        '    return [...list].sort((a,b) => (cnt[b.toUpperCase()]||0)-(cnt[a.toUpperCase()]||0));\n'
+        '}\n'
         'function _freqSort(list, field) {\n'
         '    const cnt = {};\n'
         '    state.records.forEach(r => { const v = r[field]; if (v) cnt[v] = (cnt[v]||0)+1; });\n'
@@ -1269,6 +1281,39 @@ def apply_patches(html):
         '${esc(r)}</option>`).join(\'\')',
 
         'edit-ro-freq-sort'
+    ))
+
+    # ── 72. form ЦІЛЬ: sort by frequency ──
+    patches.append((
+        'Object.keys(state.scoreTable).map(x=>`<option value="${esc(x)}" ${state.form.newTarget===x?\'selected\':\'\'}>'+
+        '${esc(x)}</option>`).join(\'\')',
+
+        '_freqSortTargets(Object.keys(state.scoreTable)).map(x=>`<option value="${esc(x)}" ${state.form.newTarget===x?\'selected\':\'\'}>'+
+        '${esc(x)}</option>`).join(\'\')',
+
+        'form-target-freq-sort'
+    ))
+
+    # ── 73. edit modal scoreOpts (add-target ціль select): sort by frequency ──
+    patches.append((
+        'Object.keys(state.scoreTable).map(x=>`<option value="${esc(x)}" ${er.newTarget===x?\'selected\':\'\'}>'+
+        '${esc(x)}</option>`).join(\'\')',
+
+        '_freqSortTargets(Object.keys(state.scoreTable)).map(x=>`<option value="${esc(x)}" ${er.newTarget===x?\'selected\':\'\'}>'+
+        '${esc(x)}</option>`).join(\'\')',
+
+        'edit-scoreOpts-freq-sort'
+    ))
+
+    # ── 74. edit modal _so (inline per-target ціль select): sort by frequency ──
+    patches.append((
+        'Object.keys(state.scoreTable).map(x=>`<option value="${esc(x)}" ${_ca===x?\'selected\':\'\'}>'+
+        '${esc(x)}</option>`).join(\'\')',
+
+        '_freqSortTargets(Object.keys(state.scoreTable)).map(x=>`<option value="${esc(x)}" ${_ca===x?\'selected\':\'\'}>'+
+        '${esc(x)}</option>`).join(\'\')',
+
+        'edit-so-freq-sort'
     ))
 
 
