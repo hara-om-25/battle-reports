@@ -1115,7 +1115,7 @@ def apply_patches(html):
         'onmouseup="this.classList.remove(\'pressing\')" '
         'ontouchstart="this.classList.add(\'pressing\')" '
         'ontouchend="this.classList.remove(\'pressing\')" '
-        'class="btn-stencil" style="padding:0 8px;font-size:16px;flex-shrink:0" title="Вставити з буфера">&#x2398;</button>\n'
+        'class="btn-stencil" style="padding:2px 8px;font-size:16px;flex-shrink:0;line-height:1" title="Вставити з буфера">&#x2398;</button>\n'
         '                        </div>',
 
         'mgrs-paste-btn'
