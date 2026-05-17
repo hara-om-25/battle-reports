@@ -1249,6 +1249,28 @@ def apply_patches(html):
         'edit-ammo-freq-sort'
     ))
 
+    # ── 70. edit modal resOpts (add-target result select): sort by frequency ──
+    patches.append((
+        'state.results.map(r=>`<option value="${esc(r)}" ${er.newResult===r?\'selected\':\'\'}>'+
+        '${esc(r)}</option>`).join(\'\')',
+
+        '_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${er.newResult===r?\'selected\':\'\'}>'+
+        '${esc(r)}</option>`).join(\'\')',
+
+        'edit-resOpts-freq-sort'
+    ))
+
+    # ── 71. edit modal _ro (inline per-target result select): sort by frequency ──
+    patches.append((
+        'state.results.map(r=>`<option value="${esc(r)}" ${t.result===r?\'selected\':\'\'}>'+
+        '${esc(r)}</option>`).join(\'\')',
+
+        '_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${t.result===r?\'selected\':\'\'}>'+
+        '${esc(r)}</option>`).join(\'\')',
+
+        'edit-ro-freq-sort'
+    ))
+
 
     # Apply patches
     for old, new, name in patches:
