@@ -1121,6 +1121,60 @@ def apply_patches(html):
         'mgrs-paste-btn'
     ))
 
+    # ── 63. form: move + button inside РЕЗУЛЬТАТ column, paste-button style ──
+    patches.append((
+        '                <div class="grid gap-3" style="grid-template-columns: 1fr 1fr auto">\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2">ЦІЛЬ</label>\n'
+        '                        <select onchange="state.form.newTarget=this.value; render()" class="field">\n'
+        '                            <option value="">Виберіть...</option>\n'
+        '                            ${Object.keys(state.scoreTable).map(x=>`<option value="${esc(x)}" ${state.form.newTarget===x?\'selected\':\'\'}>'+
+        '${esc(x)}</option>`).join(\'\')}\n'
+        '                        </select>\n'
+        '                    </div>\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2">РЕЗУЛЬТАТ</label>\n'
+        '                        <select onchange="state.form.newResult=this.value; render()" class="field">\n'
+        '                            <option value="">Виберіть...</option>\n'
+        '                            ${state.results.map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?\'selected\':\'\'}>'+
+        '${esc(r)}</option>`).join(\'\')}\n'
+        '                        </select>\n'
+        '                    </div>\n'
+        '                    <div style="display:flex; align-items:flex-end">\n'
+        '                        <button onclick="addTargetToForm()" class="btn-stencil btn-green w-full" style="aspect-ratio:1; padding:0; font-size:24px; height:42px">+</button>\n'
+        '                    </div>\n'
+        '                </div>',
+
+        '                <div class="grid gap-3" style="grid-template-columns: 1fr 1fr">\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2">ЦІЛЬ</label>\n'
+        '                        <select onchange="state.form.newTarget=this.value; render()" class="field">\n'
+        '                            <option value="">Виберіть...</option>\n'
+        '                            ${Object.keys(state.scoreTable).map(x=>`<option value="${esc(x)}" ${state.form.newTarget===x?\'selected\':\'\'}>'+
+        '${esc(x)}</option>`).join(\'\')}\n'
+        '                        </select>\n'
+        '                    </div>\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2">РЕЗУЛЬТАТ</label>\n'
+        '                        <div style="display:flex;gap:4px;align-items:stretch;overflow:visible;padding-bottom:4px">\n'
+        '                        <select onchange="state.form.newResult=this.value; render()" class="field" style="flex:1;min-width:0">\n'
+        '                            <option value="">Виберіть...</option>\n'
+        '                            ${state.results.map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?\'selected\':\'\'}>'+
+        '${esc(r)}</option>`).join(\'\')}\n'
+        '                        </select>\n'
+        '                        <button onclick="addTargetToForm()" '
+        'onmousedown="this.style.background=\'#5a8a5a\';this.style.transform=\'translateY(2px)\'" '
+        'onmouseup="this.style.background=\'\';this.style.transform=\'\'" '
+        'ontouchstart="this.style.background=\'#5a8a5a\';this.style.transform=\'translateY(2px)\'" '
+        'ontouchend="this.style.background=\'\';this.style.transform=\'\'" '
+        'class="btn-stencil btn-green" style="padding:0;font-size:24px;flex-shrink:0;width:42px;align-self:stretch;margin-top:2px;margin-bottom:2px">+</button>\n'
+        '                        </div>\n'
+        '                    </div>\n'
+        '                </div>',
+
+        'form-add-target-btn-style'
+    ))
+
 
     # Apply patches
     for old, new, name in patches:
