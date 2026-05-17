@@ -1175,6 +1175,80 @@ def apply_patches(html):
         'form-add-target-btn-style'
     ))
 
+    # ── 64. freq-sort helpers ──
+    patches.append((
+        'function copyPrev() {\n',
+
+        'function _freqSort(list, field) {\n'
+        '    const cnt = {};\n'
+        '    state.records.forEach(r => { const v = r[field]; if (v) cnt[v] = (cnt[v]||0)+1; });\n'
+        '    return [...list].sort((a,b) => (cnt[b]||0)-(cnt[a]||0));\n'
+        '}\n'
+        'function _freqSortResults(list) {\n'
+        '    const cnt = {};\n'
+        '    state.records.forEach(r => { if (r.result) r.result.split(\', \').forEach(x => { x=x.trim(); if(x) cnt[x]=(cnt[x]||0)+1; }); });\n'
+        '    return [...list].sort((a,b) => (cnt[b]||0)-(cnt[a]||0));\n'
+        '}\n'
+        'function copyPrev() {\n',
+
+        'freq-sort-helpers'
+    ))
+
+    # ── 65. form РЕЗУЛЬТАТ: sort by frequency ──
+    patches.append((
+        'state.results.map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?\'selected\':\'\'}>'+
+        '${esc(r)}</option>`).join(\'\')',
+
+        '_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?\'selected\':\'\'}>'+
+        '${esc(r)}</option>`).join(\'\')',
+
+        'form-result-freq-sort'
+    ))
+
+    # ── 66. form ДРОН: sort by frequency ──
+    patches.append((
+        'state.drones.map(d=>`<option value="${esc(d)}" ${state.form.drone===d?\'selected\':\'\'}>'+
+        '${esc(d)}</option>`).join(\'\')',
+
+        '_freqSort(state.drones,\'drone\').map(d=>`<option value="${esc(d)}" ${state.form.drone===d?\'selected\':\'\'}>'+
+        '${esc(d)}</option>`).join(\'\')',
+
+        'form-drone-freq-sort'
+    ))
+
+    # ── 67. form БОЄПРИПАС: sort by frequency ──
+    patches.append((
+        'state.ammo.map(a=>`<option value="${esc(a)}" ${state.form.ammo===a?\'selected\':\'\'}>'+
+        '${esc(a)}</option>`).join(\'\')',
+
+        '_freqSort(state.ammo,\'ammo\').map(a=>`<option value="${esc(a)}" ${state.form.ammo===a?\'selected\':\'\'}>'+
+        '${esc(a)}</option>`).join(\'\')',
+
+        'form-ammo-freq-sort'
+    ))
+
+    # ── 68. edit modal droneOpts: sort by frequency ──
+    patches.append((
+        '.concat(state.drones.map(d=>`<option value="${esc(d)}" ${er.drone===d?\'selected\':\'\'}>'+
+        '${esc(d)}</option>`)).join(\'\')',
+
+        '.concat(_freqSort(state.drones,\'drone\').map(d=>`<option value="${esc(d)}" ${er.drone===d?\'selected\':\'\'}>'+
+        '${esc(d)}</option>`)).join(\'\')',
+
+        'edit-drone-freq-sort'
+    ))
+
+    # ── 69. edit modal ammoOpts: sort by frequency ──
+    patches.append((
+        '.concat(state.ammo.map(a=>`<option value="${esc(a)}" ${er.ammo===a?\'selected\':\'\'}>'+
+        '${esc(a)}</option>`)).join(\'\')',
+
+        '.concat(_freqSort(state.ammo,\'ammo\').map(a=>`<option value="${esc(a)}" ${er.ammo===a?\'selected\':\'\'}>'+
+        '${esc(a)}</option>`)).join(\'\')',
+
+        'edit-ammo-freq-sort'
+    ))
+
 
     # Apply patches
     for old, new, name in patches:
