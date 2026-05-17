@@ -659,6 +659,14 @@ function removeTargetFromForm(idx) {
     render();
 }
 
+function copyPrev() {
+    const _recs = state.records.filter(r => r.reportNum === state.report);
+    if (!_recs.length) return;
+    const _last = _recs[_recs.length - 1];
+    if (_last.drone) state.form.drone = _last.drone;
+    if (_last.ammo) state.form.ammo = _last.ammo;
+    render();
+}
 async function add() {
     if(state.form.targets.length === 0) {
         alert('Додайте результат вильоту, навіть якщо ціль не було уражено');
@@ -1097,7 +1105,10 @@ function render() {
                         <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>
                         <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>
                     </div>
-                    <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>
+                    <div style="display:flex;align-items:center;gap:1em">
+                        ${state.records.filter(r=>r.reportNum===state.report).length?'<button onclick="copyPrev()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil" style="font-size:0.78em;padding:3px 10px;opacity:0.85">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>':''}
+                        <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>
+                    </div>
                 </div>
                 <div class="space-y-2" style="max-height: 150px; overflow-y: auto">
                     ${state.form.targets.map((t, i) => `<div class="list-item" style="display:flex; justify-content:space-between; align-items:center"><span>${esc(t.fullName)} - ${esc(t.result)} (${targetPoints[i]} балів)</span><button onclick="removeTargetFromForm(${i})" class="btn-stencil" style="padding:4px 8px; font-size:12px">✕</button></div>`).join('')}
@@ -1128,7 +1139,10 @@ function render() {
                 <div class="grid gap-4 mt-6" style="grid-template-columns: 2fr 1fr 1fr; border-top: 1px dashed var(--khaki); padding-top: 16px">
                     <div>
                         <label class="label block mb-2">MGRS</label>
-                        <input type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="field" />
+                        <div style="display:flex;gap:4px;align-items:stretch">
+                        <input id="form-coord" type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="field" style="flex:1;min-width:0" />
+                        <button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();state.form.coord=v;const el=document.getElementById('form-coord');if(el)el.value=v;}).catch(()=>{})" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil" style="padding:0 10px;font-size:18px;flex-shrink:0" title="Вставити з буфера">&#x2398;</button>
+                        </div>
                     </div>
                     <div>
                         <label class="label block mb-2">200</label>
