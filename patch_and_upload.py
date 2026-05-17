@@ -1108,14 +1108,14 @@ def apply_patches(html):
         '                        <input type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="field" />',
 
         '                        <label class="label block mb-2">MGRS</label>\n'
-        '                        <div style="display:flex;gap:4px;align-items:stretch">\n'
+        '                        <div style="display:flex;gap:4px;align-items:stretch;overflow:visible;padding-bottom:4px">\n'
         '                        <input id="form-coord" type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="field" style="flex:1;min-width:0" />\n'
         '                        <button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();state.form.coord=v;const el=document.getElementById(\'form-coord\');if(el)el.value=v;}).catch(()=>{})" '
         'onmousedown="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
         'onmouseup="this.style.background=\'\';this.style.transform=\'\'" '
         'ontouchstart="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
         'ontouchend="this.style.background=\'\';this.style.transform=\'\'" '
-        'class="btn-stencil" style="padding:0;font-size:16px;flex-shrink:0;width:42px;height:42px" title="Вставити з буфера">&#x2398;</button>\n'
+        'class="btn-stencil" style="padding:0;font-size:16px;flex-shrink:0;width:42px;align-self:stretch" title="Вставити з буфера">&#x2398;</button>\n'
         '                        </div>',
 
         'mgrs-paste-btn'
