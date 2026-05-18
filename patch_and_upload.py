@@ -1317,6 +1317,36 @@ def apply_patches(html):
     ))
 
 
+    # ── 77. shield click: push local records to ГОЛОВНА instead of pull ──
+    patches.append((
+        'async function syncOnShieldClick() {\n'
+        '    state.shieldHide = true;\n'
+        '    render();\n'
+        '    try {\n'
+        '        await loadDataFromAPI();\n'
+        '    } finally {\n'
+        '        state.shieldHide = false;\n'
+        '        render();\n'
+        '    }\n'
+        '}',
+
+        'async function syncOnShieldClick() {\n'
+        '    state.shieldHide = true;\n'
+        '    render();\n'
+        '    try {\n'
+        '        await syncRecordsToAPI();\n'
+        '        showAlert(\'✅ Дані синхронізовано з ГОЛОВНА!\');\n'
+        '    } catch(e) {\n'
+        '        showAlert(\'⚠️ Помилка синхронізації: \' + e.message);\n'
+        '    } finally {\n'
+        '        state.shieldHide = false;\n'
+        '        render();\n'
+        '    }\n'
+        '}',
+
+        'shield-push-sync'
+    ))
+
     # ── 75. auth: silent token refresh on 401 instead of alert+logout ──
     patches.append((
         '        if (usersResp.error) {\n'
