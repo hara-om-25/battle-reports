@@ -293,10 +293,10 @@
     <div id="modal"></div>
     <script>
 window.addEventListener('error', function(e) {
-    alert('JS ПОМИЛКА:\n' + e.message + '\n\nФайл: ' + (e.filename||'?') + '\nРядок: ' + (e.lineno||'?') + '\nСтек:\n' + (e.error && e.error.stack ? e.error.stack.substring(0,500) : 'нема'));
+    showAlert('JS ПОМИЛКА:\n' + e.message + '\n\nФайл: ' + (e.filename||'?') + '\nРядок: ' + (e.lineno||'?') + '\nСтек:\n' + (e.error && e.error.stack ? e.error.stack.substring(0,500) : 'нема'));
 });
 window.addEventListener('unhandledrejection', function(e) {
-    alert('PROMISE ПОМИЛКА:\n' + (e.reason && e.reason.message || e.reason) + '\n\nСтек:\n' + (e.reason && e.reason.stack ? e.reason.stack.substring(0,500) : 'нема'));
+    showAlert('PROMISE ПОМИЛКА:\n' + (e.reason && e.reason.message || e.reason) + '\n\nСтек:\n' + (e.reason && e.reason.stack ? e.reason.stack.substring(0,500) : 'нема'));
 });
 </script>
     <script>
@@ -349,20 +349,20 @@ async function verifyAndLoad() {
                 tokenClient.requestAccessToken({ prompt: '' });
                 return;
             }
-            alert('Помилка доступу до файла: ' + usersResp.error.message);
+            showAlert('Помилка доступу до файла: ' + usersResp.error.message);
             logout(); return;
         }
         
         const users = (usersResp.values || []).flat().map(x => (x||'').trim().toLowerCase()).filter(x => x);
         const userEmail = (state.user || '').trim().toLowerCase();
         if (!users.includes(userEmail)) {
-            alert('У вас немає доступу!\nВаш email: ' + state.user);
+            showAlert('У вас немає доступу!\nВаш email: ' + state.user);
             logout(); return;
         }
         
         await loadDataFromAPI();
     } catch(err) {
-        alert('Помилка перевірки: ' + err.message);
+        showAlert('Помилка перевірки: ' + err.message);
         logout();
     }
 }
@@ -373,7 +373,7 @@ function initAuth() {
         scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email',
         callback: async (response) => {
             if (response.error) {
-                alert('Помилка авторизації: ' + response.error);
+                showAlert('Помилка авторизації: ' + response.error);
                 return;
             }
             state.token = response.access_token;
@@ -387,13 +387,33 @@ function initAuth() {
                 sessionStorage.setItem('email', state.user);
                 await verifyAndLoad();
             } catch(err) {
-                alert('Помилка: ' + err.message);
+                showAlert('Помилка: ' + err.message);
                 logout();
             }
         }
     });
 }
 
+function showAlert(msg) {
+    var _ov = document.createElement('div');
+    _ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    var _bx = document.createElement('div');
+    _bx.style.cssText = 'background:var(--surface);border:1px solid var(--olive-dark);box-shadow:4px 4px 0 var(--olive-dark);padding:24px 28px 20px;max-width:420px;width:100%;font-family:Tektur,monospace;color:var(--text)';
+    var _ti = document.createElement('div');
+    _ti.style.cssText = 'color:var(--yellow);font-size:0.7em;letter-spacing:0.15em;margin-bottom:14px;font-weight:700';
+    _ti.textContent = 'ПОВІДОМЛЕННЯ';
+    var _mg = document.createElement('div');
+    _mg.style.cssText = 'white-space:pre-wrap;font-size:0.92em;margin-bottom:22px;line-height:1.5';
+    _mg.textContent = msg;
+    var _ok = document.createElement('button');
+    _ok.className = 'btn-stencil';
+    _ok.style.cssText = 'float:right;padding:4px 22px;font-size:0.85em';
+    _ok.textContent = 'OK';
+    _bx.appendChild(_ti); _bx.appendChild(_mg); _bx.appendChild(_ok);
+    _ov.appendChild(_bx);
+    document.body.appendChild(_ov);
+    _ok.addEventListener('click', function() { document.body.removeChild(_ov); });
+}
 function login() { tokenClient.requestAccessToken(); }
 
 function logout() {
@@ -478,7 +498,7 @@ async function goToArchive() {
             ).then(r => r.json());
             state.archiveSheets = (_ar.sheets||[]).map(s=>s.properties.title).filter(t=>/^\d/.test(t));
         } catch(e) {
-            alert('Помилка завантаження архіву: ' + e.message);
+            showAlert('Помилка завантаження архіву: ' + e.message);
         } finally {
             state.archiveLoading = false;
         }
@@ -511,7 +531,7 @@ async function loadArchiveSheet(name) {
             }
         }
     } catch(e) {
-        alert('Помилка: ' + e.message);
+        showAlert('Помилка: ' + e.message);
     } finally {
         state.archiveLoading = false;
         render();
@@ -590,7 +610,7 @@ async function loadDataFromAPI() {
         render();
     } catch(err) {
         console.error('Завантаження failed:', err);
-        alert('Помилка завантаження: ' + err.message + '\n\nДеталі в консолі (F12)');
+        showAlert('Помилка завантаження: ' + err.message + '\n\nДеталі в консолі (F12)');
         logout();
     }
 }
@@ -606,7 +626,7 @@ async function syncListsToAPI() {
         }
         await apiUpdate(`СПИСКИ!A2:C${maxLen + 1}`, rows);
     } catch(err) {
-        alert('Помилка синхронізації списків: ' + err.message);
+        showAlert('Помилка синхронізації списків: ' + err.message);
     }
 }
 
@@ -644,7 +664,7 @@ function calculatePoints(abbr, q200, q300, result) {
 
 function addTargetToForm() {
     if(!state.form.newResult) {
-        alert('Виберіть результат!');
+        showAlert('Виберіть результат!');
         return;
     }
     const abbr = state.form.newTarget;
@@ -697,11 +717,11 @@ function copyPrev() {
 }
 async function add() {
     if(state.form.targets.length === 0) {
-        alert('Додайте результат вильоту, навіть якщо ціль не було уражено');
+        showAlert('Додайте результат вильоту, навіть якщо ціль не було уражено');
         return;
     }
     if(!state.form.drone || !state.form.ammo) {
-        alert('Виберіть дрон та боєприпас!');
+        showAlert('Виберіть дрон та боєприпас!');
         return;
     }
     
@@ -741,9 +761,9 @@ async function add() {
             rec.coordinates, rec.drone, rec.ammo, rec.result,
             rec.points
         ]]);
-        alert('✅ Запис додано і синхронізовано!');
+        showAlert('✅ Запис додано і синхронізовано!');
     } catch(err) {
-        alert('⚠️ Запис додано локально, але не синхронізовано: ' + err.message);
+        showAlert('⚠️ Запис додано локально, але не синхронізовано: ' + err.message);
     }
     render();
 }
@@ -822,7 +842,7 @@ async function confirmDeleteRecord() {
     if (idx === null || idx === undefined) return;
     state.records.splice(idx, 1);
     state.pendingRecordIdx = null;
-    try { await syncRecordsToAPI(); } catch(e) { alert('Помилка: ' + e.message); }
+    try { await syncRecordsToAPI(); } catch(e) { showAlert('Помилка: ' + e.message); }
     closeModal(); render();
 }
 
@@ -950,7 +970,7 @@ async function saveEditRecord() {
     er.targets.forEach(t=>{const _p=t.name.trim().split(' '),_l=_p[_p.length-1],_r=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.name.trim(),_u=_r.toUpperCase();const _ab=Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})();const _sc=state.scoreTable[_ab];if(_sc)_ptsE+=t.result==='знищено'?_sc.znyshcheno:t.result==='пошкоджено'?_sc.poshkodzheno:0;});
     r.points=Math.round(_ptsE*100)/100;
     state.editRecord = null;
-    try { await syncRecordsToAPI(); } catch(e) { alert('Помилка: ' + e.message); }
+    try { await syncRecordsToAPI(); } catch(e) { showAlert('Помилка: ' + e.message); }
     closeModal(); render();
 }
 
@@ -1007,9 +1027,9 @@ function generateReport(dayRecs) {
 }
 
 function exportXLSX() {
-    if(!state.selReport || !state.selDate) { alert('Виберіть звіт та день!'); return; }
+    if(!state.selReport || !state.selDate) { showAlert('Виберіть звіт та день!'); return; }
     const dayRecs = state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate);
-    if(dayRecs.length===0) { alert('Немає записів!'); return; }
+    if(dayRecs.length===0) { showAlert('Немає записів!'); return; }
     try {
         const data = [['Звіт','Дата та час','Ціль','200','300','Координати','Тип дрона','Боєприпас','Результат','Балів']];
         dayRecs.forEach(r => { data.push([r.reportNum,r.datetime,r.target,r.qty200,r.qty300,r.coordinates,r.drone,r.ammo,r.result,r.points]); });
@@ -1017,14 +1037,14 @@ function exportXLSX() {
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Звіти');
         XLSX.writeFile(wb, 'battle-reports.xlsx');
-        alert('✅ XLSX експортовано!');
-    } catch(e) { alert('Помилка: ' + e.message); }
+        showAlert('✅ XLSX експортовано!');
+    } catch(e) { showAlert('Помилка: ' + e.message); }
 }
 
 function exportPDF() {
-    if(!state.selReport || !state.selDate) { alert('Виберіть звіт та день!'); return; }
+    if(!state.selReport || !state.selDate) { showAlert('Виберіть звіт та день!'); return; }
     const dayRecs = state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate);
-    if(dayRecs.length===0) { alert('Немає записів!'); return; }
+    if(dayRecs.length===0) { showAlert('Немає записів!'); return; }
     const lines = generateReport(dayRecs);
     const printContent = `<html><head><meta charset="UTF-8"><title>Звіт</title><style>body{font-family:Arial;line-height:1.6;padding:20px;}pre{white-space:pre-wrap;}</style></head><body><pre>${lines.join('\n')}</pre></body></html>`;
     const printWindow = window.open('','','height=400,width=600');
@@ -1059,12 +1079,12 @@ ${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-
 }
 
 function copyReport() {
-    if(!state.selReport || !state.selDate) { alert('Виберіть звіт та день!'); return; }
+    if(!state.selReport || !state.selDate) { showAlert('Виберіть звіт та день!'); return; }
     const dayRecs = state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate);
-    if(dayRecs.length===0) { alert('Немає записів!'); return; }
+    if(dayRecs.length===0) { showAlert('Немає записів!'); return; }
     const lines = generateReport(dayRecs);
     navigator.clipboard.writeText(lines.join('\n'));
-    alert('✅ Скопійовано!');
+    showAlert('✅ Скопійовано!');
 }
 
 function getAbbr() { const p = state.form.target.split(' '); return p.length>1?p.slice(0,-1).join(' '):''; }
