@@ -343,6 +343,12 @@ async function verifyAndLoad() {
         ).then(r => r.json());
         
         if (usersResp.error) {
+            if (usersResp.error.code === 401 || usersResp.error.status === 'UNAUTHENTICATED') {
+                sessionStorage.removeItem('token');
+                state.token = null;
+                tokenClient.requestAccessToken({ prompt: '' });
+                return;
+            }
             alert('Помилка доступу до файла: ' + usersResp.error.message);
             logout(); return;
         }
