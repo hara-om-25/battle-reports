@@ -479,7 +479,10 @@ async function syncOnShieldClick() {
     state.shieldHide = true;
     render();
     try {
-        await loadDataFromAPI();
+        await syncRecordsToAPI();
+        showAlert('✅ Дані синхронізовано з ГОЛОВНА!');
+    } catch(e) {
+        showAlert('⚠️ Помилка синхронізації: ' + e.message);
     } finally {
         state.shieldHide = false;
         render();
