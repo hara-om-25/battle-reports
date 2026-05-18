@@ -1317,6 +1317,27 @@ def apply_patches(html):
     ))
 
 
+    # ── 75. auth: silent token refresh on 401 instead of alert+logout ──
+    patches.append((
+        '        if (usersResp.error) {\n'
+        "            alert('Помилка доступу до файла: ' + usersResp.error.message);\n"
+        '            logout(); return;\n'
+        '        }',
+
+        '        if (usersResp.error) {\n'
+        '            if (usersResp.error.code === 401 || usersResp.error.status === \'UNAUTHENTICATED\') {\n'
+        "                sessionStorage.removeItem('token');\n"
+        '                state.token = null;\n'
+        "                tokenClient.requestAccessToken({ prompt: '' });\n"
+        '                return;\n'
+        '            }\n'
+        "            alert('Помилка доступу до файла: ' + usersResp.error.message);\n"
+        '            logout(); return;\n'
+        '        }',
+
+        'auth-silent-token-refresh'
+    ))
+
     # Apply patches
     for old, new, name in patches:
         if old not in html:
