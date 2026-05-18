@@ -1317,6 +1317,38 @@ def apply_patches(html):
     ))
 
 
+    # ── 78. PWA: manifest link + service worker registration ──
+    patches.append((
+        '    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+        '    <title>БОЙОВІ ЗВІТИ v78</title>',
+
+        '    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+        '    <title>БОЙОВІ ЗВІТИ</title>\n'
+        '    <link rel="manifest" href="/battle-reports/manifest.json">\n'
+        '    <meta name="theme-color" content="#8a8060">\n'
+        '    <meta name="mobile-web-app-capable" content="yes">\n'
+        '    <meta name="apple-mobile-web-app-capable" content="yes">\n'
+        '    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n'
+        '    <meta name="apple-mobile-web-app-title" content="ЗВІТИ">\n'
+        '    <link rel="apple-touch-icon" href="/battle-reports/icons/icon-192.png">',
+
+        'pwa-meta'
+    ))
+
+    # ── 79. PWA: register service worker before </body> ──
+    patches.append((
+        '</body>\n</html>',
+
+        '<script>\n'
+        "if ('serviceWorker' in navigator) {\n"
+        "  navigator.serviceWorker.register('/battle-reports/sw.js').catch(()=>{});\n"
+        '}\n'
+        '</script>\n'
+        '</body>\n</html>',
+
+        'pwa-sw-register'
+    ))
+
     # ── 77. shield click: push local records to ГОЛОВНА instead of pull ──
     patches.append((
         'async function syncOnShieldClick() {\n'
