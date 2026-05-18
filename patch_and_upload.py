@@ -1338,6 +1338,35 @@ def apply_patches(html):
         'auth-silent-token-refresh'
     ))
 
+    # ── 76. custom showAlert dialog in app style ──
+    patches.append((
+        'function login() { tokenClient.requestAccessToken(); }',
+
+        'function showAlert(msg) {\n'
+        '    var _ov = document.createElement(\'div\');\n'
+        '    _ov.style.cssText = \'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px\';\n'
+        '    var _bx = document.createElement(\'div\');\n'
+        '    _bx.style.cssText = \'background:var(--surface);border:1px solid var(--olive-dark);box-shadow:4px 4px 0 var(--olive-dark);padding:24px 28px 20px;max-width:420px;width:100%;font-family:Tektur,monospace;color:var(--text)\';\n'
+        '    var _ti = document.createElement(\'div\');\n'
+        '    _ti.style.cssText = \'color:var(--yellow);font-size:0.7em;letter-spacing:0.15em;margin-bottom:14px;font-weight:700\';\n'
+        '    _ti.textContent = \'ПОВІДОМЛЕННЯ\';\n'
+        '    var _mg = document.createElement(\'div\');\n'
+        '    _mg.style.cssText = \'white-space:pre-wrap;font-size:0.92em;margin-bottom:22px;line-height:1.5\';\n'
+        '    _mg.textContent = msg;\n'
+        '    var _ok = document.createElement(\'button\');\n'
+        '    _ok.className = \'btn-stencil\';\n'
+        '    _ok.style.cssText = \'float:right;padding:4px 22px;font-size:0.85em\';\n'
+        '    _ok.textContent = \'OK\';\n'
+        '    _bx.appendChild(_ti); _bx.appendChild(_mg); _bx.appendChild(_ok);\n'
+        '    _ov.appendChild(_bx);\n'
+        '    document.body.appendChild(_ov);\n'
+        '    _ok.addEventListener(\'click\', function() { document.body.removeChild(_ov); });\n'
+        '}\n'
+        'function login() { tokenClient.requestAccessToken(); }',
+
+        'custom-show-alert'
+    ))
+
     # Apply patches
     for old, new, name in patches:
         if old not in html:
@@ -1345,6 +1374,11 @@ def apply_patches(html):
         else:
             html = html.replace(old, new, 1)
             print(f"[OK]   Patch '{name}' applied")
+
+    # Replace native alert() with custom showAlert()
+    count = html.count('alert(')
+    html = html.replace('alert(', 'showAlert(')
+    print(f"[OK]   Replaced {count} alert() call(s) with showAlert()")
 
     # Global font replace (after all patches)
     count = html.count("'Stardos Stencil'")
