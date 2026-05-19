@@ -704,6 +704,36 @@ def apply_patches(html):
         'save-edit-recalc-points'
     ))
 
+    # ── 45b. edit modal: compute _hasOs200/_hasOs300 for 200/300 field control ──
+    patches.append((
+        'const q200opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty200===n?\'selected\':\'\'}>'\
+        '${n}</option>`).join(\'\');\n'
+        '    const q300opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty300===n?\'selected\':\'\'}>'\
+        '${n}</option>`).join(\'\');',
+
+        "const _hasOs200 = er.targets.some(t=>{const _ab=Object.keys(state.scoreTable).find(k=>t.name.startsWith(k))||'';return _ab==='ОС'&&t.result==='знищено';});\n"
+        "    const _hasOs300 = er.targets.some(t=>{const _ab=Object.keys(state.scoreTable).find(k=>t.name.startsWith(k))||'';return _ab==='ОС'&&(t.result==='знищено'||t.result==='пошкоджено');});\n"
+        '    const q200opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty200===n?\'selected\':\'\'}>'\
+        '${n}</option>`).join(\'\');\n'
+        '    const q300opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty300===n?\'selected\':\'\'}>'\
+        '${n}</option>`).join(\'\');',
+
+        'edit-modal-has-os-vars'
+    ))
+
+    # ── 45c. edit modal: disable 200/300 selects based on ОС targets ──
+    patches.append((
+        '<select onchange="state.editRecord.qty200=parseInt(this.value);checkEditDirty()" class="field">${q200opts}</select>'
+        '</div><div><label class="label block mb-1">300</label>'
+        '<select onchange="state.editRecord.qty300=parseInt(this.value);checkEditDirty()" class="field">${q300opts}</select>',
+
+        '<select${_hasOs200?\'\':\' disabled\'} onchange="state.editRecord.qty200=parseInt(this.value);checkEditDirty()" class="field" style="${_hasOs200?\'\':\'opacity:0.35\'}">${q200opts}</select>'
+        '</div><div><label class="label block mb-1">300</label>'
+        '<select${_hasOs300?\'\':\' disabled\'} onchange="state.editRecord.qty300=parseInt(this.value);checkEditDirty()" class="field" style="${_hasOs300?\'\':\'opacity:0.35\'}">${q300opts}</select>',
+
+        'edit-modal-qty-field-control'
+    ))
+
     # ── 46. Trim drone/ammo/results when loading from СПИСКИ ──
     patches.append((
         '        if (row[0]) state.drones.push(row[0]);\n'
