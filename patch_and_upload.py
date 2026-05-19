@@ -680,7 +680,7 @@ def apply_patches(html):
         '    const er = state.editRecord;\n'
         '    if (!er || !newResult) return;\n'
         '    er.targets[i].result = newResult;\n'
-        '    checkEditDirty();\n'
+        '    renderEditRecordModal();\n'
         '}\n'
         '\n'
         'function removeEditTarget(i) {',
@@ -711,8 +711,8 @@ def apply_patches(html):
         '    const q300opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty300===n?\'selected\':\'\'}>'\
         '${n}</option>`).join(\'\');',
 
-        "const _hasOs200 = er.targets.some(t=>{const _ab=Object.keys(state.scoreTable).find(k=>t.name.startsWith(k))||'';return _ab==='ОС'&&t.result==='знищено';});\n"
-        "    const _hasOs300 = er.targets.some(t=>{const _ab=Object.keys(state.scoreTable).find(k=>t.name.startsWith(k))||'';return _ab==='ОС'&&(t.result==='знищено'||t.result==='пошкоджено');});\n"
+        "const _hasOs200 = er.targets.some(t=>{const _ab=Object.keys(state.scoreTable).find(k=>t.name.startsWith(k))||'';return _ab==='ОС'&&t.result==='знищено';})||(er.newTarget==='ОС'&&er.newResult==='знищено');\n"
+        "    const _hasOs300 = er.targets.some(t=>{const _ab=Object.keys(state.scoreTable).find(k=>t.name.startsWith(k))||'';return _ab==='ОС'&&(t.result==='знищено'||t.result==='пошкоджено');})||(er.newTarget==='ОС'&&(er.newResult==='знищено'||er.newResult==='пошкоджено'));\n"
         '    const q200opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty200===n?\'selected\':\'\'}>'\
         '${n}</option>`).join(\'\');\n'
         '    const q300opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty300===n?\'selected\':\'\'}>'\
@@ -732,6 +732,17 @@ def apply_patches(html):
         '<select${_hasOs300?\'\':\' disabled\'} onchange="state.editRecord.qty300=parseInt(this.value);checkEditDirty()" class="field" style="${_hasOs300?\'\':\'opacity:0.35\'}">${q300opts}</select>',
 
         'edit-modal-qty-field-control'
+    ))
+
+    # ── 45d. edit modal: new-target selects re-render modal on change ──
+    patches.append((
+        '<select onchange="state.editRecord.newTarget=this.value" class="field"><option value="">Ціль...</option>${scoreOpts}</select>'
+        '<select onchange="state.editRecord.newResult=this.value" class="field"><option value="">Результат...',
+
+        '<select onchange="state.editRecord.newTarget=this.value;renderEditRecordModal()" class="field"><option value="">Ціль...</option>${scoreOpts}</select>'
+        '<select onchange="state.editRecord.newResult=this.value;renderEditRecordModal()" class="field"><option value="">Результат...',
+
+        'edit-modal-new-target-rerender'
     ))
 
     # ── 46. Trim drone/ammo/results when loading from СПИСКИ ──
