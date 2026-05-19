@@ -496,6 +496,90 @@ function calculatePoints(abbr, q200, q300, result) {
     return mainPoints + base;
 }
 
+function showAiModal() {
+    const savedKey = localStorage.getItem('aiApiKey') || '';
+    const modal = document.getElementById('modal');
+    modal.innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">🤖 AI ЗАПОВНЕННЯ</h2><div class="mb-3"><label class="label block mb-1">ANTHROPIC API KEY</label><input type="password" id="aiKeyInput" value="${esc(savedKey)}" class="field" placeholder="sk-ant-..." /></div><div class="mb-4"><label class="label block mb-1">ОПИС ОПЕРАЦІЇ</label><textarea id="aiDescInput" class="field" rows="4" placeholder="Наприклад: підбили танк і 2 БТР, дрон Мавік, боєприпас РПГ-7В, поранили 3 піхотинці..."></textarea></div><div class="space-y-2"><button id="aiRunBtn" onclick="runAiAutofill()" class="btn-stencil btn-yellow-dim w-full">🤖 ЗАПОВНИТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
+}
+
+async function runAiAutofill() {
+    const key = document.getElementById('aiKeyInput').value.trim();
+    const desc = document.getElementById('aiDescInput').value.trim();
+    if (!key) { alert('Введіть API ключ Anthropic!'); return; }
+    if (!desc) { alert('Введіть опис операції!'); return; }
+    localStorage.setItem('aiApiKey', key);
+    const btn = document.getElementById('aiRunBtn');
+    btn.textContent = '⏳ ОБРОБКА...';
+    btn.disabled = true;
+    try {
+        await aiAutofill(key, desc);
+        closeModal();
+        render();
+    } catch(e) {
+        alert('Помилка AI: ' + e.message);
+        btn.textContent = '🤖 ЗАПОВНИТИ';
+        btn.disabled = false;
+    }
+}
+
+async function aiAutofill(apiKey, description) {
+    const availableTargets = Object.keys(state.scoreTable);
+    const availableDrones = state.drones;
+    const availableAmmo = state.ammo;
+    const availableResults = state.results;
+    const prompt = `Ти помічник для заповнення форми бойових звітів. На основі опису заповни поля форми.
+
+Доступні цілі (використовуй ТІЛЬКИ ці): ${availableTargets.join(', ')}
+Доступні дрони (використовуй ТІЛЬКИ ці): ${availableDrones.join(', ')}
+Доступні боєприпаси (використовуй ТІЛЬКИ ці): ${availableAmmo.join(', ')}
+Доступні результати (використовуй ТІЛЬКИ ці): ${availableResults.join(', ')}
+
+Опис операції: ${description}
+
+Поверни ТІЛЬКИ JSON без коментарів та пояснень:
+{"targets":[{"abbr":"назва_цілі","result":"результат"}],"q200":0,"q300":0,"coord":"","drone":"","ammo":""}`;
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+            model: 'claude-opus-4-7',
+            max_tokens: 1024,
+            thinking: {type: 'adaptive'},
+            messages: [{role: 'user', content: prompt}]
+        })
+    });
+    if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error && err.error.message || 'HTTP ' + resp.status);
+    }
+    const data = await resp.json();
+    const text = data.content.find(b => b.type === 'text')?.text || '';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Не вдалося розпарсити відповідь AI');
+    const filled = JSON.parse(jsonMatch[0]);
+    if (filled.targets && filled.targets.length > 0) {
+        state.form.targets = [];
+        for (const t of filled.targets) {
+            if (state.scoreTable[t.abbr] && availableResults.includes(t.result)) {
+                if (!state.counts[t.abbr]) state.counts[t.abbr] = 0;
+                state.counts[t.abbr]++;
+                state.form.targets.push({abbr: t.abbr, fullName: t.abbr + ' ' + state.counts[t.abbr], result: t.result});
+            }
+        }
+    }
+    if (typeof filled.q200 === 'number' && filled.q200 >= 0 && filled.q200 <= 9) state.form.q200 = filled.q200;
+    if (typeof filled.q300 === 'number' && filled.q300 >= 0 && filled.q300 <= 9) state.form.q300 = filled.q300;
+    if (filled.coord) state.form.coord = filled.coord;
+    if (filled.drone && availableDrones.includes(filled.drone)) state.form.drone = filled.drone;
+    if (filled.ammo && availableAmmo.includes(filled.ammo)) state.form.ammo = filled.ammo;
+}
+
 function addTargetToForm() {
     if(!state.form.newTarget || !state.form.newResult) {
         alert('Виберіть ціль і результат!');
@@ -800,7 +884,10 @@ function render() {
                     </div>
                 </div>
                 
-                <button onclick="add()" class="btn-stencil btn-yellow-dim w-full text-lg mt-4">✓ ДОДАТИ ЗАПИС</button>
+                <div class="flex gap-2 mt-4">
+                    <button onclick="showAiModal()" class="btn-stencil" style="background:var(--olive-dark);border-color:var(--khaki);flex-shrink:0">🤖 AI</button>
+                    <button onclick="add()" class="btn-stencil btn-yellow-dim w-full text-lg flex-1">✓ ДОДАТИ ЗАПИС</button>
+                </div>
             </div>
         </div></div>`;
     }
