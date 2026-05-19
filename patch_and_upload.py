@@ -1335,6 +1335,13 @@ def apply_patches(html):
         'pwa-meta'
     ))
 
+    # ── 80. red × button on target remove ──
+    patches.append((
+        'onclick="removeTargetFromForm(${i})" class="btn-stencil" style="padding:4px 8px; font-size:12px">✕',
+        'onclick="removeTargetFromForm(${i})" class="btn-stencil btn-danger" style="padding:4px 8px; font-size:12px">✕',
+        'red-remove-btn'
+    ))
+
     # ── 79. PWA: register service worker before </body> ──
     patches.append((
         '</body>\n</html>',
