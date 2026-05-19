@@ -773,6 +773,22 @@ def apply_patches(html):
         'edit-modal-remove-rerender'
     ))
 
+    # ── 45f. On load: migrate stale qty200/qty300 for non-ОС records ──
+    patches.append((
+        '        }\n'
+        '        \n'
+        '        if (state.records.length > 0) {\n'
+        '            state.report = Math.max(...state.records.map(r => r.reportNum));\n',
+
+        '        }\n'
+        "        state.records.forEach(r=>{if((r.qty200||r.qty300)&&!r.target.split(', ').some(t=>{const _p=t.trim().split(' '),_l=_p[_p.length-1],_a=/^\\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.trim();return _a==='ОС';})){r.qty200=0;r.qty300=0;}});\n"
+        '        \n'
+        '        if (state.records.length > 0) {\n'
+        '            state.report = Math.max(...state.records.map(r => r.reportNum));\n',
+
+        'records-load-migrate-qty'
+    ))
+
     # ── 46. Trim drone/ammo/results when loading from СПИСКИ ──
     patches.append((
         '        if (row[0]) state.drones.push(row[0]);\n'
