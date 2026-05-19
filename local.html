@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>БОЙОВІ ЗВІТИ — ЛОКАЛЬНО</title>
+    <link href="https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    <style>
+    :root {
+      --bg: #1a1d18; --surface: #252a23; --surface-light: #323830;
+      --khaki: #8b8b3a; --olive: #5a6b2f; --olive-bright: #7a9540;
+      --olive-dark: #3d4720; --yellow: #d4b81a; --yellow-dim: #8a7510;
+      --text: #d9d6c4; --text-dim: #8a8870; --danger: #6b2a1a; --danger-bright: #9c4530;
+    }
+    * { font-family: 'JetBrains Mono', monospace; }
+    body { background: var(--bg); background-image: radial-gradient(circle at 20% 30%, rgba(122,149,64,0.08) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(212,184,26,0.05) 0%, transparent 50%); color: var(--text); min-height: 100vh; }
+    .stencil { font-family: 'Stardos Stencil', serif; letter-spacing: 0.05em; }
+    .stencil-shadow { font-family: 'Stardos Stencil', serif; letter-spacing: 0.05em; text-shadow: 2px 2px 0 rgba(0,0,0,0.4), 4px 4px 0 rgba(0,0,0,0.2); }
+    .crate { background: var(--surface); border: 2px solid var(--olive); border-radius: 4px; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05); }
+    .crate::before { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border: 1px dashed rgba(139,139,58,0.3); border-radius: 4px; pointer-events: none; }
+    .btn-stencil { background: var(--olive); border: 2px solid var(--olive-bright); color: var(--text); font-family: 'Stardos Stencil', serif; letter-spacing: 0.1em; padding: 10px 16px; border-radius: 2px; box-shadow: 0 4px 0 #2d3818, 0 6px 12px rgba(0,0,0,0.4); transition: all 0.1s; text-shadow: 1px 1px 0 rgba(0,0,0,0.5); cursor: pointer; }
+    .btn-stencil:active { transform: translateY(2px); box-shadow: 0 2px 0 #2d3818, 0 4px 8px rgba(0,0,0,0.4); }
+    .btn-danger { background: var(--danger); border-color: var(--danger-bright); box-shadow: 0 4px 0 #3d1810, 0 6px 12px rgba(0,0,0,0.4); }
+    .btn-yellow-dim { background: #8a7510; border-color: #a8901a; color: #1a1d18; box-shadow: 0 4px 0 #5a4c08, 0 6px 12px rgba(0,0,0,0.4); text-shadow: none; }
+    .btn-yellow-dim.active, .btn-yellow { background: var(--yellow); border-color: #f4d942; color: #1a1d18; box-shadow: 0 4px 0 var(--yellow-dim), 0 6px 12px rgba(0,0,0,0.4); text-shadow: none; }
+    .btn-blue { background: #3d5a7a; border-color: #5a7a9c; box-shadow: 0 4px 0 #1f2d3d, 0 6px 12px rgba(0,0,0,0.4); }
+    .btn-black { background: #1a1d18; border-color: #3a3d35; box-shadow: 0 4px 0 #0a0d08, 0 6px 12px rgba(0,0,0,0.4); }
+    .btn-green { background: #2d5a30; border-color: #4a7d4d; box-shadow: 0 4px 0 #1a3318, 0 6px 12px rgba(0,0,0,0.4); }
+    .field { background: rgba(0,0,0,0.3); border: 2px solid var(--surface-light); border-radius: 2px; color: var(--text); padding: 10px 12px; width: 100%; font-family: 'JetBrains Mono', monospace; }
+    .field:focus { border-color: var(--olive-bright); outline: none; }
+    textarea.field { resize: vertical; }
+    select.field { background-color: rgba(0,0,0,0.3); background-image: linear-gradient(45deg, transparent 50%, var(--khaki) 50%), linear-gradient(135deg, var(--khaki) 50%, transparent 50%); background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 28px; appearance: none; -webkit-appearance: none; }
+    select.field option { background: var(--surface); color: var(--text); font-family: 'JetBrains Mono', monospace; }
+    .label { font-family: 'Stardos Stencil', serif; letter-spacing: 0.1em; color: var(--khaki); font-size: 0.85em; text-transform: uppercase; }
+    .nav-btn { font-family: 'Stardos Stencil', serif; letter-spacing: 0.1em; padding: 8px 14px; background: var(--surface); border: 1px solid var(--olive); color: var(--text-dim); border-radius: 2px; cursor: pointer; }
+    .nav-btn.active { background: var(--olive); color: #fff; text-shadow: 1px 1px 0 rgba(0,0,0,0.5); }
+    .list-item { background: rgba(0,0,0,0.3); border: 1px solid var(--surface-light); color: var(--text); padding: 8px 12px; border-radius: 2px; cursor: pointer; transition: all 0.1s; font-family: 'JetBrains Mono', monospace; display: block; }
+    .list-item:hover { border-color: var(--olive-bright); background: rgba(122,149,64,0.1); }
+    .record-card { background: rgba(0,0,0,0.3); border: 1px solid var(--surface-light); padding: 10px 12px; border-radius: 2px; }
+    .report-box { background: rgba(0,0,0,0.4); border: 1px dashed var(--khaki); padding: 16px; border-radius: 2px; color: var(--text); white-space: pre-wrap; font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+    .modal-box { background: var(--surface); border: 2px solid var(--olive); border-radius: 4px; padding: 24px; width: 100%; max-width: 420px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); max-height: 90vh; overflow-y: auto; }
+    </style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal"></div>
+<script>
+window.addEventListener('error', function(e) {
+    alert('JS ПОМИЛКА:\n' + e.message + '\nРядок: ' + (e.lineno||'?'));
+});
+window.addEventListener('unhandledrejection', function(e) {
+    alert('PROMISE ПОМИЛКА:\n' + (e.reason && e.reason.message || e.reason));
+});
+
+const LS = {
+    RECORDS: 'br_records', SCORE: 'br_scoreTable', DRONES: 'br_drones',
+    AMMO: 'br_ammo', RESULTS: 'br_results', UNIT: 'br_unitName',
+    REPORT: 'br_report', AI_KEY: 'aiApiKey', GS_CLIENT: 'br_gs_client', GS_SHEET: 'br_gs_sheet'
+};
+
+const DEFAULT_SCORE = {
+    'ОС':     {znyshcheno: 3,  poshkodzheno: 1},
+    'Т-72':   {znyshcheno: 40, poshkodzheno: 20},
+    'Т-80':   {znyshcheno: 45, poshkodzheno: 22},
+    'БТР-82': {znyshcheno: 20, poshkodzheno: 10},
+    'БМП-2':  {znyshcheno: 25, poshkodzheno: 12},
+    'МТЛБ':   {znyshcheno: 15, poshkodzheno: 8},
+    'АРМ':    {znyshcheno: 15, poshkodzheno: 8},
+    'Вантажівка': {znyshcheno: 8, poshkodzheno: 4},
+    'ГАЗ-66': {znyshcheno: 8,  poshkodzheno: 4},
+    'УАЗ':    {znyshcheno: 6,  poshkodzheno: 3},
+    'Гармата':{znyshcheno: 30, poshkodzheno: 15},
+    'Міномет':{znyshcheno: 20, poshkodzheno: 10},
+    'РЛС':    {znyshcheno: 25, poshkodzheno: 12},
+    'ДШК':    {znyshcheno: 12, poshkodzheno: 6},
+};
+
+let state = {
+    page: 'form',
+    unitName: 'ТГ Мур 5/7',
+    scoreTable: {},
+    drones: [], ammo: [], results: [],
+    records: [], report: 1, counts: {},
+    form: {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:''},
+    selReport: null, selDate: null,
+    inputVal: '', inputList: null, inputIdx: null, editVal: '',
+    sNewKey:'', sNewZ:'', sNewP:'', sEditScoreKey:null
+};
+
+function lsGet(key, def) { try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : def; } catch { return def; } }
+function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+
+function loadAll() {
+    state.unitName = lsGet(LS.UNIT, 'ТГ Мур 5/7');
+    state.scoreTable = lsGet(LS.SCORE, DEFAULT_SCORE);
+    state.drones = lsGet(LS.DRONES, ['Мавік 3T', 'FPV', 'Лелека']);
+    state.ammo = lsGet(LS.AMMO, ['РПГ-7В', 'Ф-1', 'РКГ-3', 'ТМ-62', 'ПГ-7ВЛ']);
+    state.results = lsGet(LS.RESULTS, ['знищено', 'пошкоджено', 'влучання']);
+    state.records = lsGet(LS.RECORDS, []);
+    state.report = lsGet(LS.REPORT, 1);
+    if (state.records.length > 0) {
+        const maxReport = Math.max(...state.records.map(r => r.reportNum));
+        if (maxReport > state.report) state.report = maxReport;
+        const repRecs = state.records.filter(r => r.reportNum === state.report);
+        state.counts = {};
+        repRecs.forEach(r => {
+            const parts = r.target.split(' ');
+            const abbr = parts.slice(0, -1).join(' ') || parts[0];
+            state.counts[abbr] = (state.counts[abbr] || 0) + 1;
+        });
+    }
+    render();
+}
+
+function saveRecords() { lsSet(LS.RECORDS, state.records); }
+function saveLists() { lsSet(LS.DRONES, state.drones); lsSet(LS.AMMO, state.ammo); lsSet(LS.RESULTS, state.results); }
+function saveSettings() { lsSet(LS.UNIT, state.unitName); lsSet(LS.SCORE, state.scoreTable); }
+
+function esc(s) { if(s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function getDateOnly(dt) { if(!dt) return ''; return dt.split(' ')[0].replace(',','').trim(); }
+function cleanCoords(c) { if(!c) return ''; return c.split(',')[0].split(' ').slice(0,4).join(' ').trim(); }
+
+function calculatePoints(abbr, q200, q300, result) {
+    const os = state.scoreTable['ОС'] || {znyshcheno:0, poshkodzheno:0};
+    const base = parseInt(q200)*os.znyshcheno + parseInt(q300)*os.poshkodzheno;
+    if (!abbr || abbr === 'ОС') return base;
+    const t = state.scoreTable[abbr];
+    if (!t) return base;
+    let mp = 0;
+    if (!result) mp = t.poshkodzheno;
+    else if (result === 'знищено') mp = t.znyshcheno;
+    else if (result === 'пошкоджено') mp = t.poshkodzheno;
+    return mp + base;
+}
+
+function generateReport(dayRecs) {
+    const lines = [];
+    lines.push('Доповідаю!');
+    const date = getDateOnly(dayRecs[0].datetime);
+    lines.push(date + 'р. ' + state.unitName + ' здійснено ' + dayRecs.length + ' бойових вильотів.');
+    const total = dayRecs.reduce((s,r) => s + r.points, 0);
+    lines.push('Вражено, орієнтовно на ' + total + ' балів, а саме:');
+    lines.push('');
+    const grouped = {};
+    dayRecs.forEach(r => { const k = r.target + ' ' + r.result; grouped[k] = (grouped[k]||0) + 1; });
+    let i = 1;
+    Object.entries(grouped).sort((a,b) => b[1]-a[1]).forEach(([k,v]) => { lines.push(i + '. ' + k + ' - ' + v + ' шт.'); i++; });
+    lines.push('');
+    lines.push('🫡🤝🇺🇦');
+    return lines;
+}
+
+function addTargetToForm() {
+    if (!state.form.newTarget || !state.form.newResult) { alert('Виберіть ціль і результат!'); return; }
+    const abbr = state.form.newTarget;
+    if (!state.counts[abbr]) state.counts[abbr] = 0;
+    state.counts[abbr]++;
+    state.form.targets.push({abbr, fullName: abbr + ' ' + state.counts[abbr], result: state.form.newResult});
+    state.form.newTarget = '';
+    state.form.newResult = '';
+    render();
+}
+
+function removeTargetFromForm(idx) {
+    const t = state.form.targets[idx];
+    if (t && state.counts[t.abbr]) state.counts[t.abbr]--;
+    state.form.targets.splice(idx, 1);
+    render();
+}
+
+function add() {
+    if (state.form.targets.length === 0 || !state.form.drone || !state.form.ammo) {
+        alert('Додайте хоча б одну ціль, виберіть дрон та боєприпас!'); return;
+    }
+    let totalPoints = 0, targetStr = '', resultStr = '';
+    for (let i = 0; i < state.form.targets.length; i++) {
+        const t = state.form.targets[i];
+        const pts = calculatePoints(t.abbr, state.form.q200, state.form.q300, t.result);
+        totalPoints += pts;
+        targetStr += (i>0?', ':'') + t.fullName;
+        resultStr += (i>0?', ':'') + t.result;
+    }
+    const rec = {
+        reportNum: state.report,
+        datetime: new Date().toLocaleString('uk-UA'),
+        target: targetStr,
+        qty200: state.form.q200,
+        qty300: state.form.q300,
+        coordinates: cleanCoords(state.form.coord),
+        drone: state.form.drone,
+        ammo: state.form.ammo,
+        result: resultStr,
+        points: totalPoints
+    };
+    state.records.push(rec);
+    state.form = {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:''};
+    saveRecords();
+    alert('✅ Запис додано!');
+    render();
+}
+
+function newReport() { state.report++; lsSet(LS.REPORT, state.report); state.counts = {}; render(); }
+function deleteRecord(idx) { if(confirm('Видалити запис?')) { state.records.splice(idx,1); saveRecords(); render(); } }
+
+function exportXLSX() {
+    if (!state.selReport || !state.selDate) { alert('Виберіть звіт та день!'); return; }
+    const dr = state.records.filter(r => r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate);
+    if (!dr.length) { alert('Немає записів!'); return; }
+    const data = [['Звіт','Дата та час','Ціль','200','300','Координати','Тип дрона','Боєприпас','Результат','Балів']];
+    dr.forEach(r => data.push([r.reportNum,r.datetime,r.target,r.qty200,r.qty300,r.coordinates,r.drone,r.ammo,r.result,r.points]));
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Звіти');
+    XLSX.writeFile(wb, 'battle-reports.xlsx');
+}
+
+function exportPDF() {
+    if (!state.selReport || !state.selDate) { alert('Виберіть звіт та день!'); return; }
+    const dr = state.records.filter(r => r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate);
+    if (!dr.length) { alert('Немає записів!'); return; }
+    const lines = generateReport(dr);
+    const pw = window.open('','','height=500,width=700');
+    pw.document.write(`<html><head><meta charset="UTF-8"><title>Звіт</title><style>body{font-family:Arial;line-height:1.6;padding:20px;}pre{white-space:pre-wrap;font-size:14px;}</style></head><body><pre>${lines.join('\n')}</pre></body></html>`);
+    pw.document.close();
+    setTimeout(() => pw.print(), 250);
+}
+
+function copyReport() {
+    if (!state.selReport || !state.selDate) { alert('Виберіть звіт та день!'); return; }
+    const dr = state.records.filter(r => r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate);
+    if (!dr.length) { alert('Немає записів!'); return; }
+    navigator.clipboard.writeText(generateReport(dr).join('\n'));
+    alert('✅ Скопійовано!');
+}
+
+function exportAllJSON() {
+    const data = {unitName: state.unitName, scoreTable: state.scoreTable, drones: state.drones, ammo: state.ammo, results: state.results, records: state.records};
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'battle-reports-backup.json'; a.click();
+}
+
+function importJSON() {
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json';
+    inp.onchange = e => {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            try {
+                const data = JSON.parse(ev.target.result);
+                if (data.records) { state.records = data.records; saveRecords(); }
+                if (data.scoreTable) { state.scoreTable = data.scoreTable; }
+                if (data.drones) state.drones = data.drones;
+                if (data.ammo) state.ammo = data.ammo;
+                if (data.results) state.results = data.results;
+                if (data.unitName) state.unitName = data.unitName;
+                saveLists(); saveSettings();
+                alert('✅ Дані імпортовано!'); render();
+            } catch { alert('Помилка: некоректний JSON файл'); }
+        };
+        reader.readAsText(file);
+    };
+    inp.click();
+}
+
+// ── Lists management ──────────────────────────────────────────────────────────
+function selectItem(list, idx) { state.inputVal = state[list][idx]; state.inputList = list; state.inputIdx = idx; render(); }
+function clearInput() { state.inputVal = ''; state.inputList = null; state.inputIdx = null; render(); }
+
+function showModal() {
+    const modal = document.getElementById('modal');
+    modal.innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color:var(--yellow)">В ЯКИЙ СПИСОК ДОДАТИ?</h2><div class="space-y-2"><button onclick="addToList('drones');closeModal()" class="btn-stencil btn-blue w-full">ДРОНИ</button><button onclick="addToList('ammo');closeModal()" class="btn-stencil btn-blue w-full">БОЄПРИПАС</button><button onclick="addToList('results');closeModal()" class="btn-stencil btn-blue w-full">РЕЗУЛЬТАТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
+}
+function showEditModal() {
+    state.editVal = state.inputVal;
+    document.getElementById('modal').innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color:var(--yellow)">РЕДАГУВАННЯ</h2><div class="mb-4"><input type="text" id="editInput" value="${esc(state.editVal)}" class="field"/></div><div class="space-y-2"><button onclick="saveEdit()" class="btn-stencil btn-green w-full">ЗБЕРЕГТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
+    setTimeout(() => document.getElementById('editInput').focus(), 100);
+}
+function showDeleteModal() {
+    document.getElementById('modal').innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color:var(--yellow)">ВИДАЛЕННЯ</h2><div class="mb-4 p-3 rounded" style="background:rgba(0,0,0,0.4);border:1px dashed var(--khaki)"><p class="text-center stencil">${esc(state.inputVal)}</p></div><div class="space-y-2"><button onclick="confirmDelete()" class="btn-stencil btn-danger w-full">ВИДАЛИТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
+}
+function saveEdit() {
+    const val = document.getElementById('editInput').value;
+    if (val.trim() && state.inputList !== null && state.inputIdx !== null) {
+        state[state.inputList][state.inputIdx] = val.trim();
+        state.inputVal = val.trim();
+        saveLists(); clearInput();
+    }
+}
+function confirmDelete() {
+    if (state.inputList !== null && state.inputIdx !== null) {
+        state[state.inputList].splice(state.inputIdx, 1);
+        saveLists(); clearInput();
+    }
+}
+function closeModal() { document.getElementById('modal').innerHTML = ''; }
+function addItem() { showModal(); }
+function editItem() { if(state.inputList!==null && state.inputIdx!==null) showEditModal(); }
+function deleteItem() { if(state.inputList!==null && state.inputIdx!==null) showDeleteModal(); }
+function addToList(list) {
+    if (state.inputVal.trim() && !state[list].includes(state.inputVal.trim())) {
+        state[list].push(state.inputVal.trim()); saveLists();
+    }
+    clearInput();
+}
+
+// ── AI autofill ───────────────────────────────────────────────────────────────
+function showAiModal() {
+    const savedKey = localStorage.getItem(LS.AI_KEY) || '';
+    document.getElementById('modal').innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color:var(--yellow)">🤖 AI ЗАПОВНЕННЯ</h2><div class="mb-3"><label class="label block mb-1">ANTHROPIC API KEY</label><input type="password" id="aiKeyInput" value="${esc(savedKey)}" class="field" placeholder="sk-ant-..."/></div><div class="mb-4"><label class="label block mb-1">ОПИС ОПЕРАЦІЇ</label><textarea id="aiDescInput" class="field" rows="4" placeholder="Наприклад: підбили танк і 2 БТР, дрон Мавік 3T, боєприпас ПГ-7ВЛ, поранили 3 піхотинці..."></textarea></div><div class="space-y-2"><button id="aiRunBtn" onclick="runAiAutofill()" class="btn-stencil btn-yellow-dim w-full">🤖 ЗАПОВНИТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
+}
+async function runAiAutofill() {
+    const key = document.getElementById('aiKeyInput').value.trim();
+    const desc = document.getElementById('aiDescInput').value.trim();
+    if (!key) { alert('Введіть API ключ Anthropic!'); return; }
+    if (!desc) { alert('Введіть опис операції!'); return; }
+    localStorage.setItem(LS.AI_KEY, key);
+    const btn = document.getElementById('aiRunBtn');
+    btn.textContent = '⏳ ОБРОБКА...'; btn.disabled = true;
+    try {
+        await aiAutofill(key, desc);
+        closeModal(); render();
+    } catch(e) {
+        alert('Помилка AI: ' + e.message);
+        btn.textContent = '🤖 ЗАПОВНИТИ'; btn.disabled = false;
+    }
+}
+async function aiAutofill(apiKey, description) {
+    const prompt = `Ти помічник для заповнення форми бойових звітів. На основі опису заповни поля.
+
+Доступні цілі (ТІЛЬКИ ці): ${Object.keys(state.scoreTable).join(', ')}
+Доступні дрони (ТІЛЬКИ ці): ${state.drones.join(', ')}
+Доступні боєприпаси (ТІЛЬКИ ці): ${state.ammo.join(', ')}
+Доступні результати (ТІЛЬКИ ці): ${state.results.join(', ')}
+
+Опис: ${description}
+
+Поверни ТІЛЬКИ JSON без пояснень:
+{"targets":[{"abbr":"назва_цілі","result":"результат"}],"q200":0,"q300":0,"coord":"","drone":"","ammo":""}`;
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body: JSON.stringify({model:'claude-opus-4-7', max_tokens:1024, thinking:{type:'adaptive'}, messages:[{role:'user',content:prompt}]})
+    });
+    if (!resp.ok) { const e = await resp.json().catch(()=>({})); throw new Error(e.error&&e.error.message||'HTTP '+resp.status); }
+    const data = await resp.json();
+    const text = data.content.find(b => b.type==='text')?.text || '';
+    const m = text.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error('Не вдалося розпарсити відповідь AI');
+    const f = JSON.parse(m[0]);
+    if (f.targets && f.targets.length > 0) {
+        state.form.targets = [];
+        for (const t of f.targets) {
+            if (state.scoreTable[t.abbr] && state.results.includes(t.result)) {
+                if (!state.counts[t.abbr]) state.counts[t.abbr] = 0;
+                state.counts[t.abbr]++;
+                state.form.targets.push({abbr:t.abbr, fullName:t.abbr+' '+state.counts[t.abbr], result:t.result});
+            }
+        }
+    }
+    if (typeof f.q200==='number' && f.q200>=0 && f.q200<=9) state.form.q200 = f.q200;
+    if (typeof f.q300==='number' && f.q300>=0 && f.q300<=9) state.form.q300 = f.q300;
+    if (f.coord) state.form.coord = f.coord;
+    if (f.drone && state.drones.includes(f.drone)) state.form.drone = f.drone;
+    if (f.ammo && state.ammo.includes(f.ammo)) state.form.ammo = f.ammo;
+}
+
+// ── Google Sheets optional export ─────────────────────────────────────────────
+function showSheetsModal(mode) {
+    const clientId = lsGet(LS.GS_CLIENT, '');
+    const sheetId = lsGet(LS.GS_SHEET, '');
+    document.getElementById('modal').innerHTML = `<div class="modal-overlay"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color:var(--yellow)">📊 GOOGLE ТАБЛИЦІ — ${mode==='export'?'ЕКСПОРТ':'ІМПОРТ'}</h2>
+    <div class="mb-3"><label class="label block mb-1">GOOGLE CLIENT ID</label><input type="text" id="gsClientInput" value="${esc(clientId)}" class="field" placeholder="...apps.googleusercontent.com"/></div>
+    <div class="mb-4"><label class="label block mb-1">SPREADSHEET ID</label><input type="text" id="gsSheetInput" value="${esc(sheetId)}" class="field" placeholder="16C9nHIQ..."/></div>
+    <div class="space-y-2"><button onclick="runSheetsOp('${mode}')" class="btn-stencil btn-blue w-full">${mode==='export'?'📤 ЕКСПОРТУВАТИ':'📥 ІМПОРТУВАТИ'}</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div>
+    <p class="mt-3 text-xs" style="color:var(--text-dim)">Потребує Google OAuth у браузері. Дані відправляються напряму до таблиці.</p></div></div>`;
+}
+
+function runSheetsOp(mode) {
+    const clientId = document.getElementById('gsClientInput').value.trim();
+    const sheetId = document.getElementById('gsSheetInput').value.trim();
+    if (!clientId || !sheetId) { alert('Заповніть Client ID та Sheet ID!'); return; }
+    lsSet(LS.GS_CLIENT, clientId); lsSet(LS.GS_SHEET, sheetId);
+    const scope = 'https://www.googleapis.com/auth/spreadsheets';
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(location.origin+location.pathname)}&response_type=token&scope=${encodeURIComponent(scope)}&state=${mode}_${sheetId}`;
+    closeModal();
+    const popup = window.open(authUrl, 'gs_auth', 'width=500,height=600');
+    const check = setInterval(() => {
+        try {
+            if (!popup || popup.closed) { clearInterval(check); return; }
+            const hash = popup.location.hash;
+            if (hash && hash.includes('access_token=')) {
+                const token = new URLSearchParams(hash.slice(1)).get('access_token');
+                popup.close(); clearInterval(check);
+                if (mode === 'export') doSheetsExport(token, sheetId);
+                else doSheetsImport(token, sheetId);
+            }
+        } catch {}
+    }, 500);
+}
+
+async function doSheetsExport(token, sheetId) {
+    const headers = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+    const url = id => `https://sheets.googleapis.com/v4/spreadsheets/${id}/values`;
+    try {
+        // Write records to ГОЛОВНА sheet
+        const rows = [['Звіт','Дата та час','Ціль','200','300','Координати','Тип дрона','Боєприпас','Результат','Балів']];
+        state.records.forEach(r => rows.push([r.reportNum,r.datetime,r.target,r.qty200,r.qty300,r.coordinates,r.drone,r.ammo,r.result,r.points]));
+        await fetch(`${url(sheetId)}/ГОЛОВНА!A1:J${rows.length}?valueInputOption=USER_ENTERED`, {method:'PUT', headers, body:JSON.stringify({values:rows})}).then(r=>r.json());
+        // Write lists
+        const maxLen = Math.max(state.drones.length, state.ammo.length, state.results.length);
+        const listRows = [['Дрони','Боєприпас','Результати']];
+        for (let i=0;i<maxLen;i++) listRows.push([state.drones[i]||'',state.ammo[i]||'',state.results[i]||'']);
+        await fetch(`${url(sheetId)}/СПИСКИ!A1:C${listRows.length}?valueInputOption=USER_ENTERED`, {method:'PUT', headers, body:JSON.stringify({values:listRows})}).then(r=>r.json());
+        alert('✅ Експортовано в Google Таблиці!');
+    } catch(e) { alert('Помилка експорту: ' + e.message); }
+}
+
+async function doSheetsImport(token, sheetId) {
+    const get = async range => {
+        const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}`, {headers:{'Authorization':'Bearer '+token}}).then(r=>r.json());
+        if (r.error) throw new Error(r.error.message);
+        return r.values || [];
+    };
+    try {
+        // Import score table
+        const scoreRows = await get('е бали');
+        if (scoreRows.length > 1) {
+            state.scoreTable = {};
+            for (let i=1;i<scoreRows.length;i++) {
+                if (scoreRows[i]&&scoreRows[i][0]) state.scoreTable[scoreRows[i][0]] = {znyshcheno:parseFloat(scoreRows[i][1])||0, poshkodzheno:parseFloat(scoreRows[i][2])||0};
+            }
+        }
+        // Import lists
+        const listRows = await get('СПИСКИ');
+        state.drones = []; state.ammo = []; state.results = [];
+        for (let i=1;i<listRows.length;i++) {
+            const row = listRows[i]||[];
+            if (row[0]) state.drones.push(row[0]);
+            if (row[1]) state.ammo.push(row[1]);
+            if (row[2]) state.results.push(row[2]);
+        }
+        // Import records
+        const mainRows = await get('ГОЛОВНА');
+        state.records = [];
+        for (let i=1;i<mainRows.length;i++) {
+            const row = mainRows[i]||[];
+            if (row[0]||row[2]) state.records.push({reportNum:parseInt(row[0])||0,datetime:row[1]||'',target:row[2]||'',qty200:parseInt(row[3])||0,qty300:parseInt(row[4])||0,coordinates:row[5]||'',drone:row[6]||'',ammo:row[7]||'',result:row[8]||'',points:parseFloat(row[9])||0});
+        }
+        if (state.records.length>0) state.report = Math.max(...state.records.map(r=>r.reportNum));
+        saveLists(); saveSettings(); saveRecords(); lsSet(LS.REPORT, state.report);
+        alert('✅ Дані імпортовано з Google Таблиць!'); render();
+    } catch(e) { alert('Помилка імпорту: ' + e.message); }
+}
+
+// ── Render helpers ────────────────────────────────────────────────────────────
+function renderListSection(list, title) {
+    return `<div class="crate p-4"><h2 class="stencil-shadow text-lg mb-3" style="color:var(--yellow)">${title} <span style="color:var(--khaki)">(${state[list].length})</span></h2><div class="space-y-2">${state[list].map((x,i)=>`<div class="list-item ${state.inputList===list&&state.inputIdx===i?'border-yellow-500':''}" onclick="selectItem('${list}',${i})">${esc(x)}</div>`).join('')}</div></div>`;
+}
+
+// ── Main render ───────────────────────────────────────────────────────────────
+function render() {
+    const app = document.getElementById('app');
+    const todayDate = getDateOnly(new Date().toLocaleString('uk-UA'));
+    const todayCount = state.records.filter(r=>r.reportNum===state.report && getDateOnly(r.datetime)===todayDate).length;
+
+    let h = `<nav class="crate p-3 m-4 sticky top-4 z-40"><div class="flex justify-between items-center flex-wrap gap-2">
+        <div class="flex items-center gap-3 flex-wrap">
+            <span class="stencil-shadow text-lg" style="color:var(--yellow)">БОЙОВІ ЗВІТИ</span>
+            <span class="stencil text-sm" style="color:var(--khaki)">ЛОКАЛЬНО</span>
+        </div>
+        <div class="flex gap-2 flex-wrap items-center">
+            <button onclick="state.page='form';render()" class="nav-btn ${state.page==='form'?'active':''}">ФОРМА</button>
+            <button onclick="state.page='reports';render()" class="nav-btn ${state.page==='reports'?'active':''}">ЗВІТИ</button>
+            <button onclick="state.page='lists';render()" class="nav-btn ${state.page==='lists'?'active':''}">СПИСКИ</button>
+            <button onclick="state.page='settings';render()" class="nav-btn ${state.page==='settings'?'active':''}">⚙ НАЛ.</button>
+        </div>
+    </div></nav>`;
+
+    if (state.page === 'form') {
+        if (!state.form.targets) state.form.targets = [];
+        let totalPoints = 0;
+        const targetPoints = state.form.targets.map(t => { const p = calculatePoints(t.abbr, state.form.q200, state.form.q300, t.result); totalPoints += p; return p; });
+        h += `<div class="p-4 max-w-3xl mx-auto"><div class="crate p-6">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                <h2 class="stencil-shadow text-3xl" style="color:var(--yellow)">ЗВІТ №${state.report}</h2>
+                <div class="flex gap-2 items-center flex-wrap">
+                    <span class="stencil text-sm" style="color:var(--text-dim)">Сьогодні: ${todayCount} вил.</span>
+                    <button onclick="newReport()" class="btn-stencil btn-danger">🚩 НОВИЙ ЗВІТ</button>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="stencil mb-2" style="color:var(--khaki)">ЦІЛІ (${state.form.targets.length}) — ${totalPoints} б.</h3>
+                <div class="space-y-2 mb-3">${state.form.targets.map((t,i)=>`<div class="list-item flex justify-between items-center"><span>${esc(t.fullName)} — ${esc(t.result)} (${targetPoints[i]} б.)</span><button onclick="removeTargetFromForm(${i})" class="btn-stencil btn-danger" style="padding:4px 8px;font-size:12px">✕</button></div>`).join('')}</div>
+                <div class="grid grid-cols-1 gap-2">
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <label class="label block mb-1">ЦІЛЬ</label>
+                            <select onchange="state.form.newTarget=this.value;render()" class="field">
+                                <option value="">Виберіть...</option>
+                                ${Object.keys(state.scoreTable).map(x=>`<option value="${esc(x)}" ${state.form.newTarget===x?'selected':''}>${esc(x)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="flex-1">
+                            <label class="label block mb-1">РЕЗУЛЬТАТ</label>
+                            <select onchange="state.form.newResult=this.value;render()" class="field">
+                                <option value="">Виберіть...</option>
+                                ${state.results.map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="addTargetToForm()" class="btn-stencil btn-green" style="padding:10px 16px">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="label block mb-1">КООРДИНАТИ</label>
+                    <input type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="field"/>
+                </div>
+                <div>
+                    <label class="label block mb-1">200</label>
+                    <select onchange="state.form.q200=parseInt(this.value);render()" class="field">
+                        ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q200===n?'selected':''}>${n}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="label block mb-1">ДРОН</label>
+                    <select onchange="state.form.drone=this.value;render()" class="field">
+                        <option value="">Виберіть...</option>
+                        ${state.drones.map(d=>`<option value="${esc(d)}" ${state.form.drone===d?'selected':''}>${esc(d)}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="label block mb-1">300</label>
+                    <select onchange="state.form.q300=parseInt(this.value);render()" class="field">
+                        ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q300===n?'selected':''}>${n}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="label block mb-1">БОЄПРИПАС</label>
+                    <select onchange="state.form.ammo=this.value;render()" class="field">
+                        <option value="">Виберіть...</option>
+                        ${state.ammo.map(a=>`<option value="${esc(a)}" ${state.form.ammo===a?'selected':''}>${esc(a)}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-2 mt-4">
+                <button onclick="showAiModal()" class="btn-stencil" style="background:var(--olive-dark);border-color:var(--khaki);flex-shrink:0">🤖 AI</button>
+                <button onclick="add()" class="btn-stencil btn-yellow-dim w-full text-lg flex-1">✓ ДОДАТИ ЗАПИС</button>
+            </div>
+        </div></div>`;
+    }
+
+    if (state.page === 'lists') {
+        h += `<div class="p-4 space-y-4"><h1 class="stencil-shadow text-3xl px-2" style="color:var(--yellow)">СПИСКИ</h1>
+        <div class="crate p-4"><div class="flex gap-2 mb-2 flex-wrap">
+            <button onclick="addItem()" class="btn-stencil btn-green">+</button>
+            <input type="text" value="${esc(state.inputVal)}" onchange="state.inputVal=this.value" placeholder="Редагування..." class="field flex-1" style="min-width:120px"/>
+            <button onclick="clearInput()" class="btn-stencil btn-danger">✕</button>
+            <button onclick="editItem()" class="btn-stencil btn-blue">✏</button>
+            <button onclick="deleteItem()" class="btn-stencil btn-black">🗑</button>
+        </div></div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">${renderListSection('drones','ДРОНИ')}${renderListSection('ammo','БОЄПРИПАС')}${renderListSection('results','РЕЗУЛЬТАТИ')}</div></div>`;
+    }
+
+    if (state.page === 'reports') {
+        const reps = [...new Set(state.records.map(r=>r.reportNum))].sort((a,b)=>a-b);
+        const dates = state.selReport ? [...new Set(state.records.filter(r=>r.reportNum===state.selReport).map(r=>getDateOnly(r.datetime)))].sort() : [];
+        const dayRecs = state.selReport && state.selDate ? state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate) : [];
+        const reportLines = dayRecs.length > 0 ? generateReport(dayRecs) : [];
+        h += `<div class="p-4 space-y-4">
+            <div class="flex justify-between items-center flex-wrap gap-2">
+                <h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">ЗВІТИ</h1>
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="showSheetsModal('export')" class="btn-stencil btn-blue" style="font-size:12px">📤 Sheets</button>
+                    <button onclick="showSheetsModal('import')" class="btn-stencil btn-blue" style="font-size:12px">📥 Sheets</button>
+                    <button onclick="exportAllJSON()" class="btn-stencil btn-black" style="font-size:12px">💾 JSON</button>
+                    <button onclick="importJSON()" class="btn-stencil" style="font-size:12px">📂 JSON</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="crate p-4"><h3 class="stencil-shadow mb-3" style="color:var(--yellow)">ЗВІТИ</h3>
+                    <div class="flex flex-col gap-2">${reps.map((r,i)=>`<button onclick="state.selReport=${r};state.selDate=null;render()" class="btn-stencil ${state.selReport===r?'btn-yellow':'btn-yellow-dim'}">${i===0?'ПЕРШИЙ':'ЗВІТ '+r}</button>`).join('')||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає звітів</p>'}</div>
+                </div>
+                <div class="crate p-4"><h3 class="stencil-shadow mb-3" style="color:var(--yellow)">ДНІ</h3>
+                    <div class="flex flex-col gap-2">${state.selReport?(dates.map(d=>`<button onclick="state.selDate='${esc(d)}';render()" class="btn-stencil ${state.selDate===d?'btn-yellow':'btn-yellow-dim'}">${esc(d)}</button>`).join('')||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає</p>'):'<p class="stencil text-center py-2" style="color:var(--text-dim)">Виберіть звіт</p>'}</div>
+                </div>
+            </div>
+            ${dayRecs.length>0?`<div class="crate p-4">
+                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                    <h3 class="stencil-shadow" style="color:var(--yellow)">ЗВІТ НА ${state.selDate}</h3>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="exportXLSX()" class="btn-stencil btn-green">XLSX</button>
+                        <button onclick="exportPDF()" class="btn-stencil btn-blue">PDF</button>
+                        <button onclick="copyReport()" class="btn-stencil btn-black">КОПІЮВАТИ</button>
+                    </div>
+                </div>
+                <div class="report-box">${reportLines.join('\n')}</div>
+            </div>
+            <div class="crate p-4"><h3 class="stencil-shadow mb-3" style="color:var(--yellow)">ЗАПИСИ</h3>
+                <div class="space-y-2 max-h-96 overflow-y-auto">${dayRecs.map((r,i)=>`<div class="record-card text-sm flex justify-between items-start gap-2"><div><p style="color:var(--yellow)" class="stencil">${esc(r.target)} — ${esc(r.result)} <span style="color:var(--khaki)">(${r.points} б.)</span></p><p>200: ${r.qty200} | 300: ${r.qty300} | ${esc(r.drone)} | ${esc(r.ammo)}</p><p style="color:var(--text-dim)">${esc(r.datetime)} | ${esc(r.coordinates)}</p></div><button onclick="deleteRecord(${state.records.indexOf(r)})" class="btn-stencil btn-danger flex-shrink-0" style="padding:4px 8px;font-size:11px">✕</button></div>`).join('')}</div>
+            </div>`:''}
+        </div>`;
+    }
+
+    if (state.page === 'settings') {
+        h += `<div class="p-4 space-y-4 max-w-3xl mx-auto">
+            <h1 class="stencil-shadow text-3xl px-2" style="color:var(--yellow)">НАЛАШТУВАННЯ</h1>
+
+            <div class="crate p-4">
+                <h2 class="stencil-shadow mb-3" style="color:var(--yellow)">ПІДРОЗДІЛ</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="unitNameInput" value="${esc(state.unitName)}" class="field flex-1" placeholder="ТГ Мур 5/7"/>
+                    <button onclick="state.unitName=document.getElementById('unitNameInput').value;saveSettings();alert('✅ Збережено!')" class="btn-stencil btn-green">✓</button>
+                </div>
+            </div>
+
+            <div class="crate p-4">
+                <h2 class="stencil-shadow mb-3" style="color:var(--yellow)">ТАБЛИЦЯ БАЛІВ</h2>
+                <p class="text-xs mb-3" style="color:var(--text-dim)">Абревіатура → бали за знищено / пошкоджено</p>
+                <div class="space-y-2 max-h-64 overflow-y-auto mb-4">
+                    ${Object.entries(state.scoreTable).map(([k,v])=>`<div class="record-card flex justify-between items-center gap-2 text-sm">
+                        <span style="color:var(--yellow)" class="stencil flex-1">${esc(k)}</span>
+                        <span style="color:var(--text-dim)">${v.znyshcheno} / ${v.poshkodzheno}</span>
+                        <button onclick="deleteScoreEntry('${esc(k)}')" class="btn-stencil btn-danger" style="padding:3px 8px;font-size:11px">✕</button>
+                    </div>`).join('')}
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <input type="text" id="sNewKey" placeholder="Абревіатура" class="field" value="${esc(state.sNewKey)}"/>
+                    <input type="number" id="sNewZ" placeholder="Знищено" class="field" value="${esc(state.sNewZ)}"/>
+                    <input type="number" id="sNewP" placeholder="Пошкоджено" class="field" value="${esc(state.sNewP)}"/>
+                </div>
+                <button onclick="addScoreEntry()" class="btn-stencil btn-green w-full mt-2">+ ДОДАТИ ЦІЛЬ</button>
+                <button onclick="resetScoreTable()" class="btn-stencil btn-danger w-full mt-2" style="font-size:12px">↺ СКИНУТИ ДО СТАНДАРТУ</button>
+            </div>
+
+            <div class="crate p-4">
+                <h2 class="stencil-shadow mb-3" style="color:var(--yellow)">ДАНІ</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="exportAllJSON()" class="btn-stencil btn-black w-full">💾 Зберегти JSON</button>
+                    <button onclick="importJSON()" class="btn-stencil w-full">📂 Завантажити JSON</button>
+                </div>
+                <button onclick="if(confirm('УВАГА! Всі записи будуть видалені!'))clearAllRecords()" class="btn-stencil btn-danger w-full mt-2">🗑 ВИДАЛИТИ ВСІ ЗАПИСИ</button>
+            </div>
+        </div>`;
+    }
+
+    app.innerHTML = h;
+}
+
+function addScoreEntry() {
+    const key = document.getElementById('sNewKey').value.trim();
+    const z = parseFloat(document.getElementById('sNewZ').value) || 0;
+    const p = parseFloat(document.getElementById('sNewP').value) || 0;
+    if (!key) { alert('Введіть абревіатуру!'); return; }
+    state.scoreTable[key] = {znyshcheno: z, poshkodzheno: p};
+    saveSettings();
+    document.getElementById('sNewKey').value = '';
+    document.getElementById('sNewZ').value = '';
+    document.getElementById('sNewP').value = '';
+    render();
+}
+function deleteScoreEntry(key) {
+    if (confirm('Видалити "' + key + '" з таблиці балів?')) {
+        delete state.scoreTable[key]; saveSettings(); render();
+    }
+}
+function resetScoreTable() {
+    if (confirm('Скинути таблицю балів до стандартних значень?')) {
+        state.scoreTable = {...DEFAULT_SCORE}; saveSettings(); render();
+    }
+}
+function clearAllRecords() { state.records = []; state.report = 1; state.counts = {}; saveRecords(); lsSet(LS.REPORT, 1); render(); }
+
+window.onload = loadAll;
+</script>
+</body>
+</html>
