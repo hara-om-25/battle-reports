@@ -20,6 +20,11 @@ android {
     }
 }
 
+repositories {
+    google()
+    mavenCentral()
+}
+
 dependencies {
     implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
 }
