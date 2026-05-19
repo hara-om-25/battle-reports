@@ -644,32 +644,18 @@ function cleanCoords(coord) { if(!coord) return ''; return coord.split(',')[0].s
 
 function esc(s) { if(s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-// Нова формула:
-// База завжди: q200 × ОС.B + q300 × ОС.C
-// Якщо ціль = ОС → тільки база
-// Якщо ціль ≠ ОС:
-//   - результат не обраний → ціль.C + база
-//   - результат "знищено" → ціль.B + база
-//   - результат "пошкоджено" → ціль.C + база
-//   - інший результат → 0 + база
 function calculatePoints(abbr, q200, q300, result) {
-    const os = state.scoreTable['ОС'] || {znyshcheno:0, poshkodzheno:0};
-    const base = parseInt(q200) * os.znyshcheno + parseInt(q300) * os.poshkodzheno;
-    if (!abbr) return base;
-    if (abbr === 'ОС') return base;
-    const target = state.scoreTable[abbr];
-    if (!target) return base;
-    let mainPoints = 0;
-    if (!result) {
-        mainPoints = target.poshkodzheno; // мінімальне = пошкоджено
-    } else if (result === 'знищено') {
-        mainPoints = target.znyshcheno;
-    } else if (result === 'пошкоджено') {
-        mainPoints = target.poshkodzheno;
-    } else {
-        mainPoints = 0;
+    if (abbr === 'ОС') {
+        const os = state.scoreTable['ОС'] || {znyshcheno:0, poshkodzheno:0};
+        if (result === 'знищено') return os.znyshcheno * (parseInt(q200)||0) + os.poshkodzheno * (parseInt(q300)||0);
+        if (result === 'пошкоджено') return os.poshkodzheno * (parseInt(q300)||0);
+        return 0;
     }
-    return mainPoints + base;
+    const target = state.scoreTable[abbr];
+    if (!target) return 0;
+    if (result === 'знищено') return target.znyshcheno;
+    if (result === 'пошкоджено') return target.poshkodzheno;
+    return 0;
 }
 
 function addTargetToForm() {
@@ -735,14 +721,12 @@ async function add() {
         return;
     }
     
-    const _os = state.scoreTable['ОС'] || {znyshcheno:0, poshkodzheno:0};
-    const _base = (parseInt(state.form.q200)||0) * _os.znyshcheno + (parseInt(state.form.q300)||0) * _os.poshkodzheno;
-    let totalPoints = _base;
+    let totalPoints = 0;
     let targetStr = '';
     let resultStr = '';
     for(let i=0; i<state.form.targets.length; i++) {
         const t = state.form.targets[i];
-        const pts = calculatePoints(t.abbr, 0, 0, t.result);
+        const pts = calculatePoints(t.abbr, state.form.q200, state.form.q300, t.result);
         totalPoints += pts;
         targetStr += (i>0?', ':'') + t.fullName;
         resultStr += (i>0?', ':'') + t.result;
@@ -976,8 +960,8 @@ async function saveEditRecord() {
     r.drone = er.drone;
     r.ammo = er.ammo;
     const _osE=state.scoreTable['ОС']||{znyshcheno:0,poshkodzheno:0};
-    let _ptsE=(parseInt(er.qty200)||0)*_osE.znyshcheno+(parseInt(er.qty300)||0)*_osE.poshkodzheno;
-    er.targets.forEach(t=>{const _p=t.name.trim().split(' '),_l=_p[_p.length-1],_r=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.name.trim(),_u=_r.toUpperCase();const _ab=Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})();const _sc=state.scoreTable[_ab];if(_sc)_ptsE+=t.result==='знищено'?_sc.znyshcheno:t.result==='пошкоджено'?_sc.poshkodzheno:0;});
+    let _ptsE=0;
+    er.targets.forEach(t=>{const _p=t.name.trim().split(' '),_l=_p[_p.length-1],_r=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.name.trim(),_u=_r.toUpperCase();const _ab=Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})();if(_ab==='ОС'){if(t.result==='знищено')_ptsE+=_osE.znyshcheno*(parseInt(er.qty200)||0)+_osE.poshkodzheno*(parseInt(er.qty300)||0);else if(t.result==='пошкоджено')_ptsE+=_osE.poshkodzheno*(parseInt(er.qty300)||0);}else{const _sc=state.scoreTable[_ab];if(_sc)_ptsE+=t.result==='знищено'?_sc.znyshcheno:t.result==='пошкоджено'?_sc.poshkodzheno:0;}});
     r.points=Math.round(_ptsE*100)/100;
     state.editRecord = null;
     try { await syncRecordsToAPI(); } catch(e) { showAlert('Помилка: ' + e.message); }
@@ -1140,11 +1124,9 @@ function render() {
     
     if(state.page==='form') {
         if(!state.form.targets) state.form.targets = [];
-        const _os2 = state.scoreTable['ОС'] || {znyshcheno:0, poshkodzheno:0};
-        const _base2 = (parseInt(state.form.q200)||0) * _os2.znyshcheno + (parseInt(state.form.q300)||0) * _os2.poshkodzheno;
-        let totalPoints = _base2;
+        let totalPoints = 0;
         const targetPoints = state.form.targets.map(t => {
-            const pts = calculatePoints(t.abbr, 0, 0, t.result);
+            const pts = calculatePoints(t.abbr, state.form.q200, state.form.q300, t.result);
             totalPoints += pts;
             return pts;
         });
@@ -1183,7 +1165,7 @@ function render() {
                     <div>
                         <label class="label block mb-2">РЕЗУЛЬТАТ</label>
                         <div style="display:flex;gap:4px;align-items:stretch;overflow:visible;padding-bottom:4px">
-                        <select onchange="state.form.newResult=this.value; render()" class="field" style="flex:1;min-width:0">
+                        <select onchange="state.form.newResult=this.value; if(this.value==='пошкоджено'){state.form.q200=0;} render()" class="field" style="flex:1;min-width:0">
                             <option value="">Виберіть...</option>
                             ${_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
                         </select>
@@ -1202,13 +1184,13 @@ function render() {
                     </div>
                     <div>
                         <label class="label block mb-2">200</label>
-                        <select onchange="state.form.q200=parseInt(this.value);render()" class="field">
+                        <select${state.form.newTarget==='ОС'&&state.form.newResult==='знищено'?'':' disabled'} onchange="state.form.q200=parseInt(this.value);render()" class="field" style="${state.form.newTarget==='ОС'&&state.form.newResult==='знищено'?'':'opacity:0.35'}">
                             ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q200===n?'selected':''}>${n}</option>`).join('')}
                         </select>
                     </div>
                     <div>
                         <label class="label block mb-2">300</label>
-                        <select onchange="state.form.q300=parseInt(this.value);render()" class="field">
+<select${state.form.newTarget==='ОС'&&(state.form.newResult==='знищено'||state.form.newResult==='пошкоджено')?'':' disabled'} onchange="state.form.q300=parseInt(this.value);render()" class="field" style="${state.form.newTarget==='ОС'&&(state.form.newResult==='знищено'||state.form.newResult==='пошкоджено')?'':'opacity:0.35'}">
                             ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q300===n?'selected':''}>${n}</option>`).join('')}
                         </select>
                     </div>
