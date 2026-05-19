@@ -704,6 +704,19 @@ def apply_patches(html):
         'save-edit-recalc-points'
     ))
 
+    # ── 45a. saveEditRecord: zero qty200/qty300 if no ОС in targets ──
+    patches.append((
+        '    r.qty200 = er.qty200;\n'
+        '    r.qty300 = er.qty300;\n',
+
+        "    const _erHasOs = er.targets.some(t=>{const _ab=Object.keys(state.scoreTable).find(k=>t.name.startsWith(k))||'';return _ab==='ОС';});\n"
+        "    if (!_erHasOs) { er.qty200=0; er.qty300=0; }\n"
+        '    r.qty200 = er.qty200;\n'
+        '    r.qty300 = er.qty300;\n',
+
+        'save-edit-zero-qty-no-os'
+    ))
+
     # ── 45b. edit modal: compute _hasOs200/_hasOs300 for 200/300 field control ──
     patches.append((
         'const q200opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty200===n?\'selected\':\'\'}>'\
