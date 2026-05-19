@@ -960,6 +960,8 @@ async function saveEditRecord() {
     r.target = er.targets.map(t => t.name).join(', ');
     r.result = er.targets.map(t => t.result).join(', ');
     r.coordinates = er.coordinates;
+    const _erHasOs = er.targets.some(t=>{const _ab=Object.keys(state.scoreTable).find(k=>t.name.startsWith(k))||'';return _ab==='ОС';});
+    if (!_erHasOs) { er.qty200=0; er.qty300=0; }
     r.qty200 = er.qty200;
     r.qty300 = er.qty300;
     r.drone = er.drone;
