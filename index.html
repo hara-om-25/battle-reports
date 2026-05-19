@@ -593,6 +593,7 @@ async function loadDataFromAPI() {
                 });
             }
         }
+        state.records.forEach(r=>{if((r.qty200||r.qty300)&&!r.target.split(', ').some(t=>{const _p=t.trim().split(' '),_l=_p[_p.length-1],_a=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.trim();return _a==='ОС';})){r.qty200=0;r.qty300=0;}});
         
         if (state.records.length > 0) {
             state.report = Math.max(...state.records.map(r => r.reportNum));
