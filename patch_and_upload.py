@@ -137,7 +137,54 @@ def apply_patches(html):
     )
     patches.append((old_gen, new_gen, 'generateReport'))
 
-    # ── 5. add() — base calculated once, not per target ──
+    # ── 5a. calculatePoints — нова формула: ОС×коефіцієнт, решта ×1 ──
+    patches.append((
+        '// Нова формула:\n'
+        '// База завжди: q200 × ОС.B + q300 × ОС.C\n'
+        '// Якщо ціль = ОС → тільки база\n'
+        '// Якщо ціль ≠ ОС:\n'
+        '//   - результат не обраний → ціль.C + база\n'
+        '//   - результат "знищено" → ціль.B + база\n'
+        '//   - результат "пошкоджено" → ціль.C + база\n'
+        '//   - інший результат → 0 + база\n'
+        'function calculatePoints(abbr, q200, q300, result) {\n'
+        "    const os = state.scoreTable['ОС'] || {znyshcheno:0, poshkodzheno:0};\n"
+        '    const base = parseInt(q200) * os.znyshcheno + parseInt(q300) * os.poshkodzheno;\n'
+        '    if (!abbr) return base;\n'
+        "    if (abbr === 'ОС') return base;\n"
+        '    const target = state.scoreTable[abbr];\n'
+        '    if (!target) return base;\n'
+        '    let mainPoints = 0;\n'
+        '    if (!result) {\n'
+        '        mainPoints = target.poshkodzheno; // мінімальне = пошкоджено\n'
+        "    } else if (result === 'знищено') {\n"
+        '        mainPoints = target.znyshcheno;\n'
+        "    } else if (result === 'пошкоджено') {\n"
+        '        mainPoints = target.poshkodzheno;\n'
+        '    } else {\n'
+        '        mainPoints = 0;\n'
+        '    }\n'
+        '    return mainPoints + base;\n'
+        '}',
+
+        'function calculatePoints(abbr, q200, q300, result) {\n'
+        "    if (abbr === 'ОС') {\n"
+        "        const os = state.scoreTable['ОС'] || {znyshcheno:0, poshkodzheno:0};\n"
+        "        if (result === 'знищено') return os.znyshcheno * (parseInt(q200)||0) + os.poshkodzheno * (parseInt(q300)||0);\n"
+        "        if (result === 'пошкоджено') return os.poshkodzheno * (parseInt(q300)||0);\n"
+        '        return 0;\n'
+        '    }\n'
+        '    const target = state.scoreTable[abbr];\n'
+        '    if (!target) return 0;\n'
+        "    if (result === 'знищено') return target.znyshcheno;\n"
+        "    if (result === 'пошкоджено') return target.poshkodzheno;\n"
+        '    return 0;\n'
+        '}',
+
+        'new-calculatePoints'
+    ))
+
+    # ── 5. add() — pass q200/q300 directly to calculatePoints ──
     old_add = (
         '    let totalPoints = 0;\n'
         "    let targetStr = '';\n"
@@ -150,20 +197,7 @@ def apply_patches(html):
         "        resultStr += (i>0?', ':'') + t.result;\n"
         '    }'
     )
-    new_add = (
-        "    const _os = state.scoreTable['ОС'] || {znyshcheno:0, poshkodzheno:0};\n"
-        '    const _base = (parseInt(state.form.q200)||0) * _os.znyshcheno + (parseInt(state.form.q300)||0) * _os.poshkodzheno;\n'
-        '    let totalPoints = _base;\n'
-        "    let targetStr = '';\n"
-        "    let resultStr = '';\n"
-        '    for(let i=0; i<state.form.targets.length; i++) {\n'
-        '        const t = state.form.targets[i];\n'
-        '        const pts = calculatePoints(t.abbr, 0, 0, t.result);\n'
-        '        totalPoints += pts;\n'
-        "        targetStr += (i>0?', ':'') + t.fullName;\n"
-        "        resultStr += (i>0?', ':'') + t.result;\n"
-        '    }'
-    )
+    new_add = old_add  # calculatePoints now handles ОС internally with q200/q300
     patches.append((old_add, new_add, 'add-base-fix'))
 
     # ── 6. render() totalPoints — base calculated once ──
@@ -175,16 +209,7 @@ def apply_patches(html):
         '            return pts;\n'
         '        });'
     )
-    new_render_pts = (
-        "        const _os2 = state.scoreTable['ОС'] || {znyshcheno:0, poshkodzheno:0};\n"
-        '        const _base2 = (parseInt(state.form.q200)||0) * _os2.znyshcheno + (parseInt(state.form.q300)||0) * _os2.poshkodzheno;\n'
-        '        let totalPoints = _base2;\n'
-        '        const targetPoints = state.form.targets.map(t => {\n'
-        '            const pts = calculatePoints(t.abbr, 0, 0, t.result);\n'
-        '            totalPoints += pts;\n'
-        '            return pts;\n'
-        '        });'
-    )
+    new_render_pts = old_render_pts  # calculatePoints now handles ОС internally
     patches.append((old_render_pts, new_render_pts, 'render-totalPoints-fix'))
 
     # ── 7. Add todayPoints + reportTotalPoints after todayCount line ──
@@ -670,8 +695,8 @@ def apply_patches(html):
 
         "    r.ammo = er.ammo;\n"
         "    const _osE=state.scoreTable['\u041e\u0421']||{znyshcheno:0,poshkodzheno:0};\n"
-        "    let _ptsE=(parseInt(er.qty200)||0)*_osE.znyshcheno+(parseInt(er.qty300)||0)*_osE.poshkodzheno;\n"
-        "    er.targets.forEach(t=>{const _p=t.name.trim().split(' '),_l=_p[_p.length-1],_r=/^\\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.name.trim(),_u=_r.toUpperCase();const _ab=Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})();const _sc=state.scoreTable[_ab];if(_sc)_ptsE+=t.result===\'\u0437\u043d\u0438\u0449\u0435\u043d\u043e\'?_sc.znyshcheno:t.result===\'\u043f\u043e\u0448\u043a\u043e\u0434\u0436\u0435\u043d\u043e\'?_sc.poshkodzheno:0;});\n"
+        "    let _ptsE=0;\n"
+        "    er.targets.forEach(t=>{const _p=t.name.trim().split(' '),_l=_p[_p.length-1],_r=/^\\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.name.trim(),_u=_r.toUpperCase();const _ab=Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})();if(_ab==='\u041e\u0421'){if(t.result==='\u0437\u043d\u0438\u0449\u0435\u043d\u043e')_ptsE+=_osE.znyshcheno*(parseInt(er.qty200)||0)+_osE.poshkodzheno*(parseInt(er.qty300)||0);else if(t.result==='\u043f\u043e\u0448\u043a\u043e\u0434\u0436\u0435\u043d\u043e')_ptsE+=_osE.poshkodzheno*(parseInt(er.qty300)||0);}else{const _sc=state.scoreTable[_ab];if(_sc)_ptsE+=t.result==='\u0437\u043d\u0438\u0449\u0435\u043d\u043e'?_sc.znyshcheno:t.result==='\u043f\u043e\u0448\u043a\u043e\u0434\u0436\u0435\u043d\u043e'?_sc.poshkodzheno:0;}});\n"
         "    r.points=Math.round(_ptsE*100)/100;\n"
         "    state.editRecord = null;\n"
         "    try { await syncRecordsToAPI(); }",
@@ -1333,6 +1358,44 @@ def apply_patches(html):
         '    <link rel="apple-touch-icon" href="/battle-reports/icons/icon-192.png">',
 
         'pwa-meta'
+    ))
+
+    # ── 81. 200/300 fields: active only when ОС is selected ──
+    patches.append((
+        '<select onchange="state.form.q200=parseInt(this.value);render()" class="field">\n'
+        '                            ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q200===n?\'selected\':\'\'}>'\
+        '${n}</option>`).join(\'\')}\n'
+        '                        </select>\n'
+        '                    </div>\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2">300</label>\n'
+        '                        <select onchange="state.form.q300=parseInt(this.value);render()" class="field">\n'
+        '                            ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q300===n?\'selected\':\'\'}>'\
+        '${n}</option>`).join(\'\')}',
+
+        '<select${state.form.newTarget===\'ОС\'&&state.form.newResult===\'знищено\'?\'\':\' disabled\'}'
+        ' onchange="state.form.q200=parseInt(this.value);render()" class="field"'
+        ' style="${state.form.newTarget===\'ОС\'&&state.form.newResult===\'знищено\'?\'\':\'opacity:0.35\'}">\n'
+        '                            ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q200===n?\'selected\':\'\'}>'\
+        '${n}</option>`).join(\'\')}\n'
+        '                        </select>\n'
+        '                    </div>\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2">300</label>\n'
+        '<select${state.form.newTarget===\'ОС\'&&(state.form.newResult===\'знищено\'||state.form.newResult===\'пошкоджено\')?\'\':\' disabled\'}'
+        ' onchange="state.form.q300=parseInt(this.value);render()" class="field"'
+        ' style="${state.form.newTarget===\'ОС\'&&(state.form.newResult===\'знищено\'||state.form.newResult===\'пошкоджено\')?\'\':\'opacity:0.35\'}">\n'
+        '                            ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q300===n?\'selected\':\'\'}>'\
+        '${n}</option>`).join(\'\')}',
+
+        'os-field-control'
+    ))
+
+    # ── 82. result dropdown: auto-reset q200 when пошкоджено selected ──
+    patches.append((
+        '<select onchange="state.form.newResult=this.value; render()" class="field" style="flex:1;min-width:0">',
+        '<select onchange="state.form.newResult=this.value; if(this.value===\'пошкоджено\'){state.form.q200=0;} render()" class="field" style="flex:1;min-width:0">',
+        'result-reset-q200'
     ))
 
     # ── 80. red × button on target remove ──
