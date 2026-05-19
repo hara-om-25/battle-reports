@@ -713,7 +713,8 @@ def apply_patches(html):
 
         "const _hasOs200 = er.targets.some(t=>{const _ab=Object.keys(state.scoreTable).find(k=>t.name.startsWith(k))||'';return _ab==='ОС'&&t.result==='знищено';})||(er.newTarget==='ОС'&&er.newResult==='знищено');\n"
         "    const _hasOs300 = er.targets.some(t=>{const _ab=Object.keys(state.scoreTable).find(k=>t.name.startsWith(k))||'';return _ab==='ОС'&&(t.result==='знищено'||t.result==='пошкоджено');})||(er.newTarget==='ОС'&&(er.newResult==='знищено'||er.newResult==='пошкоджено'));\n"
-        "    if (_fromUserAction) { if (!_hasOs200) er.qty200=0; if (!_hasOs300) er.qty300=0; }\n"
+        "    if (!_hasOs200) er.qty200=0;\n"
+        "    if (!_hasOs300) er.qty300=0;\n"
         '    const q200opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty200===n?\'selected\':\'\'}>'\
         '${n}</option>`).join(\'\');\n'
         '    const q300opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty300===n?\'selected\':\'\'}>'\
@@ -1451,6 +1452,25 @@ def apply_patches(html):
         '<select onchange="state.form.newResult=this.value; render()" class="field" style="flex:1;min-width:0">',
         '<select onchange="state.form.newResult=this.value; if(this.value===\'пошкоджено\'){state.form.q200=0;} render()" class="field" style="flex:1;min-width:0">',
         'result-reset-q200'
+    ))
+
+    # ── 83. form: reset q200/q300 when newTarget changes away from ОС ──
+    patches.append((
+        'onchange="state.form.newTarget=this.value; render()" class="field">',
+        'onchange="state.form.newTarget=this.value; if(this.value!==\'ОС\'){state.form.q200=0;state.form.q300=0;} render()" class="field">',
+        'form-target-reset-qty'
+    ))
+
+    # ── 84. add(): zero out qty200/qty300 if no ОС target in sortie ──
+    patches.append((
+        'const cleanedCoord = cleanCoords(state.form.coord);\n'
+        '    const rec = {',
+
+        'const cleanedCoord = cleanCoords(state.form.coord);\n'
+        '    if(!state.form.targets.some(t=>t.abbr===\'ОС\')){state.form.q200=0;state.form.q300=0;}\n'
+        '    const rec = {',
+
+        'add-zero-qty-no-os'
     ))
 
     # ── 80. red × button on target remove ──
