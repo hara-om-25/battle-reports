@@ -673,14 +673,14 @@ def apply_patches(html):
         "    er.targets.filter((_,ti)=>ti!==i).forEach(t=>{if(_gA(t.name)===newAbbr.toUpperCase())maxN=Math.max(maxN,_gN(t.name));});\n"
         "    er.targets[i].name = newAbbr + ' ' + (maxN + 1);\n"
         '    checkEditDirty();\n'
-        '    renderEditRecordModal();\n'
+        '    renderEditRecordModal(true);\n'
         '}\n'
         '\n'
         'function changeEditTargetResult(i, newResult) {\n'
         '    const er = state.editRecord;\n'
         '    if (!er || !newResult) return;\n'
         '    er.targets[i].result = newResult;\n'
-        '    renderEditRecordModal();\n'
+        '    renderEditRecordModal(true);\n'
         '}\n'
         '\n'
         'function removeEditTarget(i) {',
@@ -713,6 +713,7 @@ def apply_patches(html):
 
         "const _hasOs200 = er.targets.some(t=>{const _ab=Object.keys(state.scoreTable).find(k=>t.name.startsWith(k))||'';return _ab==='ОС'&&t.result==='знищено';})||(er.newTarget==='ОС'&&er.newResult==='знищено');\n"
         "    const _hasOs300 = er.targets.some(t=>{const _ab=Object.keys(state.scoreTable).find(k=>t.name.startsWith(k))||'';return _ab==='ОС'&&(t.result==='знищено'||t.result==='пошкоджено');})||(er.newTarget==='ОС'&&(er.newResult==='знищено'||er.newResult==='пошкоджено'));\n"
+        "    if (_fromUserAction) { if (!_hasOs200) er.qty200=0; if (!_hasOs300) er.qty300=0; }\n"
         '    const q200opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty200===n?\'selected\':\'\'}>'\
         '${n}</option>`).join(\'\');\n'
         '    const q300opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty300===n?\'selected\':\'\'}>'\
@@ -739,10 +740,23 @@ def apply_patches(html):
         '<select onchange="state.editRecord.newTarget=this.value" class="field"><option value="">Ціль...</option>${scoreOpts}</select>'
         '<select onchange="state.editRecord.newResult=this.value" class="field"><option value="">Результат...',
 
-        '<select onchange="state.editRecord.newTarget=this.value;renderEditRecordModal()" class="field"><option value="">Ціль...</option>${scoreOpts}</select>'
-        '<select onchange="state.editRecord.newResult=this.value;renderEditRecordModal()" class="field"><option value="">Результат...',
+        '<select onchange="state.editRecord.newTarget=this.value;renderEditRecordModal(true)" class="field"><option value="">Ціль...</option>${scoreOpts}</select>'
+        '<select onchange="state.editRecord.newResult=this.value;renderEditRecordModal(true)" class="field"><option value="">Результат...',
 
         'edit-modal-new-target-rerender'
+    ))
+
+    # ── 45e. edit modal: removeEditTarget passes true to renderEditRecordModal ──
+    patches.append((
+        'state.editRecord.targets.splice(i, 1);\n'
+        '    renderEditRecordModal();\n'
+        '}',
+
+        'state.editRecord.targets.splice(i, 1);\n'
+        '    renderEditRecordModal(true);\n'
+        '}',
+
+        'edit-modal-remove-rerender'
     ))
 
     # ── 46. Trim drone/ammo/results when loading from СПИСКИ ──
