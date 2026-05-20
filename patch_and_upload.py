@@ -1459,18 +1459,18 @@ def apply_patches(html):
         '                            ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q300===n?\'selected\':\'\'}>'\
         '${n}</option>`).join(\'\')}',
 
-        '<select${(state.form.newTarget===\'ОС\'&&state.form.newResult===\'знищено\')||state.form.targets.some(t=>t.abbr===\'ОС\'&&t.result===\'знищено\')?\'\':\' disabled\'}'
+        '<select${state.form.newTarget===\'ОС\'&&state.form.newResult===\'знищено\'?\'\':\' disabled\'}'
         ' onchange="state.form.q200=parseInt(this.value);render()" class="field"'
-        ' style="${(state.form.newTarget===\'ОС\'&&state.form.newResult===\'знищено\')||state.form.targets.some(t=>t.abbr===\'ОС\'&&t.result===\'знищено\')?\'\':\'opacity:0.35\'}">\n'
+        ' style="${state.form.newTarget===\'ОС\'&&state.form.newResult===\'знищено\'?\'\':\'opacity:0.35\'}">\n'
         '                            ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q200===n?\'selected\':\'\'}>'\
         '${n}</option>`).join(\'\')}\n'
         '                        </select>\n'
         '                    </div>\n'
         '                    <div>\n'
         '                        <label class="label block mb-2">300</label>\n'
-        '<select${(state.form.newTarget===\'ОС\'&&(state.form.newResult===\'знищено\'||state.form.newResult===\'пошкоджено\'))||state.form.targets.some(t=>t.abbr===\'ОС\'&&(t.result===\'знищено\'||t.result===\'пошкоджено\'))?\'\':\' disabled\'}'
+        '<select${state.form.newTarget===\'ОС\'&&(state.form.newResult===\'знищено\'||state.form.newResult===\'пошкоджено\')?\'\':\' disabled\'}'
         ' onchange="state.form.q300=parseInt(this.value);render()" class="field"'
-        ' style="${(state.form.newTarget===\'ОС\'&&(state.form.newResult===\'знищено\'||state.form.newResult===\'пошкоджено\'))||state.form.targets.some(t=>t.abbr===\'ОС\'&&(t.result===\'знищено\'||t.result===\'пошкоджено\'))?\'\':\'opacity:0.35\'}">\n'
+        ' style="${state.form.newTarget===\'ОС\'&&(state.form.newResult===\'знищено\'||state.form.newResult===\'пошкоджено\')?\'\':\'opacity:0.35\'}">\n'
         '                            ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q300===n?\'selected\':\'\'}>'\
         '${n}</option>`).join(\'\')}',
 
