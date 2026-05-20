@@ -679,6 +679,7 @@ function addTargetToForm() {
 
 function removeTargetFromForm(idx) {
     state.form.targets.splice(idx, 1);
+    if(!state.form.targets.some(t=>t.abbr==='ОС')){state.form.q200=0;state.form.q300=0;}
     render();
 }
 
@@ -1165,7 +1166,7 @@ function render() {
                 <div class="grid gap-3" style="grid-template-columns: 1fr 1fr">
                     <div>
                         <label class="label block mb-2">ЦІЛЬ</label>
-                        <select onchange="state.form.newTarget=this.value; if(this.value!=='ОС'){state.form.q200=0;state.form.q300=0;} render()" class="field">
+                        <select onchange="state.form.newTarget=this.value; if(this.value!=='ОС'&&!state.form.targets.some(t=>t.abbr==='ОС')){state.form.q200=0;state.form.q300=0;} render()" class="field">
                             <option value="">Виберіть...</option>
                             ${_freqSortTargets(Object.keys(state.scoreTable)).map(x=>`<option value="${esc(x)}" ${state.form.newTarget===x?'selected':''}>${esc(x)}</option>`).join('')}
                         </select>
@@ -1173,7 +1174,7 @@ function render() {
                     <div>
                         <label class="label block mb-2">РЕЗУЛЬТАТ</label>
                         <div style="display:flex;gap:4px;align-items:stretch;overflow:visible;padding-bottom:4px">
-                        <select onchange="state.form.newResult=this.value; if(this.value==='пошкоджено'){state.form.q200=0;} render()" class="field" style="flex:1;min-width:0">
+                        <select onchange="state.form.newResult=this.value; if(this.value==='пошкоджено'&&!state.form.targets.some(t=>t.abbr==='ОС')){state.form.q200=0;} render()" class="field" style="flex:1;min-width:0">
                             <option value="">Виберіть...</option>
                             ${_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
                         </select>
@@ -1192,13 +1193,13 @@ function render() {
                     </div>
                     <div>
                         <label class="label block mb-2">200</label>
-                        <select${state.form.newTarget==='ОС'&&state.form.newResult==='знищено'?'':' disabled'} onchange="state.form.q200=parseInt(this.value);render()" class="field" style="${state.form.newTarget==='ОС'&&state.form.newResult==='знищено'?'':'opacity:0.35'}">
+                        <select${(state.form.newTarget==='ОС'&&state.form.newResult==='знищено')||state.form.targets.some(t=>t.abbr==='ОС'&&t.result==='знищено')?'':' disabled'} onchange="state.form.q200=parseInt(this.value);render()" class="field" style="${(state.form.newTarget==='ОС'&&state.form.newResult==='знищено')||state.form.targets.some(t=>t.abbr==='ОС'&&t.result==='знищено')?'':'opacity:0.35'}">
                             ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q200===n?'selected':''}>${n}</option>`).join('')}
                         </select>
                     </div>
                     <div>
                         <label class="label block mb-2">300</label>
-<select${state.form.newTarget==='ОС'&&(state.form.newResult==='знищено'||state.form.newResult==='пошкоджено')?'':' disabled'} onchange="state.form.q300=parseInt(this.value);render()" class="field" style="${state.form.newTarget==='ОС'&&(state.form.newResult==='знищено'||state.form.newResult==='пошкоджено')?'':'opacity:0.35'}">
+<select${(state.form.newTarget==='ОС'&&(state.form.newResult==='знищено'||state.form.newResult==='пошкоджено'))||state.form.targets.some(t=>t.abbr==='ОС'&&(t.result==='знищено'||t.result==='пошкоджено'))?'':' disabled'} onchange="state.form.q300=parseInt(this.value);render()" class="field" style="${(state.form.newTarget==='ОС'&&(state.form.newResult==='знищено'||state.form.newResult==='пошкоджено'))||state.form.targets.some(t=>t.abbr==='ОС'&&(t.result==='знищено'||t.result==='пошкоджено'))?'':'opacity:0.35'}">
                             ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q300===n?'selected':''}>${n}</option>`).join('')}
                         </select>
                     </div>
