@@ -1563,9 +1563,8 @@ def apply_patches(html):
 
         '        if (usersResp.error) {\n'
         '            if (usersResp.error.code === 401 || usersResp.error.status === \'UNAUTHENTICATED\') {\n'
-        "                sessionStorage.removeItem('token');\n"
-        '                state.token = null;\n'
-        "                tokenClient.requestAccessToken({ prompt: '' });\n"
+        '                state.token = null; state.loaded = false;\n'
+        "                tokenClient.requestAccessToken({ prompt: '', hint: state.user||'' });\n"
         '                return;\n'
         '            }\n'
         "            alert('Помилка доступу до файла: ' + usersResp.error.message);\n"
@@ -1574,6 +1573,96 @@ def apply_patches(html):
 
         'auth-silent-token-refresh'
     ))
+
+    # ── 75a. auth: localStorage замість sessionStorage в window.onload ──
+    patches.append((
+        "            const savedToken = sessionStorage.getItem('token');\n"
+        "            const savedEmail = sessionStorage.getItem('email');",
+
+        "            const savedToken = localStorage.getItem('token');\n"
+        "            const savedEmail = localStorage.getItem('email');",
+
+        'auth-use-localstorage'
+    ))
+
+    # ── 75b. auth: розумний callback — refresh vs перший логін + timer ──
+    patches.append((
+        '            state.token = response.access_token;\n'
+        '            try {\n'
+        "                const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {\n"
+        "                    headers: { 'Authorization': `Bearer ${state.token}` }\n"
+        '                }).then(r => r.json());\n'
+        '                state.user = userInfo.email;\n'
+        '                \n'
+        "                sessionStorage.setItem('token', state.token);\n"
+        "                sessionStorage.setItem('email', state.user);\n"
+        '                await verifyAndLoad();\n'
+        '            } catch(err) {\n'
+        "                alert('Помилка: ' + err.message);\n"
+        '                logout();\n'
+        '            }',
+
+        '            state.token = response.access_token;\n'
+        "            localStorage.setItem('token', state.token);\n"
+        '            if (state.user && state.loaded) {\n'
+        '                _startTokenTimer(); return;\n'
+        '            }\n'
+        '            try {\n'
+        '                if (!state.user) {\n'
+        "                    const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {\n"
+        "                        headers: { 'Authorization': `Bearer ${state.token}` }\n"
+        '                    }).then(r => r.json());\n'
+        '                    state.user = userInfo.email;\n'
+        "                    localStorage.setItem('email', state.user);\n"
+        '                }\n'
+        '                _startTokenTimer();\n'
+        '                await verifyAndLoad();\n'
+        '            } catch(err) {\n'
+        "                alert('Помилка: ' + err.message);\n"
+        '                logout();\n'
+        '            }',
+
+        'auth-callback-smart'
+    ))
+
+    # ── 75c. auth: localStorage + timer clear в logout ──
+    patches.append((
+        "    sessionStorage.removeItem('token');\n"
+        "    sessionStorage.removeItem('email');",
+
+        "    localStorage.removeItem('token');\n"
+        "    localStorage.removeItem('email');\n"
+        "    if(window._tokenTimer){clearInterval(window._tokenTimer);window._tokenTimer=null;}",
+
+        'auth-logout-localstorage'
+    ))
+
+    # ── 75d. auth: _startTokenTimer() + visibilitychange перед initAuth ──
+    patches.append((
+        'function initAuth() {\n'
+        '    tokenClient = google.accounts.oauth2.initTokenClient({',
+
+        'function _startTokenTimer() {\n'
+        "    if(window._tokenTimer)clearInterval(window._tokenTimer);\n"
+        "    window._tokenTimer=setInterval(()=>{\n"
+        "        if(state.token&&state.user)tokenClient.requestAccessToken({prompt:'',hint:state.user});\n"
+        "    },45*60*1000);\n"
+        "    localStorage.setItem('_lastRefresh',Date.now().toString());\n"
+        '}\n'
+        "document.addEventListener('visibilitychange',()=>{\n"
+        "    if(!document.hidden&&state.token&&state.user){\n"
+        "        const _last=parseInt(localStorage.getItem('_lastRefresh')||'0');\n"
+        "        if(Date.now()-_last>44*60*1000)tokenClient.requestAccessToken({prompt:'',hint:state.user});\n"
+        '    }\n'
+        '});\n'
+        'function initAuth() {\n'
+        '    tokenClient = google.accounts.oauth2.initTokenClient({',
+
+        'auth-token-timer-fn'
+    ))
+
+    # ── 75e. auth: login() з hint — застосовується ПІСЛЯ custom-show-alert ──
+    # (вставляється пізніше в списку патчів, після custom-show-alert)
 
     # ── 76. custom showAlert dialog in app style ──
     patches.append((
@@ -1602,6 +1691,13 @@ def apply_patches(html):
         'function login() { tokenClient.requestAccessToken(); }',
 
         'custom-show-alert'
+    ))
+
+    # ── 76a. auth: login() з hint (після custom-show-alert) ──
+    patches.append((
+        'function login() { tokenClient.requestAccessToken(); }',
+        "function login() { const _h=localStorage.getItem('email')||''; tokenClient.requestAccessToken(_h?{hint:_h}:{}); }",
+        'auth-login-hint'
     ))
 
     # Apply patches
