@@ -329,8 +329,8 @@ window.onload = () => {
         if (typeof google !== 'undefined' && google.accounts) {
             clearInterval(initInterval);
             initAuth();
-            const savedToken = sessionStorage.getItem('token');
-            const savedEmail = sessionStorage.getItem('email');
+            const savedToken = localStorage.getItem('token');
+            const savedEmail = localStorage.getItem('email');
             if (savedToken && savedEmail) {
                 state.token = savedToken;
                 state.user = savedEmail;
@@ -351,9 +351,8 @@ async function verifyAndLoad() {
         
         if (usersResp.error) {
             if (usersResp.error.code === 401 || usersResp.error.status === 'UNAUTHENTICATED') {
-                sessionStorage.removeItem('token');
-                state.token = null;
-                tokenClient.requestAccessToken({ prompt: '' });
+                state.token = null; state.loaded = false;
+                tokenClient.requestAccessToken({ prompt: '', hint: state.user||'' });
                 return;
             }
             showAlert('Помилка доступу до файла: ' + usersResp.error.message);
@@ -374,6 +373,19 @@ async function verifyAndLoad() {
     }
 }
 
+function _startTokenTimer() {
+    if(window._tokenTimer)clearInterval(window._tokenTimer);
+    window._tokenTimer=setInterval(()=>{
+        if(state.token&&state.user)tokenClient.requestAccessToken({prompt:'',hint:state.user});
+    },45*60*1000);
+    localStorage.setItem('_lastRefresh',Date.now().toString());
+}
+document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden&&state.token&&state.user){
+        const _last=parseInt(localStorage.getItem('_lastRefresh')||'0');
+        if(Date.now()-_last>44*60*1000)tokenClient.requestAccessToken({prompt:'',hint:state.user});
+    }
+});
 function initAuth() {
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
@@ -384,14 +396,19 @@ function initAuth() {
                 return;
             }
             state.token = response.access_token;
+            localStorage.setItem('token', state.token);
+            if (state.user && state.loaded) {
+                _startTokenTimer(); return;
+            }
             try {
-                const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                    headers: { 'Authorization': `Bearer ${state.token}` }
-                }).then(r => r.json());
-                state.user = userInfo.email;
-                
-                sessionStorage.setItem('token', state.token);
-                sessionStorage.setItem('email', state.user);
+                if (!state.user) {
+                    const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                        headers: { 'Authorization': `Bearer ${state.token}` }
+                    }).then(r => r.json());
+                    state.user = userInfo.email;
+                    localStorage.setItem('email', state.user);
+                }
+                _startTokenTimer();
                 await verifyAndLoad();
             } catch(err) {
                 showAlert('Помилка: ' + err.message);
@@ -421,11 +438,12 @@ function showAlert(msg) {
     document.body.appendChild(_ov);
     _ok.addEventListener('click', function() { document.body.removeChild(_ov); });
 }
-function login() { tokenClient.requestAccessToken(); }
+function login() { const _h=localStorage.getItem('email')||''; tokenClient.requestAccessToken(_h?{hint:_h}:{}); }
 
 function logout() {
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('email');
+    localStorage.removeItem('token');
+    localStorage.removeItem('email');
+    if(window._tokenTimer){clearInterval(window._tokenTimer);window._tokenTimer=null;}
     state.token = null; state.user = null;
     state.scoreTable = {}; state.drones = []; state.ammo = []; state.results = [];  state.records = [];
     state.archiveSheets = []; state.selArchive = null; state.archiveRecs = []; state.archiveLoading = false; state.pvr = [];
