@@ -602,6 +602,7 @@ def apply_patches(html):
 
         'function removeTargetFromForm(idx) {\n'
         '    state.form.targets.splice(idx, 1);\n'
+        '    if(!state.form.targets.some(t=>t.abbr===\'ОС\')){state.form.q200=0;state.form.q300=0;}\n'
         '    render();\n'
         '}',
 
@@ -1458,18 +1459,18 @@ def apply_patches(html):
         '                            ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q300===n?\'selected\':\'\'}>'\
         '${n}</option>`).join(\'\')}',
 
-        '<select${state.form.newTarget===\'ОС\'&&state.form.newResult===\'знищено\'?\'\':\' disabled\'}'
+        '<select${(state.form.newTarget===\'ОС\'&&state.form.newResult===\'знищено\')||state.form.targets.some(t=>t.abbr===\'ОС\'&&t.result===\'знищено\')?\'\':\' disabled\'}'
         ' onchange="state.form.q200=parseInt(this.value);render()" class="field"'
-        ' style="${state.form.newTarget===\'ОС\'&&state.form.newResult===\'знищено\'?\'\':\'opacity:0.35\'}">\n'
+        ' style="${(state.form.newTarget===\'ОС\'&&state.form.newResult===\'знищено\')||state.form.targets.some(t=>t.abbr===\'ОС\'&&t.result===\'знищено\')?\'\':\'opacity:0.35\'}">\n'
         '                            ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q200===n?\'selected\':\'\'}>'\
         '${n}</option>`).join(\'\')}\n'
         '                        </select>\n'
         '                    </div>\n'
         '                    <div>\n'
         '                        <label class="label block mb-2">300</label>\n'
-        '<select${state.form.newTarget===\'ОС\'&&(state.form.newResult===\'знищено\'||state.form.newResult===\'пошкоджено\')?\'\':\' disabled\'}'
+        '<select${(state.form.newTarget===\'ОС\'&&(state.form.newResult===\'знищено\'||state.form.newResult===\'пошкоджено\'))||state.form.targets.some(t=>t.abbr===\'ОС\'&&(t.result===\'знищено\'||t.result===\'пошкоджено\'))?\'\':\' disabled\'}'
         ' onchange="state.form.q300=parseInt(this.value);render()" class="field"'
-        ' style="${state.form.newTarget===\'ОС\'&&(state.form.newResult===\'знищено\'||state.form.newResult===\'пошкоджено\')?\'\':\'opacity:0.35\'}">\n'
+        ' style="${(state.form.newTarget===\'ОС\'&&(state.form.newResult===\'знищено\'||state.form.newResult===\'пошкоджено\'))||state.form.targets.some(t=>t.abbr===\'ОС\'&&(t.result===\'знищено\'||t.result===\'пошкоджено\'))?\'\':\'opacity:0.35\'}">\n'
         '                            ${[0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${state.form.q300===n?\'selected\':\'\'}>'\
         '${n}</option>`).join(\'\')}',
 
@@ -1479,14 +1480,14 @@ def apply_patches(html):
     # ── 82. result dropdown: auto-reset q200 when пошкоджено selected ──
     patches.append((
         '<select onchange="state.form.newResult=this.value; render()" class="field" style="flex:1;min-width:0">',
-        '<select onchange="state.form.newResult=this.value; if(this.value===\'пошкоджено\'){state.form.q200=0;} render()" class="field" style="flex:1;min-width:0">',
+        '<select onchange="state.form.newResult=this.value; if(this.value===\'пошкоджено\'&&!state.form.targets.some(t=>t.abbr===\'ОС\')){state.form.q200=0;} render()" class="field" style="flex:1;min-width:0">',
         'result-reset-q200'
     ))
 
     # ── 83. form: reset q200/q300 when newTarget changes away from ОС ──
     patches.append((
         'onchange="state.form.newTarget=this.value; render()" class="field">',
-        'onchange="state.form.newTarget=this.value; if(this.value!==\'ОС\'){state.form.q200=0;state.form.q300=0;} render()" class="field">',
+        'onchange="state.form.newTarget=this.value; if(this.value!==\'ОС\'&&!state.form.targets.some(t=>t.abbr===\'ОС\')){state.form.q200=0;state.form.q300=0;} render()" class="field">',
         'form-target-reset-qty'
     ))
 
