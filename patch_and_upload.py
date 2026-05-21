@@ -373,7 +373,7 @@ def apply_patches(html):
     ))
     patches.append((
         "<button onclick=\"state.page='reports';render()\" class=\"nav-btn ${state.page==='reports'?'active':''}\">ЗВІТИ</button>",
-        "<button onclick=\"state.page='reports';render()\" onmousedown=\"this.classList.add('pressing')\" onmouseup=\"this.classList.remove('pressing')\" ontouchstart=\"this.classList.add('pressing')\" ontouchend=\"this.classList.remove('pressing')\" class=\"nav-btn ${state.page==='reports'?'active':''}\">ЗВІТИ</button>",
+        "<button onclick=\"state.page='reports';state.selReport=null;state.selDate=null;render()\" onmousedown=\"this.classList.add('pressing')\" onmouseup=\"this.classList.remove('pressing')\" ontouchstart=\"this.classList.add('pressing')\" ontouchend=\"this.classList.remove('pressing')\" class=\"nav-btn ${state.page==='reports'?'active':''}\">ЗВІТИ</button>",
         'nav-reports-press'
     ))
     patches.append((
@@ -1129,27 +1129,12 @@ def apply_patches(html):
         'pvr-load-from-lists'
     ))
 
-    # ── 59. zvity page: СТАТИСТИКА block before ВИЛЬОТИ ──
+    # ── 59. zvity page: СТАТИСТИКА — тепер вбудована в zvity-vyloty-section (no-op) ──
     patches.append((
         '            <div class="crate p-4">\n'
         '                <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ВИЛЬОТИ</h3>\n'
         '                <div class="space-y-2">${dayRecs.length > 0 ? dayRecs.map((r,i)=>formatRecord(r,i+1)).join(\'\') : \'<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає вильотів</p>\'}</div>',
 
-        '            ${(()=>{'
-        'const _sr=state.selDate?dayRecs:(state.selReport?state.records.filter(r=>r.reportNum===state.selReport):[]);'
-        'if(!_sr.length)return \'\';'
-        'const _dc={};_sr.forEach(r=>{if(r.drone)_dc[r.drone]=(_dc[r.drone]||0)+1;});'
-        'const _ac={};_sr.forEach(r=>{if(r.ammo)_ac[r.ammo]=(_ac[r.ammo]||0)+1;});'
-        'const _rc={};_sr.forEach(r=>{if(r.result)r.result.split(\', \').forEach(x=>{x=x.trim();if(x)_rc[x]=(_rc[x]||0)+1;});});'
-        'const _row=(l,v,s=\'\')=>\'<p class="stencil" style="color:var(--text);margin:1px 0">\'+l+\' <span style="color:var(--yellow)">— \'+v+s+\'</span></p>\';'
-        'const _sec=(t,rows)=>rows?\'<div><p class="stencil" style="color:var(--khaki);font-size:calc(0.85em + 2px);letter-spacing:0.08em;margin-bottom:4px">\'+t+\'</p>\'+rows+\'</div>\':\'\';'
-        'const _dr=Object.entries(_dc).sort((a,b)=>b[1]-a[1]).map(([d,c])=>_row(esc(d),c,\' шт\')).join(\'\');'
-        'const _ar=Object.entries(_ac).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_row(esc(a),c,\' шт\')).join(\'\');'
-        'const _pr=(state.pvr||[]).map(pvr=>{const t=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_ac[am]||0)*cf,0);return t?_row(esc(pvr.name),t+\' кг\'):\'\';}).filter(Boolean).join(\'\');'
-        'const _rr=Object.entries(_rc).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,\' разів\')).join(\'\');'
-        'return \'<div class="crate p-4"><div class="flex flex-wrap gap-4">\''
-        '+\'<div class="space-y-3" style="flex:2 1 220px">\'+_sec(\'ДРОНИ\',_dr)+_sec(\'БОЄПРИПАСИ\',_ar)+_sec(\'ПВР\',_pr)+\'</div>\''
-        '+\'<div style="flex:3 1 280px">\'+_sec(\'РЕЗУЛЬТАТИ\',_rr)+\'</div></div></div>\';})()} \n'
         '            <div class="crate p-4">\n'
         '                <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ВИЛЬОТИ</h3>\n'
         '                <div class="space-y-2">${dayRecs.length > 0 ? dayRecs.map((r,i)=>formatRecord(r,i+1)).join(\'\') : \'<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає вильотів</p>\'}</div>',
@@ -1177,17 +1162,70 @@ def apply_patches(html):
         '    const dayR=_recs.filter(r=>getDateOnly(r.datetime)===d);\n'
         '    const cards=[...dayR].reverse().map(r=>formatRecord(r,_n--)).join(\'\');\n'
         '    const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n'
-        '    return \'<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">\'+d+\'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--yellow)">\'+dayR.length+\'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--yellow)">\'+dayPts+\'</span></span></div><div class="space-y-2">\'+cards+\'</div></div>\';\n'
+        '    return \'<div class="crate p-4">\'\n'
+        '      +(state.selDate?\'\':\'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">\'+d+\'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--yellow)">\'+dayR.length+\'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--yellow)">\'+dayPts+\'</span></span></div>\')\n'
+        '      +\'<div class="space-y-2">\'+cards+\'</div></div>\';\n'
         '  }).join(\'\');\n'
+        '  const _dc={};_recs.forEach(r=>{if(r.drone)_dc[r.drone]=(_dc[r.drone]||0)+1;});\n'
+        '  const _ac={};_recs.forEach(r=>{if(r.ammo)_ac[r.ammo]=(_ac[r.ammo]||0)+1;});\n'
+        '  const _rc={};_recs.forEach(r=>{if(r.result)r.result.split(\', \').forEach(x=>{x=x.trim();if(x)_rc[x]=(_rc[x]||0)+1;});});\n'
+        '  const _row=(l,v,s=\'\')=>\'<p class="stencil" style="color:var(--text);margin:1px 0">\'+l+\' <span style="color:var(--yellow)">— \'+v+s+\'</span></p>\';\n'
+        '  const _sec=(t,rows)=>rows?\'<div style="margin-bottom:12px"><p class="stencil" style="color:var(--khaki);font-size:calc(0.85em + 2px);letter-spacing:0.08em;margin-bottom:4px">\'+t+\'</p>\'+rows+\'</div>\':\'\'\n'
+        '  const _dr=Object.entries(_dc).sort((a,b)=>b[1]-a[1]).map(([d,c])=>_row(esc(d),c,\' шт\')).join(\'\');\n'
+        '  const _ar=Object.entries(_ac).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_row(esc(a),c,\' шт\')).join(\'\');\n'
+        '  const _pr=(state.pvr||[]).map(pvr=>{const t=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_ac[am]||0)*cf,0);return t?_row(esc(pvr.name),t+\' кг\'):\'\'}).filter(Boolean).join(\'\');\n'
+        '  const _rr=Object.entries(_rc).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,\' разів\')).join(\'\');\n'
+        '  const _sh=(_dr||_ar||_pr||_rr)?\'<div style="padding:12px 8px 4px"><div class="flex flex-wrap gap-4"><div class="space-y-3" style="flex:2 1 220px">\'+_sec(\'ДРОНИ\',_dr)+_sec(\'БОЄПРИПАСИ\',_ar)+_sec(\'ПВР\',_pr)+\'</div><div style="flex:3 1 280px">\'+_sec(\'РЕЗУЛЬТАТИ\',_rr)+\'</div></div></div>\':\'\'\n'
         '  const _lbl=state.selDate?\'ЗА ДЕНЬ\':(state.selReport?\'ЗА ЗВІТ\':\'ЗА ВИЇЗД\');\n'
         '  return \'<div>\'\n'
-        '    +\'<p class="stencil" style="color:var(--khaki);font-size:calc(0.95em + 2px);padding:4px 8px 12px">\'+_lbl+\' ЗРОБЛЕНО <span style="color:var(--text)">\'+_recs.length+\'</span> ВИЛЬОТІВ, ОРІЄНТОВНО НА <span style="color:var(--text)">\'+_total+\'</span> БАЛІВ</p>\'\n'
-        '    +\'<div class="space-y-4">\'+(_groups||\'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає вильотів</p></div>\')+\'</div></div>\';\n'
+        '    +\'<p class="stencil" style="color:var(--khaki);font-size:calc(0.95em + 2px);padding:4px 8px 12px">\'+_lbl+\' ЗДІЙСНЕНО <span style="color:var(--text)">\'+_recs.length+\'</span> ВИЛЬОТІВ, ОРІЄНТОВНО НА <span style="color:var(--text)">\'+_total+\'</span> БАЛІВ</p>\'\n'
+        '    +\'<div class="space-y-4">\'+(_groups||\'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає вильотів</p></div>\')+\'</div>\'+_sh+\'</div>\';\n'
         '})()}\n'
         '        </div>`;\n'
         '    }',
 
         'zvity-vyloty-section'
+    ))
+
+    # ── 59c. zvity page: прибрати ДОПОВІДЬ з поточної позиції ──
+    patches.append((
+        '            ${dayRecs.length > 0 ? `<div class="crate p-4">\n'
+        '                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">\n'
+        '                    <h3 class="stencil-shadow" style="color: var(--yellow)">ЗВІТ НА ${state.selDate}</h3>\n'
+        '                    <div class="flex gap-2 flex-wrap">\n'
+        '                        <button onclick="copyReport()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>\n'
+        '                    </div>\n'
+        '                </div>\n'
+        '                <div class="report-box">${reportLines.join(\'\\n\')}</div>\n'
+        '            </div>` : \'\'}\n',
+        '',
+        'zvity-dop-remove'
+    ))
+
+    # ── 59d. zvity page: ДОПОВІДЬ в самий низ після ВИЛЬОТІВ ──
+    patches.append((
+        '})()}\n'
+        '        </div>`;\n'
+        '    }\n'
+        '    \n'
+        '    app.innerHTML = h;',
+
+        '})()}\n'
+        '            ${dayRecs.length > 0 ? `<div class="crate p-4">\n'
+        '                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">\n'
+        '                    <h3 class="stencil-shadow" style="color: var(--yellow)">ЗВІТ НА ${state.selDate}</h3>\n'
+        '                    <div class="flex gap-2 flex-wrap">\n'
+        '                        <button onclick="copyReport()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>\n'
+        '                    </div>\n'
+        '                </div>\n'
+        '                <div class="report-box">${reportLines.join(\'\\n\')}</div>\n'
+        '            </div>` : \'\'}\n'
+        '        </div>`;\n'
+        '    }\n'
+        '    \n'
+        '    app.innerHTML = h;',
+
+        'zvity-dop-bottom'
     ))
 
     # ── 60. form: copyPrev() function ──
