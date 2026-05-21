@@ -1191,12 +1191,12 @@ function render() {
                     </div>
                     <div>
                         <label class="label block mb-2">РЕЗУЛЬТАТ</label>
-                        <div style="position:relative">
-                        <select onchange="state.form.newResult=this.value; render()" class="field" style="padding-right:52px;background-position:calc(100% - 58px) 50%,calc(100% - 53px) 50%">
+                        <div style="display:flex;align-items:center;border:2px solid var(--surface-light);border-radius:2px;background:rgba(0,0,0,0.3)">
+                        <select onchange="state.form.newResult=this.value; render()" class="field" style="flex:1;min-width:0;width:auto;border:none;background-color:transparent;border-radius:0">
                             <option value="">Виберіть...</option>
                             ${_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
                         </select>
-                        <button onclick="addTargetToForm()" onmousedown="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318'" onmouseup="this.style.transform='translateY(-50%)';this.style.boxShadow=''" ontouchstart="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318'" ontouchend="this.style.transform='translateY(-50%)';this.style.boxShadow=''" class="btn-stencil btn-green" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);padding:4px 8px;font-size:12px">+</button>
+                        <button onclick="addTargetToForm()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-green" style="flex:0 0 auto;margin:4px 6px 4px 0;padding:4px 8px;font-size:12px">+</button>
                         </div>
                     </div>
                 </div>
@@ -1204,9 +1204,9 @@ function render() {
                 <div class="grid gap-4 mt-6" style="grid-template-columns: 2fr 1fr 1fr; border-top: 1px dashed var(--khaki); padding-top: 16px">
                     <div>
                         <label class="label block mb-2">MGRS</label>
-                        <div style="position:relative">
-                        <input id="form-coord" type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="field" style="padding-right:52px" />
-                        <button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();state.form.coord=v;const el=document.getElementById('form-coord');if(el)el.value=v;}).catch(()=>{})" onmousedown="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #2d3818'" onmouseup="this.style.transform='translateY(-50%)';this.style.boxShadow=''" ontouchstart="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #2d3818'" ontouchend="this.style.transform='translateY(-50%)';this.style.boxShadow=''" class="btn-stencil" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);padding:4px 8px;font-size:12px" title="Вставити з буфера">&#x2B06;</button>
+                        <div style="display:flex;align-items:center;border:2px solid var(--surface-light);border-radius:2px;background:rgba(0,0,0,0.3)">
+                        <input id="form-coord" type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" style="flex:1;min-width:0;border:none;background:transparent;color:var(--text);padding:10px 12px;font-family:inherit;font-size:inherit;outline:none" />
+                        <button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();state.form.coord=v;const el=document.getElementById('form-coord');if(el)el.value=v;}).catch(()=>{})" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil" style="flex:0 0 auto;margin:4px 6px 4px 0;padding:4px 8px;font-size:12px" title="Вставити з буфера">&#x2B06;</button>
                         </div>
                     </div>
                     <div>
