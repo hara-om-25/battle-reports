@@ -1357,7 +1357,7 @@ function render() {
   const _ar=Object.entries(_ac).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_row(esc(a),c,' шт')).join('');
   const _pr=(state.pvr||[]).map(pvr=>{const t=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_ac[am]||0)*cf,0);return t?_row(esc(pvr.name),t+' кг'):''}).filter(Boolean).join('');
   const _rr=Object.entries(_rc).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,' разів')).join('');
-  const _sh=(_dr||_ar||_pr||_rr)?'<div style="padding:12px 8px 4px"><div class="flex flex-wrap gap-4"><div class="space-y-3" style="flex:2 1 220px">'+_sec('ДРОНИ',_dr)+_sec('БОЄПРИПАСИ',_ar)+_sec('ПВР',_pr)+'</div><div style="flex:3 1 280px">'+_sec('РЕЗУЛЬТАТИ',_rr)+'</div></div></div>':''
+  const _sh=(_dr||_ar||_pr||_rr)?'<div style="padding:20px 8px 4px"><div class="flex flex-wrap gap-4"><div class="space-y-3" style="flex:2 1 220px">'+_sec('ДРОНИ',_dr)+_sec('БОЄПРИПАСИ',_ar)+_sec('ПВР',_pr)+'</div><div style="flex:3 1 280px">'+_sec('РЕЗУЛЬТАТИ',_rr)+'</div></div></div>':''
   const _lbl=state.selDate?'ЗА ДЕНЬ':(state.selReport?'ЗА ЗВІТ':'ЗА ВИЇЗД');
   return '<div>'
     +'<p class="stencil" style="color:var(--khaki);font-size:calc(0.95em + 2px);padding:4px 8px 12px">'+_lbl+' ЗДІЙСНЕНО <span style="color:var(--text)">'+_recs.length+'</span> ВИЛЬОТІВ, ОРІЄНТОВНО НА <span style="color:var(--text)">'+_total+'</span> БАЛІВ</p>'
