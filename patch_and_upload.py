@@ -1179,10 +1179,10 @@ def apply_patches(html):
         '    const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n'
         '    return \'<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">\'+d+\'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--yellow)">\'+dayR.length+\'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--yellow)">\'+dayPts+\'</span></span></div><div class="space-y-2">\'+cards+\'</div></div>\';\n'
         '  }).join(\'\');\n'
+        '  const _lbl=state.selDate?\'ЗА ДЕНЬ\':(state.selReport?\'ЗА ЗВІТ\':\'ЗА ВИЇЗД\');\n'
         '  return \'<div>\'\n'
-        '    +\'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 8px"><h3 class="stencil-shadow" style="color:var(--yellow)">ВИЛЬОТИ</h3>\'\n'
-        '    +(_recs.length>0?\'<span class="stencil" style="color:var(--khaki);font-size:calc(0.95em + 2px);display:flex;flex-wrap:wrap;gap:2px 16px"><span style="white-space:nowrap">ВИЛЬОТІВ:&nbsp;<span style="color:var(--yellow)">\'+_recs.length+\'</span></span><span style="white-space:nowrap">БАЛІВ:&nbsp;<span style="color:var(--yellow)">\'+_total+\'</span></span></span>\':\'\')\n'
-        '    +\'</div><div class="space-y-4">\'+(_groups||\'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає вильотів у звіті</p></div>\')+\'</div></div>\';\n'
+        '    +\'<p class="stencil" style="color:var(--khaki);font-size:calc(0.95em + 2px);padding:4px 8px 12px">\'+_lbl+\' ЗРОБЛЕНО <span style="color:var(--text)">\'+_recs.length+\'</span> ВИЛЬОТІВ, ОРІЄНТОВНО НА <span style="color:var(--text)">\'+_total+\'</span> БАЛІВ</p>\'\n'
+        '    +\'<div class="space-y-4">\'+(_groups||\'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає вильотів</p></div>\')+\'</div></div>\';\n'
         '})()}\n'
         '        </div>`;\n'
         '    }',
