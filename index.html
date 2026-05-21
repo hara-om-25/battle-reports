@@ -1142,7 +1142,6 @@ function render() {
             </div>
             <div class="flex gap-2 items-center flex-wrap">
                 <button onclick="state.page='form';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='form'?'active':''}">ФОРМА</button>
-                <button onclick="state.page='vyloty';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='vyloty'?'active':''}">ВИЛЬОТИ</button>
                 <button onclick="state.page='reports';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='reports'?'active':''}">ЗВІТИ</button>
                 <button onclick="state.page='lists';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='lists'?'active':''}">СПИСКИ</button>
                 <button onclick="loadDataFromAPI()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="font-size:1.5em;letter-spacing:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box" title="Синхронізація">↻</button><button onclick="goToArchive()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn-archive ${state.page==='archive'?'active':''}">АРХІВ</button><button onclick="logout()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn logout">ВИЙТИ</button>
@@ -1347,10 +1346,24 @@ function render() {
                 <div class="report-box">${reportLines.filter(l=>!l.startsWith('Уражено')).join('\n')}</div>
             </div>` : ''}
             ${(()=>{const _sr=state.selDate?dayRecs:(state.selReport?state.records.filter(r=>r.reportNum===state.selReport):[]);if(!_sr.length)return '';const _dc={};_sr.forEach(r=>{if(r.drone)_dc[r.drone]=(_dc[r.drone]||0)+1;});const _ac={};_sr.forEach(r=>{if(r.ammo)_ac[r.ammo]=(_ac[r.ammo]||0)+1;});const _rc={};_sr.forEach(r=>{if(r.result)r.result.split(', ').forEach(x=>{x=x.trim();if(x)_rc[x]=(_rc[x]||0)+1;});});const _row=(l,v,s='')=>'<p class="stencil" style="color:var(--text);margin:1px 0">'+l+' <span style="color:var(--yellow)">— '+v+s+'</span></p>';const _sec=(t,rows)=>rows?'<div><p class="stencil" style="color:var(--khaki);font-size:calc(0.85em + 2px);letter-spacing:0.08em;margin-bottom:4px">'+t+'</p>'+rows+'</div>':'';const _dr=Object.entries(_dc).sort((a,b)=>b[1]-a[1]).map(([d,c])=>_row(esc(d),c,' шт')).join('');const _ar=Object.entries(_ac).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_row(esc(a),c,' шт')).join('');const _pr=(state.pvr||[]).map(pvr=>{const t=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_ac[am]||0)*cf,0);return t?_row(esc(pvr.name),t+' кг'):'';}).filter(Boolean).join('');const _rr=Object.entries(_rc).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,' разів')).join('');return '<div class="crate p-4"><h3 class="stencil-shadow mb-3" style="color:var(--yellow)">СТАТИСТИКА</h3><div class="flex flex-wrap gap-4">'+'<div class="space-y-3" style="flex:2 1 220px">'+_sec('ДРОНИ',_dr)+_sec('БОЄПРИПАСИ',_ar)+_sec('ПВР',_pr)+'</div>'+'<div style="flex:3 1 280px">'+_sec('РЕЗУЛЬТАТИ',_rr)+'</div></div></div>';})()} 
-            <div class="crate p-4">
-                <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ВИЛЬОТИ</h3>
-                <div class="space-y-2">${dayRecs.length > 0 ? dayRecs.map((r,i)=>formatRecord(r,i+1)).join('') : '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає вильотів</p>'}</div>
-            </div>
+            ${(()=>{
+  if(!state.selReport)return '';
+  const _recs=state.selDate?dayRecs:state.records.filter(r=>r.reportNum===state.selReport);
+  if(!_recs.length)return '<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає вильотів</p></div>';
+  const _total=Math.round(_recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+  let _n=0;
+  const _dates=[...new Set(_recs.map(r=>getDateOnly(r.datetime)))].sort();
+  const _groups=_dates.map(d=>{
+    const dayR=_recs.filter(r=>getDateOnly(r.datetime)===d);
+    const cards=dayR.map(r=>formatRecord(r,++_n)).join('');
+    const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+    return '<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">'+d+'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">'+dayR.length+'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">'+dayPts+'</span></span></div><div class="space-y-2">'+cards+'</div></div>';
+  }).join('');
+  return '<div>'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 8px"><h3 class="stencil-shadow" style="color:var(--yellow)">ВИЛЬОТИ</h3>'
+    +(_recs.length>0?'<span class="stencil" style="color:var(--khaki);font-size:0.95em;display:flex;flex-wrap:wrap;gap:2px 16px"><span style="white-space:nowrap">ВИЛЬОТІВ:&nbsp;<span style="color:var(--yellow)">'+_recs.length+'</span></span><span style="white-space:nowrap">БАЛІВ:&nbsp;<span style="color:var(--yellow)">'+_total+'</span></span></span>':'')
+    +'</div><div class="space-y-4">'+(_groups||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає вильотів у звіті</p></div>')+'</div></div>';
+})()}
         </div>`;
     }
     
