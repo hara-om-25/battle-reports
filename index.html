@@ -1357,11 +1357,11 @@ function render() {
     const dayR=_recs.filter(r=>getDateOnly(r.datetime)===d);
     const cards=[...dayR].reverse().map(r=>formatRecord(r,_n--)).join('');
     const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
-    return '<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">'+d+'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">'+dayR.length+'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">'+dayPts+'</span></span></div><div class="space-y-2">'+cards+'</div></div>';
+    return '<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--text)">'+d+'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">'+dayR.length+'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">'+dayPts+'</span></span></div><div class="space-y-2">'+cards+'</div></div>';
   }).join('');
   return '<div>'
     +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 8px"><h3 class="stencil-shadow" style="color:var(--yellow)">ВИЛЬОТИ</h3>'
-    +(_recs.length>0?'<span class="stencil" style="color:var(--khaki);font-size:0.95em;display:flex;flex-wrap:wrap;gap:2px 16px"><span style="white-space:nowrap">ВИЛЬОТІВ:&nbsp;<span style="color:var(--yellow)">'+_recs.length+'</span></span><span style="white-space:nowrap">БАЛІВ:&nbsp;<span style="color:var(--yellow)">'+_total+'</span></span></span>':'')
+    +(_recs.length>0?'<span class="stencil" style="color:var(--khaki);font-size:calc(0.95em + 2px);display:flex;flex-wrap:wrap;gap:2px 16px"><span style="white-space:nowrap">ВИЛЬОТІВ:&nbsp;<span style="color:var(--yellow)">'+_recs.length+'</span></span><span style="white-space:nowrap">БАЛІВ:&nbsp;<span style="color:var(--yellow)">'+_total+'</span></span></span>':'')
     +'</div><div class="space-y-4">'+(_groups||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає вильотів у звіті</p></div>')+'</div></div>';
 })()}
         </div>`;
