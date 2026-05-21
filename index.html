@@ -1196,7 +1196,7 @@ function render() {
                             <option value="">Виберіть...</option>
                             ${_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
                         </select>
-                        <button onclick="addTargetToForm()" onmousedown="this.style.background='#5a8a5a';this.style.transform='translateY(-50%) scale(0.95)'" onmouseup="this.style.background='';this.style.transform='translateY(-50%)'" ontouchstart="this.style.background='#5a8a5a';this.style.transform='translateY(-50%) scale(0.95)'" ontouchend="this.style.background='';this.style.transform='translateY(-50%)'" class="btn-stencil btn-green" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:4px 8px;font-size:12px;box-shadow:none">+</button>
+                        <button onclick="addTargetToForm()" onmousedown="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318'" onmouseup="this.style.transform='translateY(-50%)';this.style.boxShadow=''" ontouchstart="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318'" ontouchend="this.style.transform='translateY(-50%)';this.style.boxShadow=''" class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 8px;font-size:12px">+</button>
                         </div>
                     </div>
                 </div>
@@ -1206,7 +1206,7 @@ function render() {
                         <label class="label block mb-2">MGRS</label>
                         <div style="position:relative">
                         <input id="form-coord" type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" class="field" style="padding-right:52px" />
-                        <button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();state.form.coord=v;const el=document.getElementById('form-coord');if(el)el.value=v;}).catch(()=>{})" onmousedown="this.style.background='#9a9070';this.style.transform='translateY(-50%) scale(0.95)'" onmouseup="this.style.background='';this.style.transform='translateY(-50%)'" ontouchstart="this.style.background='#9a9070';this.style.transform='translateY(-50%) scale(0.95)'" ontouchend="this.style.background='';this.style.transform='translateY(-50%)'" class="btn-stencil" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:4px 8px;font-size:12px;box-shadow:none;border-color:transparent" title="Вставити з буфера">&#x2398;</button>
+                        <button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();state.form.coord=v;const el=document.getElementById('form-coord');if(el)el.value=v;}).catch(()=>{})" onmousedown="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #2d3818'" onmouseup="this.style.transform='translateY(-50%)';this.style.boxShadow=''" ontouchstart="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #2d3818'" ontouchend="this.style.transform='translateY(-50%)';this.style.boxShadow=''" class="btn-stencil" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 8px;font-size:12px" title="Вставити з буфера">&#x2398;</button>
                         </div>
                     </div>
                     <div>
