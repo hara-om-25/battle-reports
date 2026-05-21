@@ -1306,7 +1306,7 @@ def apply_patches(html):
         'onmouseup="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\'" '
         'ontouchstart="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #2d3818\'" '
         'ontouchend="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\'" '
-        'class="btn-stencil" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 8px;font-size:12px" title="Вставити з буфера">&#x2398;</button>\n'
+        'class="btn-stencil" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);box-sizing:border-box;width:28px;height:26px;padding:0;font-size:11px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden" title="Вставити з буфера">&#x2398;</button>\n'
         '                        </div>',
 
         'mgrs-paste-btn'
@@ -1358,7 +1358,7 @@ def apply_patches(html):
         'onmouseup="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\'" '
         'ontouchstart="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #1a3318\'" '
         'ontouchend="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\'" '
-        'class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 8px;font-size:12px">+</button>\n'
+        'class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);box-sizing:border-box;width:28px;height:26px;padding:0;font-size:14px;display:inline-flex;align-items:center;justify-content:center">+</button>\n'
         '                        </div>\n'
         '                    </div>\n'
         '                </div>',
