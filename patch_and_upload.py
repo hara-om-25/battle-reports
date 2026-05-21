@@ -527,6 +527,21 @@ def apply_patches(html):
         'btn-danger-active'
     ))
 
+    # ── 33b. btn-black: visible bottom shadow so height matches btn-danger/btn-blue ──
+    patches.append((
+        '    .btn-black {\n'
+        '      background: #1a1d18;\n'
+        '      border-color: #3a3d35;\n'
+        '      box-shadow: 0 4px 0 #0a0d08, 0 6px 12px rgba(0,0,0,0.4);\n'
+        '    }',
+        '    .btn-black {\n'
+        '      background: #1a1d18;\n'
+        '      border-color: #3a3d35;\n'
+        '      box-shadow: 0 4px 0 #3a3d35, 0 6px 12px rgba(0,0,0,0.4);\n'
+        '    }',
+        'btn-black-shadow'
+    ))
+
     # ── 34. НОВИЙ ЗВІТ button press effect ──
     patches.append((
         '<button onclick="newReport()" class="btn-stencil btn-danger">🚩 НОВИЙ ЗВІТ</button>',
