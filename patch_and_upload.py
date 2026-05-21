@@ -834,7 +834,7 @@ def apply_patches(html):
         'state-selvyloty'
     ))
 
-    # ── 50. nav: add ВИЛЬОТИ button between ФОРМА and ЗВІТИ ──
+    # ── 50. nav: ВИЛЬОТИ кнопка прибрана (вильоти тепер у ЗВІТИ) ──
     patches.append((
         "class=\"nav-btn ${state.page==='form'?'active':''}\">"
         "ФОРМА</button>\n"
@@ -842,12 +842,6 @@ def apply_patches(html):
 
         "class=\"nav-btn ${state.page==='form'?'active':''}\">"
         "ФОРМА</button>\n"
-        "                <button onclick=\"state.page='vyloty';render()\""
-        " onmousedown=\"this.classList.add('pressing')\""
-        " onmouseup=\"this.classList.remove('pressing')\""
-        " ontouchstart=\"this.classList.add('pressing')\""
-        " ontouchend=\"this.classList.remove('pressing')\""
-        " class=\"nav-btn ${state.page==='vyloty'?'active':''}\">ВИЛЬОТИ</button>\n"
         "                <button onclick=\"state.page='reports';render()\"",
 
         'nav-vyloty-btn'
@@ -1161,6 +1155,39 @@ def apply_patches(html):
         '                <div class="space-y-2">${dayRecs.length > 0 ? dayRecs.map((r,i)=>formatRecord(r,i+1)).join(\'\') : \'<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає вильотів</p>\'}</div>',
 
         'zvity-stats-block'
+    ))
+
+    # ── 59b. zvity page: ВИЛЬОТИ section – всі вильоти обраного звіту, згруповані по датах ──
+    patches.append((
+        '            <div class="crate p-4">\n'
+        '                <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ВИЛЬОТИ</h3>\n'
+        '                <div class="space-y-2">${dayRecs.length > 0 ? dayRecs.map((r,i)=>formatRecord(r,i+1)).join(\'\') : \'<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає вильотів</p>\'}</div>\n'
+        '            </div>\n'
+        '        </div>`;\n'
+        '    }',
+
+        '            ${(()=>{\n'
+        '  if(!state.selReport)return \'\';\n'
+        '  const _recs=state.selDate?dayRecs:state.records.filter(r=>r.reportNum===state.selReport);\n'
+        '  if(!_recs.length)return \'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає вильотів</p></div>\';\n'
+        '  const _total=Math.round(_recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n'
+        '  let _n=0;\n'
+        '  const _dates=[...new Set(_recs.map(r=>getDateOnly(r.datetime)))].sort();\n'
+        '  const _groups=_dates.map(d=>{\n'
+        '    const dayR=_recs.filter(r=>getDateOnly(r.datetime)===d);\n'
+        '    const cards=dayR.map(r=>formatRecord(r,++_n)).join(\'\');\n'
+        '    const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n'
+        '    return \'<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">\'+d+\'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">\'+dayR.length+\'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">\'+dayPts+\'</span></span></div><div class="space-y-2">\'+cards+\'</div></div>\';\n'
+        '  }).join(\'\');\n'
+        '  return \'<div>\'\n'
+        '    +\'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 8px"><h3 class="stencil-shadow" style="color:var(--yellow)">ВИЛЬОТИ</h3>\'\n'
+        '    +(_recs.length>0?\'<span class="stencil" style="color:var(--khaki);font-size:0.95em;display:flex;flex-wrap:wrap;gap:2px 16px"><span style="white-space:nowrap">ВИЛЬОТІВ:&nbsp;<span style="color:var(--yellow)">\'+_recs.length+\'</span></span><span style="white-space:nowrap">БАЛІВ:&nbsp;<span style="color:var(--yellow)">\'+_total+\'</span></span></span>\':\'\')\n'
+        '    +\'</div><div class="space-y-4">\'+(_groups||\'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає вильотів у звіті</p></div>\')+\'</div></div>\';\n'
+        '})()}\n'
+        '        </div>`;\n'
+        '    }',
+
+        'zvity-vyloty-section'
     ))
 
     # ── 60. form: copyPrev() function ──
