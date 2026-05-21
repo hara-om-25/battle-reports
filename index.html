@@ -449,6 +449,7 @@ function logout() {
     state.archiveSheets = []; state.selArchive = null; state.archiveRecs = []; state.archiveLoading = false; state.pvr = [];
     state.loaded = false; state.page = 'login';
     render();
+    setTimeout(()=>window.close(),100);
 }
 
 async function apiGet(range) {
