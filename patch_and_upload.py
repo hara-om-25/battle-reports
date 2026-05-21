@@ -1147,7 +1147,7 @@ def apply_patches(html):
         'const _ar=Object.entries(_ac).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_row(esc(a),c,\' шт\')).join(\'\');'
         'const _pr=(state.pvr||[]).map(pvr=>{const t=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_ac[am]||0)*cf,0);return t?_row(esc(pvr.name),t+\' кг\'):\'\';}).filter(Boolean).join(\'\');'
         'const _rr=Object.entries(_rc).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,\' разів\')).join(\'\');'
-        'return \'<div class="crate p-4"><h3 class="stencil-shadow mb-3" style="color:var(--yellow)">СТАТИСТИКА</h3><div class="flex flex-wrap gap-4">\''
+        'return \'<div class="crate p-4"><div class="flex flex-wrap gap-4">\''
         '+\'<div class="space-y-3" style="flex:2 1 220px">\'+_sec(\'ДРОНИ\',_dr)+_sec(\'БОЄПРИПАСИ\',_ar)+_sec(\'ПВР\',_pr)+\'</div>\''
         '+\'<div style="flex:3 1 280px">\'+_sec(\'РЕЗУЛЬТАТИ\',_rr)+\'</div></div></div>\';})()} \n'
         '            <div class="crate p-4">\n'
