@@ -1171,7 +1171,7 @@ def apply_patches(html):
         '  if(!_recs.length)return \'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає вильотів</p></div>\';\n'
         '  const _total=Math.round(_recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n'
         '  let _n=0;\n'
-        '  const _dates=[...new Set(_recs.map(r=>getDateOnly(r.datetime)))].sort();\n'
+        '  const _dates=[...new Set(_recs.map(r=>getDateOnly(r.datetime)))].sort().reverse();\n'
         '  const _groups=_dates.map(d=>{\n'
         '    const dayR=_recs.filter(r=>getDateOnly(r.datetime)===d);\n'
         '    const cards=dayR.map(r=>formatRecord(r,++_n)).join(\'\');\n'
