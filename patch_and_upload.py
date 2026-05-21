@@ -1167,8 +1167,7 @@ def apply_patches(html):
         '    }',
 
         '            ${(()=>{\n'
-        '  if(!state.selReport)return \'\';\n'
-        '  const _recs=state.selDate?dayRecs:state.records.filter(r=>r.reportNum===state.selReport);\n'
+        '  const _recs=state.selDate?dayRecs:(state.selReport?state.records.filter(r=>r.reportNum===state.selReport):state.records);\n'
         '  if(!_recs.length)return \'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає вильотів</p></div>\';\n'
         '  const _total=Math.round(_recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n'
         '  let _n=0;\n'
