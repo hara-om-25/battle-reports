@@ -1306,7 +1306,7 @@ def apply_patches(html):
         'onmouseup="this.classList.remove(\'active\')" '
         'ontouchstart="this.classList.add(\'active\')" '
         'ontouchend="this.classList.remove(\'active\')" '
-        'class="btn-stencil" style="flex:0 0 auto;margin:4px 6px 4px 0;padding:4px 8px;font-size:12px" title="Вставити з буфера">&#x2B06;</button>\n'
+        'class="btn-stencil" style="flex:0 0 auto;margin:4px 6px 4px 0;padding:4px 8px;font-size:12px;min-width:36px;text-align:center" title="Вставити з буфера">&#x2B06;</button>\n'
         '                        </div>',
 
         'mgrs-paste-btn'
@@ -1336,7 +1336,7 @@ def apply_patches(html):
         '                    </div>\n'
         '                </div>',
 
-        '                <div class="grid gap-3" style="grid-template-columns: 1fr 1fr">\n'
+        '                <div class="grid gap-3" style="grid-template-columns: 1fr 1fr auto">\n'
         '                    <div>\n'
         '                        <label class="label block mb-2">ЦІЛЬ</label>\n'
         '                        <select onchange="state.form.newTarget=this.value; render()" class="field">\n'
@@ -1347,19 +1347,19 @@ def apply_patches(html):
         '                    </div>\n'
         '                    <div>\n'
         '                        <label class="label block mb-2">РЕЗУЛЬТАТ</label>\n'
-        '                        <div style="display:flex;align-items:center;border:2px solid var(--surface-light);border-radius:2px;background:rgba(0,0,0,0.3)">\n'
-        '                        <select onchange="state.form.newResult=this.value; render()" class="field" style="flex:1;min-width:0;width:auto;border:none;background-color:transparent;border-radius:0">\n'
+        '                        <select onchange="state.form.newResult=this.value; render()" class="field">\n'
         '                            <option value="">Виберіть...</option>\n'
         '                            ${state.results.map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?\'selected\':\'\'}>'+
         '${esc(r)}</option>`).join(\'\')}\n'
         '                        </select>\n'
+        '                    </div>\n'
+        '                    <div style="display:flex;align-items:flex-end">\n'
         '                        <button onclick="addTargetToForm()" '
         'onmousedown="this.classList.add(\'active\')" '
         'onmouseup="this.classList.remove(\'active\')" '
         'ontouchstart="this.classList.add(\'active\')" '
         'ontouchend="this.classList.remove(\'active\')" '
-        'class="btn-stencil btn-green" style="flex:0 0 auto;margin:4px 6px 4px 0;padding:4px 8px;font-size:12px">+</button>\n'
-        '                        </div>\n'
+        'class="btn-stencil btn-green" style="padding:4px 8px;font-size:12px;min-width:36px;text-align:center">+</button>\n'
         '                    </div>\n'
         '                </div>',
 
