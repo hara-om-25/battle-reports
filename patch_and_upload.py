@@ -1177,7 +1177,7 @@ def apply_patches(html):
         '    const dayR=_recs.filter(r=>getDateOnly(r.datetime)===d);\n'
         '    const cards=[...dayR].reverse().map(r=>formatRecord(r,_n--)).join(\'\');\n'
         '    const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n'
-        '    return \'<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--text)">\'+d+\'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">\'+dayR.length+\'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">\'+dayPts+\'</span></span></div><div class="space-y-2">\'+cards+\'</div></div>\';\n'
+        '    return \'<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">\'+d+\'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--yellow)">\'+dayR.length+\'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--yellow)">\'+dayPts+\'</span></span></div><div class="space-y-2">\'+cards+\'</div></div>\';\n'
         '  }).join(\'\');\n'
         '  return \'<div>\'\n'
         '    +\'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 8px"><h3 class="stencil-shadow" style="color:var(--yellow)">ВИЛЬОТИ</h3>\'\n'
