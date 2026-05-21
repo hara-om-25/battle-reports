@@ -1637,6 +1637,20 @@ def apply_patches(html):
         'auth-logout-localstorage'
     ))
 
+    # ── 75c2. logout: закрити вікно/вкладку після виходу ──
+    patches.append((
+        "    state.loaded = false; state.page = 'login';\n"
+        '    render();\n'
+        '}',
+
+        "    state.loaded = false; state.page = 'login';\n"
+        '    render();\n'
+        '    setTimeout(()=>window.close(),100);\n'
+        '}',
+
+        'logout-close-window'
+    ))
+
     # ── 75d. auth: _startTokenTimer() + visibilitychange перед initAuth ──
     patches.append((
         'function initAuth() {\n'
