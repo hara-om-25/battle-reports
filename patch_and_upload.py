@@ -373,7 +373,7 @@ def apply_patches(html):
     ))
     patches.append((
         "<button onclick=\"state.page='reports';render()\" class=\"nav-btn ${state.page==='reports'?'active':''}\">ЗВІТИ</button>",
-        "<button onclick=\"state.page='reports';state.selReport=null;state.selDate=null;render()\" onmousedown=\"this.classList.add('pressing')\" onmouseup=\"this.classList.remove('pressing')\" ontouchstart=\"this.classList.add('pressing')\" ontouchend=\"this.classList.remove('pressing')\" class=\"nav-btn ${state.page==='reports'?'active':''}\">ЗВІТИ</button>",
+        "<button onclick=\"state.page='reports';render()\" onmousedown=\"this.classList.add('pressing')\" onmouseup=\"this.classList.remove('pressing')\" ontouchstart=\"this.classList.add('pressing')\" ontouchend=\"this.classList.remove('pressing')\" class=\"nav-btn ${state.page==='reports'?'active':''}\">ЗВІТИ</button>",
         'nav-reports-press'
     ))
     patches.append((
@@ -478,7 +478,7 @@ def apply_patches(html):
         'h += `<div class="p-4 space-y-4">\n'
         '            <h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">ЗВІТИ</h1>',
         'h += `<div class="p-4 space-y-4 zvity-wrap">\n'
-        '            <h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">ЗВІТИ</h1>',
+        '            <h1 onclick="state.selReport=null;state.selDate=null;render()" class="stencil-shadow text-3xl px-2" style="color: var(--yellow); cursor: pointer">ЗВІТИ</h1>',
         'zvity-max-width'
     ))
 
