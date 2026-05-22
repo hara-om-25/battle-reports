@@ -1196,8 +1196,9 @@ function render() {
                             ${_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
                         </select>
                     </div>
-                    <div style="display:flex;align-items:flex-end">
-                        <button onclick="addTargetToForm()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-green" style="padding:4px 8px;font-size:12px;min-width:36px;text-align:center">+</button>
+                    <div>
+                        <label class="label block mb-2" style="visibility:hidden">+</label>
+                        <button onclick="addTargetToForm()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-green" style="padding:4px 8px;font-size:12px">+</button>
                     </div>
                 </div>
                 
@@ -1206,7 +1207,7 @@ function render() {
                         <label class="label block mb-2">MGRS</label>
                         <div style="display:flex;align-items:center;border:2px solid var(--surface-light);border-radius:2px;background:rgba(0,0,0,0.3)">
                         <input id="form-coord" type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" style="flex:1;min-width:0;border:none;background:transparent;color:var(--text);padding:10px 12px;font-family:inherit;font-size:inherit;outline:none" />
-                        <button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();state.form.coord=v;const el=document.getElementById('form-coord');if(el)el.value=v;}).catch(()=>{})" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil" style="flex:0 0 auto;margin:4px 6px 4px 0;padding:4px 8px;font-size:12px;min-width:36px;text-align:center" title="Вставити з буфера">&#x2B06;</button>
+                        <button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();state.form.coord=v;const el=document.getElementById('form-coord');if(el)el.value=v;}).catch(()=>{})" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil" style="flex:0 0 auto;margin:4px 6px 4px 0;padding:4px 8px;font-size:12px" title="Вставити з буфера">&#x2B06;</button>
                         </div>
                     </div>
                     <div>
