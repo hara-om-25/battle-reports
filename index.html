@@ -1196,8 +1196,7 @@ function render() {
                             ${_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
                         </select>
                     </div>
-                    <div>
-                        <label class="label block mb-2" style="visibility:hidden">+</label>
+                    <div style="display:flex;align-items:flex-end">
                         <button onclick="addTargetToForm()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-green" style="padding:4px 8px;font-size:12px">+</button>
                     </div>
                 </div>
