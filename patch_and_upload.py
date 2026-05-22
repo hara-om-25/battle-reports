@@ -1336,7 +1336,7 @@ def apply_patches(html):
         '                    </div>\n'
         '                </div>',
 
-        '                <div class="grid gap-3" style="grid-template-columns: 1fr 1fr auto">\n'
+        '                <div class="grid gap-3" style="grid-template-columns: 1fr 1fr">\n'
         '                    <div>\n'
         '                        <label class="label block mb-2">ЦІЛЬ</label>\n'
         '                        <select onchange="state.form.newTarget=this.value; render()" class="field">\n'
@@ -1347,19 +1347,19 @@ def apply_patches(html):
         '                    </div>\n'
         '                    <div>\n'
         '                        <label class="label block mb-2">РЕЗУЛЬТАТ</label>\n'
-        '                        <select onchange="state.form.newResult=this.value; render()" class="field">\n'
+        '                        <div style="position:relative">\n'
+        '                        <select onchange="state.form.newResult=this.value; render()" class="field" style="padding-right:52px;background-position:calc(100% - 58px) 50%,calc(100% - 53px) 50%">\n'
         '                            <option value="">Виберіть...</option>\n'
         '                            ${state.results.map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?\'selected\':\'\'}>'+
         '${esc(r)}</option>`).join(\'\')}\n'
         '                        </select>\n'
-        '                    </div>\n'
-        '                    <div style="display:flex;align-items:flex-end">\n'
         '                        <button onclick="addTargetToForm()" '
-        'onmousedown="this.classList.add(\'active\')" '
-        'onmouseup="this.classList.remove(\'active\')" '
-        'ontouchstart="this.classList.add(\'active\')" '
-        'ontouchend="this.classList.remove(\'active\')" '
-        'class="btn-stencil btn-green" style="padding:4px 8px;font-size:12px">+</button>\n'
+        'onmousedown="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #1a3318\'" '
+        'onmouseup="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\'" '
+        'ontouchstart="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #1a3318\'" '
+        'ontouchend="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\'" '
+        'class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 10px;font-size:12px">+</button>\n'
+        '                        </div>\n'
         '                    </div>\n'
         '                </div>',
 
