@@ -1181,7 +1181,7 @@ function render() {
             </div>
             
             <div class="space-y-4">
-                <div class="grid gap-3" style="grid-template-columns: 1fr 1fr auto">
+                <div class="grid gap-3" style="grid-template-columns: 1fr 1fr">
                     <div>
                         <label class="label block mb-2">ЦІЛЬ</label>
                         <select onchange="state.form.newTarget=this.value; if(this.value!=='ОС'&&!state.form.targets.some(t=>t.abbr==='ОС')){state.form.q200=0;state.form.q300=0;} render()" class="field">
@@ -1191,13 +1191,13 @@ function render() {
                     </div>
                     <div>
                         <label class="label block mb-2">РЕЗУЛЬТАТ</label>
-                        <select onchange="state.form.newResult=this.value; render()" class="field">
+                        <div style="position:relative">
+                        <select onchange="state.form.newResult=this.value; render()" class="field" style="padding-right:52px;background-position:calc(100% - 58px) 50%,calc(100% - 53px) 50%">
                             <option value="">Виберіть...</option>
                             ${_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
                         </select>
-                    </div>
-                    <div style="display:flex;align-items:flex-end">
-                        <button onclick="addTargetToForm()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-green" style="padding:4px 8px;font-size:12px">+</button>
+                        <button onclick="addTargetToForm()" onmousedown="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318'" onmouseup="this.style.transform='translateY(-50%)';this.style.boxShadow=''" ontouchstart="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318'" ontouchend="this.style.transform='translateY(-50%)';this.style.boxShadow=''" class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 10px;font-size:12px">+</button>
+                        </div>
                     </div>
                 </div>
                 
