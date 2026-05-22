@@ -1306,7 +1306,7 @@ def apply_patches(html):
         'onmouseup="this.classList.remove(\'active\')" '
         'ontouchstart="this.classList.add(\'active\')" '
         'ontouchend="this.classList.remove(\'active\')" '
-        'class="btn-stencil" style="flex:0 0 auto;margin:4px 6px 4px 0;padding:4px 8px;font-size:12px;min-width:36px;text-align:center" title="Вставити з буфера">&#x2B06;</button>\n'
+        'class="btn-stencil" style="flex:0 0 auto;margin:4px 6px 4px 0;padding:4px 8px;font-size:12px" title="Вставити з буфера">&#x2B06;</button>\n'
         '                        </div>',
 
         'mgrs-paste-btn'
@@ -1353,13 +1353,14 @@ def apply_patches(html):
         '${esc(r)}</option>`).join(\'\')}\n'
         '                        </select>\n'
         '                    </div>\n'
-        '                    <div style="display:flex;align-items:flex-end">\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2" style="visibility:hidden">+</label>\n'
         '                        <button onclick="addTargetToForm()" '
         'onmousedown="this.classList.add(\'active\')" '
         'onmouseup="this.classList.remove(\'active\')" '
         'ontouchstart="this.classList.add(\'active\')" '
         'ontouchend="this.classList.remove(\'active\')" '
-        'class="btn-stencil btn-green" style="padding:4px 8px;font-size:12px;min-width:36px;text-align:center">+</button>\n'
+        'class="btn-stencil btn-green" style="padding:4px 8px;font-size:12px">+</button>\n'
         '                    </div>\n'
         '                </div>',
 
