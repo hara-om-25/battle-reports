@@ -1012,7 +1012,7 @@ def apply_patches(html):
         '    lines.push(\'Доповідаю!\');\n'
         '    const reportTitle = state.reportTitle || \'ТГ невідомий\';\n'
         '    const totalPoints = Math.round(recs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));\n'
-        '    lines.push(periodLabel+\'р. \'+reportTitle+\' здійснено \'+recs.length+\' бойових вильотів.\');\n'
+        '    lines.push(periodLabel+\' \'+reportTitle+\' здійснено \'+recs.length+\' бойових вильотів.\');\n'
         '    lines.push(\'Уражено орієнтовно на \'+totalPoints+\' балів\');\n'
         '    lines.push(\'\');\n'
         '    const hasOs = recs.some(r => r.target.split(\', \').some(t => t.trim().toLowerCase().startsWith(\'ос\')));\n'
@@ -1047,7 +1047,7 @@ def apply_patches(html):
         'function copyArchiveSheetReport() {\n'
         '    const recs = state.archiveRecs;\n'
         '    if (!recs.length) return;\n'
-        '    const lines = generateArchiveReport(recs, state.selArchive);\n'
+        '    const lines = generateArchiveReport(recs, state.selArchive+\'р.\');\n'
         '    navigator.clipboard.writeText(lines.join(\'\\n\')).catch(()=>{});\n'
         '}\n'
         '\n'
@@ -1195,7 +1195,7 @@ def apply_patches(html):
         "                const _pvrRows=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_ammoCnt[am]||0)*cf,0);return tot?_row(esc(pvr.name),tot+' кг'):'';}).filter(Boolean).join('');\n"
         "                const _resRows=Object.entries(_resCnt).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,' разів')).join('');\n"
         "                const _statsBlock=state.archiveRecs.length>0?`<div class=\"flex flex-wrap gap-4\" style=\"padding:4px 4px 8px\"><div class=\"space-y-3\" style=\"flex:2 1 220px\">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}</div><div style=\"flex:3 1 280px\">${_sec('РЕЗУЛЬТАТИ',_resRows)}</div></div>`:'';\n"
-        "                const _shRptLines=state.archiveRecs.length>0?generateArchiveReport(state.archiveRecs,state.selArchive):[];\n"
+        "                const _shRptLines=state.archiveRecs.length>0?generateArchiveReport(state.archiveRecs,state.selArchive+'р.'):[];\n"
         "                const _shRptBlock=state.archiveRecs.length>0?`<div class=\"crate p-4\"><div class=\"flex justify-between items-center mb-3 flex-wrap gap-2\"><div style=\"display:flex;align-items:center;gap:1.5em;flex-wrap:wrap\"><h3 class=\"stencil-shadow\" style=\"color:var(--yellow)\">ДОПОВІДЬ ЗА ${esc(state.selArchive)}</h3><span class=\"stencil\" style=\"color:var(--khaki)\">Уражено орієнтовно на <span style=\"color:var(--text)\">${_arTotal}</span> балів</span></div><div class=\"flex gap-2 flex-wrap\"><button onclick=\"copyArchiveSheetReport()\" onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-black\">КОПІЮВАТИ</button></div></div><div class=\"report-box\">${_shRptLines.filter(l=>!l.startsWith('Уражено')).join('\\n')}</div></div>`:'';\n"
         "                _arContent=`<div style=\"display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px\"><h1 class=\"stencil-shadow text-3xl\" style=\"color:var(--yellow)\">${esc(state.selArchive)}</h1>${_arHeader}</div>${_shRptBlock}<h2 class=\"stencil-shadow text-xl px-2\" style=\"color:var(--yellow)\">СТАТИСТИКА</h2>${_statsBlock}<h2 class=\"stencil-shadow text-xl px-2\" style=\"color:var(--yellow)\">ВИЛЬОТИ</h2>${_arGroups||'<div class=\"crate p-4\"><p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає записів</p></div>'}`;\n"
         "            }\n"
