@@ -1223,7 +1223,7 @@ def apply_patches(html):
         "            }\n"
         "        }\n"
         "        h+=`<div class=\"p-4 space-y-4 zvity-wrap\">\n"
-        "            <h1 class=\"stencil-shadow text-3xl px-2\" style=\"color:var(--yellow)\">АРХІВ</h1>\n"
+        "            <h1 onclick=\"state.selArchive=null;render()\" class=\"stencil-shadow text-3xl px-2\" style=\"color:var(--yellow);cursor:pointer\">АРХІВ</h1>\n"
         "            <div class=\"crate p-4\"><div class=\"flex flex-wrap gap-2\">${state.archiveLoading&&!state.selArchive?'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Завантаження...</p>':_arBtns}</div></div>\n"
         "            ${state.selArchive?_arContent:_allSection}\n"
         "        </div>`;\n"
