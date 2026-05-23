@@ -985,7 +985,8 @@ def apply_patches(html):
     patches.append((
         'selReport: null, selDate: null, selVylotyDate: null,',
         'selReport: null, selDate: null, selVylotyDate: null,'
-        ' archiveSheets: [], selArchive: null, archiveRecs: [], archiveLoading: false, pvr: [],',
+        ' archiveSheets: [], selArchive: null, archiveRecs: [], archiveLoading: false, pvr: [],'
+        ' allArchiveRecs: [], allArchiveLoaded: false, allArchiveLoading: false,',
         'state-archive'
     ))
 
@@ -996,15 +997,105 @@ def apply_patches(html):
 
         "state.scoreTable = {}; state.drones = []; state.ammo = []; state.results = [];  state.records = [];\n"
         "    state.archiveSheets = []; state.selArchive = null; state.archiveRecs = []; state.archiveLoading = false; state.pvr = [];\n"
+        "    state.allArchiveRecs = []; state.allArchiveLoaded = false; state.allArchiveLoading = false;\n"
         "    state.loaded = false; state.page = 'login';",
 
         'logout-archive-reset'
     ))
 
-    # ── 56. archive functions: goToArchive, loadArchiveSheet ──
+    # ── 56. archive functions ──
     patches.append((
         'async function loadDataFromAPI() {',
 
+        'function generateArchiveReport(recs, periodLabel) {\n'
+        '    let lines = [];\n'
+        '    lines.push(\'Доповідаю!\');\n'
+        '    const reportTitle = state.reportTitle || \'ТГ невідомий\';\n'
+        '    const totalPoints = Math.round(recs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));\n'
+        '    lines.push(periodLabel+\'р. \'+reportTitle+\' здійснено \'+recs.length+\' бойових вильотів.\');\n'
+        '    lines.push(\'Уражено орієнтовно на \'+totalPoints+\' балів\');\n'
+        '    lines.push(\'\');\n'
+        '    const hasOs = recs.some(r => r.target.split(\', \').some(t => t.trim().toLowerCase().startsWith(\'ос\')));\n'
+        '    const osSum200 = recs.reduce((s, r) => s + (parseInt(r.qty200) || 0), 0);\n'
+        '    const osSum300 = recs.reduce((s, r) => s + (parseInt(r.qty300) || 0), 0);\n'
+        '    const otherGrouped = {};\n'
+        '    recs.forEach(r => {\n'
+        '        const targets = r.target.split(\', \');\n'
+        '        const results = r.result.split(\', \');\n'
+        '        targets.forEach((tgt, idx) => {\n'
+        '            const tgtTrim = tgt.trim();\n'
+        '            const res = (results[idx] || \'\').trim();\n'
+        '            if (!tgtTrim.toLowerCase().startsWith(\'ос\') && (res === \'знищено\' || res === \'пошкоджено\')) {\n'
+        '                const _tP=tgtTrim.split(\' \'),_tL=_tP[_tP.length-1];\n'
+        '                const abbrDisp=/^\\d+$/.test(_tL)?_tP.slice(0,-1).join(\' \'):tgtTrim;\n'
+        '                const key=abbrDisp.toUpperCase()+\' \'+res;\n'
+        '                if(!otherGrouped[key])otherGrouped[key]={d:abbrDisp,r:res,n:0};\n'
+        '                otherGrouped[key].n++;\n'
+        '            }\n'
+        '        });\n'
+        '    });\n'
+        '    const resultLines = [];\n'
+        '    if (hasOs && osSum200 > 0) resultLines.push(\'ОС знищено - \' + osSum200 + \' шт.\');\n'
+        '    if (hasOs && osSum300 > 0) resultLines.push(\'ОС пошкоджено - \' + osSum300 + \' шт.\');\n'
+        '    Object.entries(otherGrouped).forEach(([k, v]) => resultLines.push(v.d + \' \' + v.r + \' - \' + v.n + \' шт.\'));\n'
+        '    resultLines.forEach((l, i) => lines.push((i + 1) + \'. \' + l));\n'
+        '    lines.push(\'\');\n'
+        '    lines.push(\'🫡🤝🇺🇦\');\n'
+        '    return lines;\n'
+        '}\n'
+        '\n'
+        'function copyArchiveSheetReport() {\n'
+        '    const recs = state.archiveRecs;\n'
+        '    if (!recs.length) return;\n'
+        '    const lines = generateArchiveReport(recs, state.selArchive);\n'
+        '    navigator.clipboard.writeText(lines.join(\'\\n\')).catch(()=>{});\n'
+        '}\n'
+        '\n'
+        'function copyAllArchiveReport() {\n'
+        '    const recs = state.allArchiveRecs;\n'
+        '    if (!recs.length) return;\n'
+        '    const dates = recs.map(r => getDateOnly(r.datetime)).filter(Boolean).sort();\n'
+        '    const earliest = dates[0] || \'\';\n'
+        '    const lines = generateArchiveReport(recs, \'З \' + earliest + \' дотепер\');\n'
+        '    navigator.clipboard.writeText(lines.join(\'\\n\')).catch(()=>{});\n'
+        '}\n'
+        '\n'
+        'async function loadAllArchiveSheets() {\n'
+        '    if (state.allArchiveLoading || state.allArchiveLoaded) return;\n'
+        '    state.allArchiveLoading = true;\n'
+        '    render();\n'
+        '    try {\n'
+        '        const allRecs = [];\n'
+        '        for (const name of state.archiveSheets) {\n'
+        '            const rows = await apiGet(name);\n'
+        '            for (let i = 1; i < rows.length; i++) {\n'
+        '                const row = rows[i] || [];\n'
+        '                if (row[0] || row[2]) {\n'
+        '                    allRecs.push({\n'
+        '                        reportNum: parseInt(row[0])||0,\n'
+        '                        datetime: row[1]||\'\',\n'
+        '                        target: row[2]||\'\',\n'
+        '                        qty200: parseInt(row[3])||0,\n'
+        '                        qty300: parseInt(row[4])||0,\n'
+        '                        coordinates: row[5]||\'\',\n'
+        '                        drone: (row[6]||\'\').trim(),\n'
+        '                        ammo: (row[7]||\'\').trim(),\n'
+        '                        result: row[8]||\'\',\n'
+        '                        points: parseFloat(row[9])||0\n'
+        '                    });\n'
+        '                }\n'
+        '            }\n'
+        '        }\n'
+        '        state.allArchiveRecs = allRecs;\n'
+        '        state.allArchiveLoaded = true;\n'
+        '    } catch(e) {\n'
+        '        alert(\'Помилка завантаження всіх архівних звітів: \' + e.message);\n'
+        '    } finally {\n'
+        '        state.allArchiveLoading = false;\n'
+        '        render();\n'
+        '    }\n'
+        '}\n'
+        '\n'
         'async function goToArchive() {\n'
         '    state.page = \'archive\';\n'
         '    if (!state.archiveSheets.length) {\n'
@@ -1023,6 +1114,7 @@ def apply_patches(html):
         '        }\n'
         '    }\n'
         '    render();\n'
+        '    if (!state.allArchiveLoaded && !state.allArchiveLoading) { loadAllArchiveSheets(); }\n'
         '}\n'
         '\n'
         'async function loadArchiveSheet(name) {\n'
@@ -1068,6 +1160,8 @@ def apply_patches(html):
 
         "    if(state.page==='archive') {\n"
         "        const _arBtns=state.archiveSheets.map(s=>{const _dl=/^\\d/.test(s)?s:(s.match(/\\d{1,2}[-.\\/]\\d{1,2}[-.\\/]\\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';return `<button onclick=\"loadArchiveSheet('${esc(s)}')\" onmousedown=\"this.classList.add('pressing')\" onmouseup=\"this.classList.remove('pressing')\" ontouchstart=\"this.classList.add('pressing')\" ontouchend=\"this.classList.remove('pressing')\" class=\"btn-stencil btn-archive ${_act}\">${esc(_dl)}</button>`;}).join('')||'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає архівних звітів</p>';\n"
+        "        const _row=(label,val,suf='')=>`<p class=\"stencil\" style=\"color:var(--text);margin:1px 0\">${label} <span style=\"color:var(--yellow)\">— ${val}${suf}</span></p>`;\n"
+        "        const _sec=(title,rows)=>rows?`<div><p class=\"stencil\" style=\"color:var(--khaki);font-size:calc(0.85em + 2px);letter-spacing:0.08em;margin-bottom:4px\">${title}</p>${rows}</div>`:'';\n"
         "        let _arContent='';\n"
         "        if(state.selArchive){\n"
         "            if(state.archiveLoading){\n"
@@ -1096,20 +1190,42 @@ def apply_patches(html):
         "                const _drnCnt={};state.archiveRecs.forEach(r=>{if(r.drone)_drnCnt[r.drone]=(_drnCnt[r.drone]||0)+1;});\n"
         "                const _ammoCnt={};state.archiveRecs.forEach(r=>{if(r.ammo)_ammoCnt[r.ammo]=(_ammoCnt[r.ammo]||0)+1;});\n"
         "                const _resCnt={};state.archiveRecs.forEach(r=>{if(r.result)r.result.split(', ').forEach(x=>{x=x.trim();if(x)_resCnt[x]=(_resCnt[x]||0)+1;});});\n"
-        "                const _row=(label,val,suf='')=>`<p class=\"stencil\" style=\"color:var(--text);margin:1px 0\">${label} <span style=\"color:var(--yellow)\">— ${val}${suf}</span></p>`;\n"
-        "                const _sec=(title,rows)=>rows?`<div><p class=\"stencil\" style=\"color:var(--khaki);font-size:calc(0.85em + 2px);letter-spacing:0.08em;margin-bottom:4px\">${title}</p>${rows}</div>`:'';\n"
         "                const _drnRows=Object.entries(_drnCnt).sort((a,b)=>b[1]-a[1]).map(([d,c])=>_row(esc(d),c,' шт')).join('');\n"
         "                const _ammoRows=Object.entries(_ammoCnt).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_row(esc(a),c,' шт')).join('');\n"
         "                const _pvrRows=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_ammoCnt[am]||0)*cf,0);return tot?_row(esc(pvr.name),tot+' кг'):'';}).filter(Boolean).join('');\n"
         "                const _resRows=Object.entries(_resCnt).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,' разів')).join('');\n"
-        "                const _statsBlock=state.archiveRecs.length>0?`<div class=\"crate p-4\"><div class=\"flex flex-wrap gap-4\"><div class=\"space-y-3\" style=\"flex:2 1 220px\">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}</div><div style=\"flex:3 1 280px\">${_sec('РЕЗУЛЬТАТИ',_resRows)}</div></div></div>`:'';\n"
-        "                _arContent=`<div style=\"display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px\"><h1 class=\"stencil-shadow text-3xl\" style=\"color:var(--yellow)\">${esc(state.selArchive)}</h1>${_arHeader}</div><h2 class=\"stencil-shadow text-xl px-2\" style=\"color:var(--yellow)\">СТАТИСТИКА</h2>${_statsBlock}<h2 class=\"stencil-shadow text-xl px-2\" style=\"color:var(--yellow)\">ВИЛЬОТИ</h2>${_arGroups||'<div class=\"crate p-4\"><p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає записів</p></div>'}`;\n"
+        "                const _statsBlock=state.archiveRecs.length>0?`<div class=\"flex flex-wrap gap-4\" style=\"padding:4px 4px 8px\"><div class=\"space-y-3\" style=\"flex:2 1 220px\">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}</div><div style=\"flex:3 1 280px\">${_sec('РЕЗУЛЬТАТИ',_resRows)}</div></div>`:'';\n"
+        "                const _shRptLines=state.archiveRecs.length>0?generateArchiveReport(state.archiveRecs,state.selArchive):[];\n"
+        "                const _shRptBlock=state.archiveRecs.length>0?`<div class=\"crate p-4\"><div class=\"flex justify-between items-center mb-3 flex-wrap gap-2\"><div style=\"display:flex;align-items:center;gap:1.5em;flex-wrap:wrap\"><h3 class=\"stencil-shadow\" style=\"color:var(--yellow)\">ДОПОВІДЬ ЗА ${esc(state.selArchive)}</h3><span class=\"stencil\" style=\"color:var(--khaki)\">Уражено орієнтовно на <span style=\"color:var(--text)\">${_arTotal}</span> балів</span></div><div class=\"flex gap-2 flex-wrap\"><button onclick=\"copyArchiveSheetReport()\" onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-black\">КОПІЮВАТИ</button></div></div><div class=\"report-box\">${_shRptLines.filter(l=>!l.startsWith('Уражено')).join('\\n')}</div></div>`:'';\n"
+        "                _arContent=`<div style=\"display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px\"><h1 class=\"stencil-shadow text-3xl\" style=\"color:var(--yellow)\">${esc(state.selArchive)}</h1>${_arHeader}</div>${_shRptBlock}<h2 class=\"stencil-shadow text-xl px-2\" style=\"color:var(--yellow)\">СТАТИСТИКА</h2>${_statsBlock}<h2 class=\"stencil-shadow text-xl px-2\" style=\"color:var(--yellow)\">ВИЛЬОТИ</h2>${_arGroups||'<div class=\"crate p-4\"><p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає записів</p></div>'}`;\n"
+        "            }\n"
+        "        }\n"
+        "        let _allSection='';\n"
+        "        if(!state.selArchive){\n"
+        "            if(state.allArchiveLoading){\n"
+        "                _allSection='<div class=\"crate p-4\"><p class=\"stencil text-center py-4\" style=\"color:var(--text-dim)\">Завантаження всіх звітів...</p></div>';\n"
+        "            } else if(state.allArchiveLoaded&&state.allArchiveRecs.length>0){\n"
+        "                const _allRecs=state.allArchiveRecs;\n"
+        "                const _allDts=_allRecs.map(r=>getDateOnly(r.datetime)).filter(Boolean).sort();\n"
+        "                const _allEarliest=_allDts[0]||'';\n"
+        "                const _allTotal=Math.round(_allRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n"
+        "                const _allRptLines=generateArchiveReport(_allRecs,'З '+_allEarliest+' дотепер');\n"
+        "                const _allRptBlock=`<div class=\"crate p-4\"><div class=\"flex justify-between items-center mb-3 flex-wrap gap-2\"><div style=\"display:flex;align-items:center;gap:1.5em;flex-wrap:wrap\"><h3 class=\"stencil-shadow\" style=\"color:var(--yellow)\">ДОПОВІДЬ ЗА ВСІ ВИЇЗДИ З ${_allEarliest} ДОТЕПЕР</h3><span class=\"stencil\" style=\"color:var(--khaki)\">Уражено орієнтовно на <span style=\"color:var(--text)\">${_allTotal}</span> балів</span></div><div class=\"flex gap-2 flex-wrap\"><button onclick=\"copyAllArchiveReport()\" onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-black\">КОПІЮВАТИ</button></div></div><div class=\"report-box\">${_allRptLines.filter(l=>!l.startsWith('Уражено')).join('\\n')}</div></div>`;\n"
+        "                const _allDrnCnt={};_allRecs.forEach(r=>{if(r.drone)_allDrnCnt[r.drone]=(_allDrnCnt[r.drone]||0)+1;});\n"
+        "                const _allAmmoCnt={};_allRecs.forEach(r=>{if(r.ammo)_allAmmoCnt[r.ammo]=(_allAmmoCnt[r.ammo]||0)+1;});\n"
+        "                const _allResCnt={};_allRecs.forEach(r=>{if(r.result)r.result.split(', ').forEach(x=>{x=x.trim();if(x)_allResCnt[x]=(_allResCnt[x]||0)+1;});});\n"
+        "                const _allDrnRows=Object.entries(_allDrnCnt).sort((a,b)=>b[1]-a[1]).map(([d,c])=>_row(esc(d),c,' шт')).join('');\n"
+        "                const _allAmmoRows=Object.entries(_allAmmoCnt).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_row(esc(a),c,' шт')).join('');\n"
+        "                const _allPvrRows=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_allAmmoCnt[am]||0)*cf,0);return tot?_row(esc(pvr.name),tot+' кг'):'';}).filter(Boolean).join('');\n"
+        "                const _allResRows=Object.entries(_allResCnt).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,' разів')).join('');\n"
+        "                const _allStatsBlock=`<div class=\"flex flex-wrap gap-4\" style=\"padding:4px 4px 8px\"><div class=\"space-y-3\" style=\"flex:2 1 220px\">${_sec('ДРОНИ',_allDrnRows)}${_sec('БОЄПРИПАСИ',_allAmmoRows)}${_sec('ПВР',_allPvrRows)}</div><div style=\"flex:3 1 280px\">${_sec('РЕЗУЛЬТАТИ',_allResRows)}</div></div>`;\n"
+        "                _allSection=_allRptBlock+'<h2 class=\"stencil-shadow text-xl px-2\" style=\"color:var(--yellow)\">ЗАГАЛЬНА СТАТИСТИКА</h2>'+_allStatsBlock;\n"
         "            }\n"
         "        }\n"
         "        h+=`<div class=\"p-4 space-y-4 zvity-wrap\">\n"
         "            <h1 class=\"stencil-shadow text-3xl px-2\" style=\"color:var(--yellow)\">АРХІВ</h1>\n"
         "            <div class=\"crate p-4\"><div class=\"flex flex-wrap gap-2\">${state.archiveLoading&&!state.selArchive?'<p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Завантаження...</p>':_arBtns}</div></div>\n"
-        "            ${state.selArchive?_arContent:''}\n"
+        "            ${state.selArchive?_arContent:_allSection}\n"
         "        </div>`;\n"
         "    }\n"
         "\n"
