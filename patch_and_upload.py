@@ -1008,12 +1008,7 @@ def apply_patches(html):
         'async function loadDataFromAPI() {',
 
         'function generateArchiveReport(recs, periodLabel) {\n'
-        '    let lines = [];\n'
-        '    lines.push(\'Доповідаю!\');\n'
-        '    lines.push(\'\');\n'
         '    const reportTitle = state.reportTitle || \'ТГ невідомий\';\n'
-        '    const totalPoints = Math.round(recs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));\n'
-        '    lines.push(periodLabel+\',Тг., "\'+reportTitle+\'" здійснено \'+recs.length+\' вильотів, уражено.\');\n'
         '    const hasOs = recs.some(r => r.target.split(\', \').some(t => t.trim().toLowerCase().startsWith(\'ос\')));\n'
         '    const osSum200 = recs.reduce((s, r) => s + (parseInt(r.qty200) || 0), 0);\n'
         '    const osSum300 = recs.reduce((s, r) => s + (parseInt(r.qty300) || 0), 0);\n'
@@ -1033,14 +1028,12 @@ def apply_patches(html):
         '            }\n'
         '        });\n'
         '    });\n'
-        '    const resultLines = [];\n'
-        '    if (hasOs && osSum200 > 0) resultLines.push(\'ОС 200 - \' + osSum200 + \'.\');\n'
-        '    if (hasOs && osSum300 > 0) resultLines.push(\'ОС 300 - \' + osSum300 + \'.\');\n'
-        '    Object.entries(otherGrouped).forEach(([k, v]) => resultLines.push(v.d + \' \' + v.r + \' - \' + v.n + \'.\'));\n'
-        '    resultLines.forEach((l, i) => lines.push((i + 1) + \'. \' + l));\n'
-        '    lines.push(\'Продовжують працювати.\');\n'
-        '    lines.push(\'\');\n'
-        '    lines.push(\'🫡🤝🇺🇦\');\n'
+        '    const _rp=[];\n'
+        '    if (hasOs && osSum200 > 0) _rp.push(\'ОС 200 - \' + osSum200);\n'
+        '    if (hasOs && osSum300 > 0) _rp.push(\'ОС 300 - \' + osSum300);\n'
+        '    Object.entries(otherGrouped).forEach(([k, v]) => _rp.push(v.d + \' \' + v.r + \' - \' + v.n));\n'
+        '    const lines = [periodLabel + \' ТГ "\' + reportTitle + \'" здійснено \' + recs.length + \' вильотів, уражено:\'];\n'
+        '    _rp.forEach((p, i) => lines.push((i+1) + \'. \' + p + (i===_rp.length-1 ? \' шт.\' : \' шт;\')));\n'
         '    return lines;\n'
         '}\n'
         '\n'
@@ -1196,7 +1189,7 @@ def apply_patches(html):
         "                const _resRows=Object.entries(_resCnt).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,' разів')).join('');\n"
         "                const _statsBlock=state.archiveRecs.length>0?`<div class=\"flex flex-wrap gap-4\" style=\"padding:4px 4px 8px\"><div class=\"space-y-3\" style=\"flex:2 1 220px\">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}</div><div style=\"flex:3 1 280px\">${_sec('РЕЗУЛЬТАТИ',_resRows)}</div></div>`:'';\n"
         "                const _shRptLines=state.archiveRecs.length>0?generateArchiveReport(state.archiveRecs,state.selArchive+'р.'):[];\n"
-        "                const _shRptBlock=state.archiveRecs.length>0?`<div class=\"crate p-4\"><div class=\"flex justify-between items-center mb-3 flex-wrap gap-2\"><div style=\"display:flex;align-items:center;gap:1.5em;flex-wrap:wrap\"><h3 class=\"stencil-shadow\" style=\"color:var(--yellow)\">ДОПОВІДЬ ЗА ${esc(state.selArchive)}</h3><span class=\"stencil\" style=\"color:var(--khaki)\">Уражено орієнтовно на <span style=\"color:var(--text)\">${_arTotal}</span> балів</span></div><div class=\"flex gap-2 flex-wrap\"><button onclick=\"copyArchiveSheetReport()\" onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-black\">КОПІЮВАТИ</button></div></div><div class=\"report-box\">${_shRptLines.filter(l=>!l.startsWith('Уражено')).join('\\n')}</div></div>`:'';\n"
+        "                const _shRptBlock=state.archiveRecs.length>0?`<div class=\"crate p-4\"><div class=\"flex justify-between items-center mb-3 flex-wrap gap-2\"><div style=\"display:flex;align-items:center;gap:1.5em;flex-wrap:wrap\"><h3 class=\"stencil-shadow\" style=\"color:var(--yellow)\">ПІДСУМКИ ЗА ${esc(state.selArchive)}</h3><span class=\"stencil\" style=\"color:var(--khaki)\">Уражено орієнтовно на <span style=\"color:var(--text)\">${_arTotal}</span> балів</span></div><div class=\"flex gap-2 flex-wrap\"><button onclick=\"copyArchiveSheetReport()\" onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-black\">КОПІЮВАТИ</button></div></div><div class=\"report-box\" style=\"color:#6dbf67\">${_shRptLines.join('\\n')}</div></div>`:'';\n"
         "                _arContent=`<div style=\"display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px\"><h1 class=\"stencil-shadow text-3xl\" style=\"color:var(--yellow)\">${esc(state.selArchive)}</h1>${_arHeader}</div>${_shRptBlock}<h2 class=\"stencil-shadow text-xl px-2\" style=\"color:var(--yellow)\">СТАТИСТИКА</h2>${_statsBlock}<h2 class=\"stencil-shadow text-xl px-2\" style=\"color:var(--yellow)\">ВИЛЬОТИ</h2>${_arGroups||'<div class=\"crate p-4\"><p class=\"stencil text-center py-2\" style=\"color:var(--text-dim)\">Немає записів</p></div>'}`;\n"
         "            }\n"
         "        }\n"
@@ -1210,7 +1203,7 @@ def apply_patches(html):
         "                const _allEarliest=_allDts[0]||'';\n"
         "                const _allTotal=Math.round(_allRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n"
         "                const _allRptLines=generateArchiveReport(_allRecs,'З '+_allEarliest+' дотепер');\n"
-        "                const _allRptBlock=`<div class=\"crate p-4\"><div class=\"flex justify-between items-center mb-3 flex-wrap gap-2\"><div style=\"display:flex;align-items:center;gap:1.5em;flex-wrap:wrap\"><h3 class=\"stencil-shadow\" style=\"color:var(--yellow)\">ДОПОВІДЬ ЗА ВСІ ВИЇЗДИ З ${_allEarliest} ДОТЕПЕР</h3><span class=\"stencil\" style=\"color:var(--khaki)\">Уражено орієнтовно на <span style=\"color:var(--text)\">${_allTotal}</span> балів</span></div><div class=\"flex gap-2 flex-wrap\"><button onclick=\"copyAllArchiveReport()\" onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-black\">КОПІЮВАТИ</button></div></div><div class=\"report-box\">${_allRptLines.filter(l=>!l.startsWith('Уражено')).join('\\n')}</div></div>`;\n"
+        "                const _allRptBlock=`<div class=\"crate p-4\"><div class=\"flex justify-between items-center mb-3 flex-wrap gap-2\"><div style=\"display:flex;align-items:center;gap:1.5em;flex-wrap:wrap\"><h3 class=\"stencil-shadow\" style=\"color:var(--yellow)\">ПІДСУМКИ ЗА ВСІ ВИЇЗДИ З ${_allEarliest} ДОТЕПЕР</h3><span class=\"stencil\" style=\"color:var(--khaki)\">Уражено орієнтовно на <span style=\"color:var(--text)\">${_allTotal}</span> балів</span></div><div class=\"flex gap-2 flex-wrap\"><button onclick=\"copyAllArchiveReport()\" onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-black\">КОПІЮВАТИ</button></div></div><div class=\"report-box\" style=\"color:#6dbf67\">${_allRptLines.join('\\n')}</div></div>`;\n"
         "                const _allDrnCnt={};_allRecs.forEach(r=>{if(r.drone)_allDrnCnt[r.drone]=(_allDrnCnt[r.drone]||0)+1;});\n"
         "                const _allAmmoCnt={};_allRecs.forEach(r=>{if(r.ammo)_allAmmoCnt[r.ammo]=(_allAmmoCnt[r.ammo]||0)+1;});\n"
         "                const _allResCnt={};_allRecs.forEach(r=>{if(r.result)r.result.split(', ').forEach(x=>{x=x.trim();if(x)_allResCnt[x]=(_allResCnt[x]||0)+1;});});\n"
