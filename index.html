@@ -519,11 +519,10 @@ async function syncOnShieldClick() {
 function generateArchiveReport(recs, periodLabel) {
     let lines = [];
     lines.push('Доповідаю!');
+    lines.push('');
     const reportTitle = state.reportTitle || 'ТГ невідомий';
     const totalPoints = Math.round(recs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));
-    lines.push(periodLabel+' '+reportTitle+' здійснено '+recs.length+' бойових вильотів.');
-    lines.push('Уражено орієнтовно на '+totalPoints+' балів');
-    lines.push('');
+    lines.push(periodLabel+',Тг., "'+reportTitle+'" здійснено '+recs.length+' вильотів, уражено.');
     const hasOs = recs.some(r => r.target.split(', ').some(t => t.trim().toLowerCase().startsWith('ос')));
     const osSum200 = recs.reduce((s, r) => s + (parseInt(r.qty200) || 0), 0);
     const osSum300 = recs.reduce((s, r) => s + (parseInt(r.qty300) || 0), 0);
@@ -544,10 +543,11 @@ function generateArchiveReport(recs, periodLabel) {
         });
     });
     const resultLines = [];
-    if (hasOs && osSum200 > 0) resultLines.push('ОС знищено - ' + osSum200 + ' шт.');
-    if (hasOs && osSum300 > 0) resultLines.push('ОС пошкоджено - ' + osSum300 + ' шт.');
-    Object.entries(otherGrouped).forEach(([k, v]) => resultLines.push(v.d + ' ' + v.r + ' - ' + v.n + ' шт.'));
+    if (hasOs && osSum200 > 0) resultLines.push('ОС 200 - ' + osSum200 + '.');
+    if (hasOs && osSum300 > 0) resultLines.push('ОС 300 - ' + osSum300 + '.');
+    Object.entries(otherGrouped).forEach(([k, v]) => resultLines.push(v.d + ' ' + v.r + ' - ' + v.n + '.'));
     resultLines.forEach((l, i) => lines.push((i + 1) + '. ' + l));
+    lines.push('Продовжують працювати.');
     lines.push('');
     lines.push('🫡🤝🇺🇦');
     return lines;
@@ -1104,12 +1104,11 @@ function deleteItem() { if(state.inputList !== null && state.inputIdx !== null) 
 function generateReport(dayRecs) {
     let lines = [];
     lines.push('Доповідаю!');
+    lines.push('');
     const date = getDateOnly(dayRecs[0].datetime);
     const reportTitle = state.reportTitle || 'ТГ невідомий';
     const totalPoints = Math.round(dayRecs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));
-    lines.push(date+'р. '+reportTitle+' здійснено '+dayRecs.length+' бойових вильотів.');
-    lines.push('Уражено орієнтовно на '+totalPoints+' балів');
-    lines.push('');
+    lines.push(date+'р.,Тг., "'+reportTitle+'" здійснено '+dayRecs.length+' вильотів, уражено.');
     const hasOs = dayRecs.some(r => r.target.split(', ').some(t => t.trim().toLowerCase().startsWith('ос')));
     const osSum200 = dayRecs.reduce((s, r) => s + (parseInt(r.qty200) || 0), 0);
     const osSum300 = dayRecs.reduce((s, r) => s + (parseInt(r.qty300) || 0), 0);
@@ -1130,10 +1129,11 @@ function generateReport(dayRecs) {
         });
     });
     const resultLines = [];
-    if (hasOs && osSum200 > 0) resultLines.push('ОС знищено - ' + osSum200 + ' шт.');
-    if (hasOs && osSum300 > 0) resultLines.push('ОС пошкоджено - ' + osSum300 + ' шт.');
-    Object.entries(otherGrouped).forEach(([k, v]) => resultLines.push(v.d + ' ' + v.r + ' - ' + v.n + ' шт.'));
+    if (hasOs && osSum200 > 0) resultLines.push('ОС 200 - ' + osSum200 + '.');
+    if (hasOs && osSum300 > 0) resultLines.push('ОС 300 - ' + osSum300 + '.');
+    Object.entries(otherGrouped).forEach(([k, v]) => resultLines.push(v.d + ' ' + v.r + ' - ' + v.n + '.'));
     resultLines.forEach((l, i) => lines.push((i + 1) + '. ' + l));
+    lines.push('Продовжують працювати.');
     lines.push('');
     lines.push('🫡🤝🇺🇦');
     return lines;
