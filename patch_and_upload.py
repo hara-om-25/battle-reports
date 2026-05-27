@@ -100,12 +100,11 @@ def apply_patches(html):
         'function generateReport(dayRecs) {\n'
         '    let lines = [];\n'
         "    lines.push('Доповідаю!');\n"
+        "    lines.push('');\n"
         '    const date = getDateOnly(dayRecs[0].datetime);\n'
         "    const reportTitle = state.reportTitle || 'ТГ невідомий';\n"
         '    const totalPoints = Math.round(dayRecs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));\n'
-        "    lines.push(date+'р. '+reportTitle+' здійснено '+dayRecs.length+' бойових вильотів.');\n"
-        "    lines.push('Уражено орієнтовно на '+totalPoints+' балів');\n"
-        "    lines.push('');\n"
+        "    lines.push(date+'р.,Тг., \"'+reportTitle+'\" здійснено '+dayRecs.length+' вильотів, уражено.');\n"
         "    const hasOs = dayRecs.some(r => r.target.split(', ').some(t => t.trim().toLowerCase().startsWith('ос')));\n"
         '    const osSum200 = dayRecs.reduce((s, r) => s + (parseInt(r.qty200) || 0), 0);\n'
         '    const osSum300 = dayRecs.reduce((s, r) => s + (parseInt(r.qty300) || 0), 0);\n'
@@ -126,10 +125,11 @@ def apply_patches(html):
         '        });\n'
         '    });\n'
         '    const resultLines = [];\n'
-        "    if (hasOs && osSum200 > 0) resultLines.push('ОС знищено - ' + osSum200 + ' шт.');\n"
-        "    if (hasOs && osSum300 > 0) resultLines.push('ОС пошкоджено - ' + osSum300 + ' шт.');\n"
-        "    Object.entries(otherGrouped).forEach(([k, v]) => resultLines.push(v.d + ' ' + v.r + ' - ' + v.n + ' шт.'));\n"
+        "    if (hasOs && osSum200 > 0) resultLines.push('ОС 200 - ' + osSum200 + '.');\n"
+        "    if (hasOs && osSum300 > 0) resultLines.push('ОС 300 - ' + osSum300 + '.');\n"
+        "    Object.entries(otherGrouped).forEach(([k, v]) => resultLines.push(v.d + ' ' + v.r + ' - ' + v.n + '.'));\n"
         "    resultLines.forEach((l, i) => lines.push((i + 1) + '. ' + l));\n"
+        "    lines.push('Продовжують працювати.');\n"
         "    lines.push('');\n"
         "    lines.push('🫡🤝🇺🇦');\n"
         '    return lines;\n'
@@ -1010,11 +1010,10 @@ def apply_patches(html):
         'function generateArchiveReport(recs, periodLabel) {\n'
         '    let lines = [];\n'
         '    lines.push(\'Доповідаю!\');\n'
+        '    lines.push(\'\');\n'
         '    const reportTitle = state.reportTitle || \'ТГ невідомий\';\n'
         '    const totalPoints = Math.round(recs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));\n'
-        '    lines.push(periodLabel+\' \'+reportTitle+\' здійснено \'+recs.length+\' бойових вильотів.\');\n'
-        '    lines.push(\'Уражено орієнтовно на \'+totalPoints+\' балів\');\n'
-        '    lines.push(\'\');\n'
+        '    lines.push(periodLabel+\',Тг., "\'+reportTitle+\'" здійснено \'+recs.length+\' вильотів, уражено.\');\n'
         '    const hasOs = recs.some(r => r.target.split(\', \').some(t => t.trim().toLowerCase().startsWith(\'ос\')));\n'
         '    const osSum200 = recs.reduce((s, r) => s + (parseInt(r.qty200) || 0), 0);\n'
         '    const osSum300 = recs.reduce((s, r) => s + (parseInt(r.qty300) || 0), 0);\n'
@@ -1035,10 +1034,11 @@ def apply_patches(html):
         '        });\n'
         '    });\n'
         '    const resultLines = [];\n'
-        '    if (hasOs && osSum200 > 0) resultLines.push(\'ОС знищено - \' + osSum200 + \' шт.\');\n'
-        '    if (hasOs && osSum300 > 0) resultLines.push(\'ОС пошкоджено - \' + osSum300 + \' шт.\');\n'
-        '    Object.entries(otherGrouped).forEach(([k, v]) => resultLines.push(v.d + \' \' + v.r + \' - \' + v.n + \' шт.\'));\n'
+        '    if (hasOs && osSum200 > 0) resultLines.push(\'ОС 200 - \' + osSum200 + \'.\');\n'
+        '    if (hasOs && osSum300 > 0) resultLines.push(\'ОС 300 - \' + osSum300 + \'.\');\n'
+        '    Object.entries(otherGrouped).forEach(([k, v]) => resultLines.push(v.d + \' \' + v.r + \' - \' + v.n + \'.\'));\n'
         '    resultLines.forEach((l, i) => lines.push((i + 1) + \'. \' + l));\n'
+        '    lines.push(\'Продовжують працювати.\');\n'
         '    lines.push(\'\');\n'
         '    lines.push(\'🫡🤝🇺🇦\');\n'
         '    return lines;\n'
