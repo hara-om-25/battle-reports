@@ -539,12 +539,13 @@ function generateArchiveReport(recs, periodLabel) {
             }
         });
     });
-    const _rp=[];
-    if (hasOs && osSum200 > 0) _rp.push('ОС 200 - ' + osSum200);
-    if (hasOs && osSum300 > 0) _rp.push('ОС 300 - ' + osSum300);
-    Object.entries(otherGrouped).forEach(([k, v]) => _rp.push(v.d + ' ' + v.r + ' - ' + v.n));
+    const _allItems=[];
+    if (hasOs && osSum200 > 0) _allItems.push({t:'ОС 200',n:osSum200});
+    if (hasOs && osSum300 > 0) _allItems.push({t:'ОС 300',n:osSum300});
+    Object.entries(otherGrouped).forEach(([k,v])=>_allItems.push({t:v.d+' '+v.r,n:v.n}));
+    _allItems.sort((a,b)=>b.n-a.n);
     const lines = [periodLabel + ' ТГ "' + reportTitle + '" здійснено ' + recs.length + ' вильотів, уражено:'];
-    _rp.forEach((p, i) => lines.push((i+1) + '. ' + p + (i===_rp.length-1 ? ' шт.' : ' шт;')));
+    _allItems.forEach((p,i)=>lines.push((i+1)+'. '+p.t+' - '+p.n+(i===_allItems.length-1?' шт.':' шт;')));
     return lines;
 }
 
