@@ -1118,7 +1118,7 @@ function generateReport(dayRecs) {
                 const _tP=tgtTrim.split(' '),_tL=_tP[_tP.length-1];
                 const abbrDisp=/^\d+$/.test(_tL)?_tP.slice(0,-1).join(' '):tgtTrim;
                 const _sce=Object.entries(state.scoreTable).find(([a,sc])=>a.toLowerCase()===abbrDisp.toLowerCase()||(sc.fullName&&sc.fullName.toLowerCase()===abbrDisp.toLowerCase()));
-                const dispName=_sce?_sce[1].fullName:abbrDisp;
+                const dispName=_sce?_sce[0]:abbrDisp;
                 const key=dispName.toUpperCase()+' '+res;
                 if(!otherGrouped[key])otherGrouped[key]={d:dispName,r:res,n:0};
                 otherGrouped[key].n++;
