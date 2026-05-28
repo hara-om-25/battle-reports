@@ -317,7 +317,7 @@ let state = {
     page: 'login', user: null, token: null, loaded: false,
     scoreTable: {}, drones: [], ammo: [], results: [], records: [],
     report: 1, counts: {},
-    form: {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:''},
+    form: {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:'', selTargetName:''},
     selReport: null, selDate: null, selVylotyDate: null, archiveSheets: [], selArchive: null, archiveRecs: [], archiveLoading: false, pvr: [], allArchiveRecs: [], allArchiveLoaded: false, allArchiveLoading: false,
     inputVal: '', inputList: null, inputIdx: null, editVal: ''
 };
@@ -767,6 +767,22 @@ function calculatePoints(abbr, q200, q300, result) {
     return 0;
 }
 
+function selectFormTarget(n){state.form.selTargetName=(state.form.selTargetName===n?'':n);render();}
+function _fmTgtList(){
+    const ab=state.form.newTarget;
+    if(!ab)return'';
+    const s={};
+    state.records.forEach(r=>{
+        (r.target||'').split(', ').forEach(t=>{
+            const p=t.trim().split(' '),l=p[p.length-1];
+            if(/^\d+$/.test(l)&&p.slice(0,-1).join(' ').toUpperCase()===ab.toUpperCase())s[t.trim()]=true;
+        });
+    });
+    const nm=Object.keys(s).sort((a,b)=>parseInt(b.split(' ').pop())-parseInt(a.split(' ').pop()));
+    if(!nm.length)return'';
+    const hl=state.form.selTargetName;
+    return'<div style="margin:4px 0 2px">'+nm.map(n=>'<button onclick="selectFormTarget(this.dataset.n)" data-n="'+esc(n)+'" class="btn-stencil" style="margin:2px;padding:2px 10px;font-size:0.82em'+(hl===n?';background:var(--green);box-shadow:0 0 0 1px var(--khaki)':'')+'">'+ esc(n)+'</button>').join('')+'</div>';
+}
 function addTargetToForm() {
     if(!state.form.newResult) {
         showAlert('Виберіть результат!');
@@ -775,10 +791,15 @@ function addTargetToForm() {
     const abbr = state.form.newTarget;
     let fullName = '';
     if(abbr) {
-        if(!state.counts[abbr]) state.counts[abbr]=0;
-        state.counts[abbr]++;
-        fullName = abbr + ' ' + state.counts[abbr];
+        if(state.form.selTargetName){
+            fullName=state.form.selTargetName;
+        }else{
+            if(!state.counts[abbr]) state.counts[abbr]=0;
+            state.counts[abbr]++;
+            fullName = abbr + ' ' + state.counts[abbr];
+        }
     }
+    state.form.selTargetName='';
     state.form.targets.push({abbr, fullName, result: state.form.newResult});
     state.form.newTarget = '';
     state.form.newResult = '';
@@ -973,11 +994,17 @@ function showEditRecordModal(idx) {
         ammo: r.ammo || '',
         newTarget: '',
         newResult: '',
+        selTargetName: '',
         _orig: JSON.stringify({targets:tNames.map((n,i)=>({name:n,result:tResults[i]||''})),coordinates:r.coordinates||'',qty200:r.qty200||0,qty300:r.qty300||0,drone:r.drone||'',ammo:r.ammo||''})
     };
     renderEditRecordModal();
 }
 
+function selectEditTarget(n){
+    if(!state.editRecord)return;
+    state.editRecord.selTargetName=(state.editRecord.selTargetName===n?'':n);
+    renderEditRecordModal();
+}
 function renderEditRecordModal() {
     const er = state.editRecord;
     if (!er) return;
@@ -989,6 +1016,16 @@ const tgtList = er.targets.length > 0
         : '<p class="stencil text-sm" style="color:var(--text-dim)">Немає цілей</p>';
     const scoreOpts = _freqSortTargets(Object.keys(state.scoreTable)).map(x=>`<option value="${esc(x)}" ${er.newTarget===x?'selected':''}>${esc(x)}</option>`).join('');
     const resOpts = _freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${er.newResult===r?'selected':''}>${esc(r)}</option>`).join('');
+    const _erTgtList=(()=>{
+        if(!er.newTarget)return'';
+        const ab=er.newTarget,s={};
+        state.records.forEach(r=>{ (r.target||'').split(', ').forEach(t=>{ const p=t.trim().split(' '),l=p[p.length-1]; if(/^\d+$/.test(l)&&p.slice(0,-1).join(' ').toUpperCase()===ab.toUpperCase())s[t.trim()]=true; }); });
+        er.targets.forEach(t=>{ const p=t.name.trim().split(' '),l=p[p.length-1]; if(/^\d+$/.test(l)&&p.slice(0,-1).join(' ').toUpperCase()===ab.toUpperCase())s[t.name.trim()]=true; });
+        const nm=Object.keys(s).sort((a,b)=>parseInt(b.split(' ').pop())-parseInt(a.split(' ').pop()));
+        if(!nm.length)return'';
+        const hl=er.selTargetName||'';
+        return'<div style="margin:4px 0 2px">'+nm.map(n=>'<button onclick="selectEditTarget(this.dataset.n)" data-n="'+esc(n)+'" class="btn-stencil" style="margin:2px;padding:2px 10px;font-size:0.82em'+(hl===n?';background:var(--green);box-shadow:0 0 0 1px var(--khaki)':'')+'">'+esc(n)+'</button>').join('')+'</div>';
+    })();
     const _droneInList=state.drones.some(d=>d===er.drone);
     const droneOpts=(er.drone&&!_droneInList?[`<option value="${esc(er.drone)}" selected>${esc(er.drone)}</option>`]:[]).concat(_freqSort(state.drones,'drone').map(d=>`<option value="${esc(d)}" ${er.drone===d?'selected':''}>${esc(d)}</option>`)).join('');
     const _ammoInList=state.ammo.some(a=>a===er.ammo);
@@ -999,7 +1036,7 @@ const tgtList = er.targets.length > 0
     if (!_hasOs300) er.qty300=0;
     const q200opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty200===n?'selected':''}>${n}</option>`).join('');
     const q300opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty300===n?'selected':''}>${n}</option>`).join('');
-    document.getElementById('modal').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box" style="max-height:90vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 class="stencil-shadow text-xl" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div style="display:flex;gap:6px"><button id="edit-save-top" onclick="saveEditRecord()" class="btn-stencil btn-green" style="padding:6px 14px;font-size:0.9em;${_dim}">&#10003;</button><button onclick="closeModal()" class="btn-stencil" style="padding:6px 14px;font-size:0.9em;opacity:0.6">&#10005;</button></div></div><div class="space-y-3"><div><label class="label block mb-1">ЦІЛІ</label><div class="space-y-1 mb-2">${tgtList}</div><div class="grid gap-2" style="grid-template-columns:1fr 1fr auto"><select onchange="state.editRecord.newTarget=this.value;renderEditRecordModal(true)" class="field"><option value="">Ціль...</option>${scoreOpts}</select><select onchange="state.editRecord.newResult=this.value;renderEditRecordModal(true)" class="field"><option value="">Результат...</option>${resOpts}</select><button onclick="addEditTarget()" class="btn-stencil btn-green" style="padding:0;font-size:22px;height:42px;min-width:42px">+</button></div></div><div><label class="label block mb-1">MGRS</label><input id="er_coord" oninput="saveEditModalState();checkEditDirty()" class="field" value="${esc(er.coordinates)}" placeholder="36U UA 24232 91610"/></div><div class="grid grid-cols-2 gap-2"><div><label class="label block mb-1">200</label><select${_hasOs200?'':' disabled'} onchange="state.editRecord.qty200=parseInt(this.value);checkEditDirty()" class="field" style="${_hasOs200?'':'opacity:0.35'}">${q200opts}</select></div><div><label class="label block mb-1">300</label><select${_hasOs300?'':' disabled'} onchange="state.editRecord.qty300=parseInt(this.value);checkEditDirty()" class="field" style="${_hasOs300?'':'opacity:0.35'}">${q300opts}</select></div></div><div><label class="label block mb-1">ДРОН</label><select onchange="state.editRecord.drone=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${droneOpts}</select></div><div><label class="label block mb-1">БОЄПРИПАС</label><select onchange="state.editRecord.ammo=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${ammoOpts}</select></div></div><div class="space-y-2 mt-4"><button id="edit-save-bottom" onclick="saveEditRecord()" class="btn-stencil btn-green w-full" style="${_dim}">ЗБЕРЕГТИ</button></div></div></div>`;
+    document.getElementById('modal').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box" style="max-height:90vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 class="stencil-shadow text-xl" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div style="display:flex;gap:6px"><button id="edit-save-top" onclick="saveEditRecord()" class="btn-stencil btn-green" style="padding:6px 14px;font-size:0.9em;${_dim}">&#10003;</button><button onclick="closeModal()" class="btn-stencil" style="padding:6px 14px;font-size:0.9em;opacity:0.6">&#10005;</button></div></div><div class="space-y-3"><div><label class="label block mb-1">ЦІЛІ</label><div class="space-y-1 mb-2">${tgtList}</div><select onchange="state.editRecord.newTarget=this.value;state.editRecord.selTargetName='';renderEditRecordModal(true)" class="field"><option value="">Ціль...</option>${scoreOpts}</select>${_erTgtList}<div class="grid gap-2" style="grid-template-columns:1fr auto"><select onchange="state.editRecord.newResult=this.value;renderEditRecordModal(true)" class="field"><option value="">Результат...</option>${resOpts}</select><button onclick="addEditTarget()" class="btn-stencil btn-green" style="padding:0;font-size:22px;height:42px;min-width:42px">+</button></div></div><div><label class="label block mb-1">MGRS</label><input id="er_coord" oninput="saveEditModalState();checkEditDirty()" class="field" value="${esc(er.coordinates)}" placeholder="36U UA 24232 91610"/></div><div class="grid grid-cols-2 gap-2"><div><label class="label block mb-1">200</label><select${_hasOs200?'':' disabled'} onchange="state.editRecord.qty200=parseInt(this.value);checkEditDirty()" class="field" style="${_hasOs200?'':'opacity:0.35'}">${q200opts}</select></div><div><label class="label block mb-1">300</label><select${_hasOs300?'':' disabled'} onchange="state.editRecord.qty300=parseInt(this.value);checkEditDirty()" class="field" style="${_hasOs300?'':'opacity:0.35'}">${q300opts}</select></div></div><div><label class="label block mb-1">ДРОН</label><select onchange="state.editRecord.drone=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${droneOpts}</select></div><div><label class="label block mb-1">БОЄПРИПАС</label><select onchange="state.editRecord.ammo=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${ammoOpts}</select></div></div><div class="space-y-2 mt-4"><button id="edit-save-bottom" onclick="saveEditRecord()" class="btn-stencil btn-green w-full" style="${_dim}">ЗБЕРЕГТИ</button></div></div></div>`;
 }
 
 function checkEditDirty() {
@@ -1028,6 +1065,8 @@ function addEditTarget() {
         er.targets.forEach(t=>{ if(_gA(t.name.trim())===abbr.toUpperCase())maxN=Math.max(maxN,_gN(t.name.trim())); });
         name = abbr + ' ' + (maxN + 1);
     }
+    if(er.selTargetName){ name=er.selTargetName; }
+    er.selTargetName='';
     er.targets.push({name, result: er.newResult});
     er.newTarget = ''; er.newResult = '';
     renderEditRecordModal();
@@ -1272,23 +1311,22 @@ function render() {
             </div>
             
             <div class="space-y-4">
-                <div class="grid gap-3" style="grid-template-columns: 1fr 1fr">
-                    <div>
-                        <label class="label block mb-2">ЦІЛЬ</label>
-                        <select onchange="state.form.newTarget=this.value; if(this.value!=='ОС'&&!state.form.targets.some(t=>t.abbr==='ОС')){state.form.q200=0;state.form.q300=0;} render()" class="field">
-                            <option value="">Виберіть...</option>
-                            ${_freqSortTargets(Object.keys(state.scoreTable)).map(x=>`<option value="${esc(x)}" ${state.form.newTarget===x?'selected':''}>${esc(x)}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="label block mb-2">РЕЗУЛЬТАТ</label>
-                        <div style="position:relative">
-                        <select onchange="state.form.newResult=this.value; render()" class="field" style="padding-right:52px;background-position:calc(100% - 58px) 50%,calc(100% - 53px) 50%">
-                            <option value="">Виберіть...</option>
-                            ${_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
-                        </select>
-                        <button onclick="addTargetToForm()" onmousedown="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318'" onmouseup="this.style.transform='translateY(-50%)';this.style.boxShadow=''" ontouchstart="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318'" ontouchend="this.style.transform='translateY(-50%)';this.style.boxShadow=''" class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 10px;font-size:12px">+</button>
-                        </div>
+                <div>
+                    <label class="label block mb-2">ЦІЛЬ</label>
+                    <select onchange="state.form.newTarget=this.value; state.form.selTargetName=''; if(this.value!=='ОС'&&!state.form.targets.some(t=>t.abbr==='ОС')){state.form.q200=0;state.form.q300=0;} render()" class="field">
+                        <option value="">Виберіть...</option>
+                        ${_freqSortTargets(Object.keys(state.scoreTable)).map(x=>`<option value="${esc(x)}" ${state.form.newTarget===x?'selected':''}>${esc(x)}</option>`).join('')}
+                    </select>
+                </div>
+                ${_fmTgtList()}
+                <div>
+                    <label class="label block mb-2">РЕЗУЛЬТАТ</label>
+                    <div style="position:relative">
+                    <select onchange="state.form.newResult=this.value; render()" class="field" style="padding-right:52px;background-position:calc(100% - 58px) 50%,calc(100% - 53px) 50%">
+                        <option value="">Виберіть...</option>
+                        ${_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
+                    </select>
+                    <button onclick="addTargetToForm()" onmousedown="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318'" onmouseup="this.style.transform='translateY(-50%)';this.style.boxShadow=''" ontouchstart="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318'" ontouchend="this.style.transform='translateY(-50%)';this.style.boxShadow=''" class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 10px;font-size:12px">+</button>
                     </div>
                 </div>
                 
