@@ -118,8 +118,10 @@ def apply_patches(html):
         "            if (!tgtTrim.toLowerCase().startsWith('ос') && (res === 'знищено' || res === 'пошкоджено')) {\n"
         "                const _tP=tgtTrim.split(' '),_tL=_tP[_tP.length-1];\n"
         "                const abbrDisp=/^\\d+$/.test(_tL)?_tP.slice(0,-1).join(' '):tgtTrim;\n"
-        "                const key=abbrDisp.toUpperCase()+' '+res;\n"
-        "                if(!otherGrouped[key])otherGrouped[key]={d:abbrDisp,r:res,n:0};\n"
+        "                const _sce=Object.entries(state.scoreTable).find(([a,sc])=>a.toLowerCase()===abbrDisp.toLowerCase()||(sc.fullName&&sc.fullName.toLowerCase()===abbrDisp.toLowerCase()));\n"
+        "                const dispName=_sce?_sce[0]:abbrDisp;\n"
+        "                const key=dispName.toUpperCase()+' '+res;\n"
+        "                if(!otherGrouped[key])otherGrouped[key]={d:dispName,r:res,n:0};\n"
         "                otherGrouped[key].n++;\n"
         '            }\n'
         '        });\n'
@@ -1022,8 +1024,10 @@ def apply_patches(html):
         '            if (!tgtTrim.toLowerCase().startsWith(\'ос\') && (res === \'знищено\' || res === \'пошкоджено\')) {\n'
         '                const _tP=tgtTrim.split(\' \'),_tL=_tP[_tP.length-1];\n'
         '                const abbrDisp=/^\\d+$/.test(_tL)?_tP.slice(0,-1).join(\' \'):tgtTrim;\n'
-        '                const key=abbrDisp.toUpperCase()+\' \'+res;\n'
-        '                if(!otherGrouped[key])otherGrouped[key]={d:abbrDisp,r:res,n:0};\n'
+        '                const _sce=Object.entries(state.scoreTable).find(([a,sc])=>a.toLowerCase()===abbrDisp.toLowerCase()||(sc.fullName&&sc.fullName.toLowerCase()===abbrDisp.toLowerCase()));\n'
+        '                const dispName=_sce?_sce[0]:abbrDisp;\n'
+        '                const key=dispName.toUpperCase()+\' \'+res;\n'
+        '                if(!otherGrouped[key])otherGrouped[key]={d:dispName,r:res,n:0};\n'
         '                otherGrouped[key].n++;\n'
         '            }\n'
         '        });\n'
