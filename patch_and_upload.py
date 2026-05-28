@@ -1982,6 +1982,204 @@ def apply_patches(html):
     else:
         print("[FAIL] ЗВІТ НА header: old string not found")
 
+    # ── 78-86. Нові патчі (застосовуються після основного циклу) ──
+    _late = []
+
+    # ── 78. Form: selTargetName в state.form ──
+    _late.append((
+        "form: {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:''}",
+        "form: {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:'', selTargetName:''}",
+        'form-seltargetname-state'
+    ))
+
+    # ── 79. Form: helpers selectFormTarget + _fmTgtList ──
+    _late.append((
+        'function addTargetToForm() {\n',
+        'function selectFormTarget(n){state.form.selTargetName=(state.form.selTargetName===n?\'\':n);render();}\n'
+        'function _fmTgtList(){\n'
+        '    const ab=state.form.newTarget;\n'
+        '    if(!ab)return\'\';\n'
+        '    const s={};\n'
+        '    state.records.forEach(r=>{\n'
+        '        (r.target||\'\').split(\', \').forEach(t=>{\n'
+        '            const p=t.trim().split(\' \'),l=p[p.length-1];\n'
+        '            if(/^\\d+$/.test(l)&&p.slice(0,-1).join(\' \').toUpperCase()===ab.toUpperCase())s[t.trim()]=true;\n'
+        '        });\n'
+        '    });\n'
+        '    const nm=Object.keys(s).sort((a,b)=>parseInt(b.split(\' \').pop())-parseInt(a.split(\' \').pop()));\n'
+        '    if(!nm.length)return\'\';\n'
+        '    const hl=state.form.selTargetName;\n'
+        '    return\'<div style="margin:4px 0 2px">\'+nm.map(n=>\'<button onclick="selectFormTarget(this.dataset.n)" data-n="\'+esc(n)+\'" class="btn-stencil" style="margin:2px;padding:2px 10px;font-size:0.82em\'+(hl===n?\';background:var(--green);box-shadow:0 0 0 1px var(--khaki)\':\'\')+\'">\'+ esc(n)+\'</button>\').join(\'\')+\'</div>\';\n'
+        '}\n'
+        'function addTargetToForm() {\n',
+        'form-target-list-helpers'
+    ))
+
+    # ── 80. Form: addTargetToForm — selTargetName logic ──
+    _late.append((
+        "    const abbr = state.form.newTarget;\n"
+        "    let fullName = '';\n"
+        "    if(abbr) {\n"
+        "        if(!state.counts[abbr]) state.counts[abbr]=0;\n"
+        "        state.counts[abbr]++;\n"
+        "        fullName = abbr + ' ' + state.counts[abbr];\n"
+        "    }\n"
+        "    state.form.targets.push({abbr, fullName, result: state.form.newResult});\n"
+        "    state.form.newTarget = '';\n"
+        "    state.form.newResult = '';",
+
+        "    const abbr = state.form.newTarget;\n"
+        "    let fullName = '';\n"
+        "    if(abbr) {\n"
+        "        if(state.form.selTargetName){\n"
+        "            fullName=state.form.selTargetName;\n"
+        "        }else{\n"
+        "            if(!state.counts[abbr]) state.counts[abbr]=0;\n"
+        "            state.counts[abbr]++;\n"
+        "            fullName = abbr + ' ' + state.counts[abbr];\n"
+        "        }\n"
+        "    }\n"
+        "    state.form.selTargetName='';\n"
+        "    state.form.targets.push({abbr, fullName, result: state.form.newResult});\n"
+        "    state.form.newTarget = '';\n"
+        "    state.form.newResult = '';",
+
+        'addTargetToForm-seltargetname'
+    ))
+
+    # ── 81. Form: HTML — ЦІЛЬ → список → РЕЗУЛЬТАТ (замість grid) ──
+    _old_fgrid = (
+        '<div class="grid gap-3" style="grid-template-columns: 1fr 1fr">\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2">ЦІЛЬ</label>\n'
+        '                        <select onchange="state.form.newTarget=this.value; if(this.value!==\'ОС\'&&!state.form.targets.some(t=>t.abbr===\'ОС\')){state.form.q200=0;state.form.q300=0;} render()" class="field">\n'
+        '                            <option value="">Виберіть...</option>\n'
+        '                            ${_freqSortTargets(Object.keys(state.scoreTable)).map(x=>`<option value="${esc(x)}" ${state.form.newTarget===x?\'selected\':\'\'}>${esc(x)}</option>`).join(\'\')}\n'
+        '                        </select>\n'
+        '                    </div>\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2">РЕЗУЛЬТАТ</label>\n'
+        '                        <div style="position:relative">\n'
+        '                        <select onchange="state.form.newResult=this.value; render()" class="field" style="padding-right:52px;background-position:calc(100% - 58px) 50%,calc(100% - 53px) 50%">\n'
+        '                            <option value="">Виберіть...</option>\n'
+        '                            ${_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?\'selected\':\'\'}>${esc(r)}</option>`).join(\'\')}\n'
+        '                        </select>\n'
+        '                        <button onclick="addTargetToForm()" onmousedown="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #1a3318\'" onmouseup="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\'" ontouchstart="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #1a3318\'" ontouchend="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\'" class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 10px;font-size:12px">+</button>\n'
+        '                        </div>\n'
+        '                    </div>\n'
+        '                </div>'
+    )
+    _new_fgrid = (
+        '<div>\n'
+        '                    <label class="label block mb-2">ЦІЛЬ</label>\n'
+        '                    <select onchange="state.form.newTarget=this.value; state.form.selTargetName=\'\'; if(this.value!==\'ОС\'&&!state.form.targets.some(t=>t.abbr===\'ОС\')){state.form.q200=0;state.form.q300=0;} render()" class="field">\n'
+        '                        <option value="">Виберіть...</option>\n'
+        '                        ${_freqSortTargets(Object.keys(state.scoreTable)).map(x=>`<option value="${esc(x)}" ${state.form.newTarget===x?\'selected\':\'\'}>${esc(x)}</option>`).join(\'\')}\n'
+        '                    </select>\n'
+        '                </div>\n'
+        '                ${_fmTgtList()}\n'
+        '                <div>\n'
+        '                    <label class="label block mb-2">РЕЗУЛЬТАТ</label>\n'
+        '                    <div style="position:relative">\n'
+        '                    <select onchange="state.form.newResult=this.value; render()" class="field" style="padding-right:52px;background-position:calc(100% - 58px) 50%,calc(100% - 53px) 50%">\n'
+        '                        <option value="">Виберіть...</option>\n'
+        '                        ${_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?\'selected\':\'\'}>${esc(r)}</option>`).join(\'\')}\n'
+        '                    </select>\n'
+        '                    <button onclick="addTargetToForm()" onmousedown="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #1a3318\'" onmouseup="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\'" ontouchstart="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #1a3318\'" ontouchend="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\'" class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 10px;font-size:12px">+</button>\n'
+        '                    </div>\n'
+        '                </div>'
+    )
+    if _old_fgrid in html:
+        html = html.replace(_old_fgrid, _new_fgrid, 1)
+        print("[OK]   form-target-list-html")
+    else:
+        print("[FAIL] form-target-list-html: old string not found")
+
+    # ── 82. Edit modal: selTargetName в state.editRecord ──
+    _late.append((
+        "        newResult: '',\n"
+        "        _orig: JSON.stringify",
+        "        newResult: '',\n"
+        "        selTargetName: '',\n"
+        "        _orig: JSON.stringify",
+        'editrecord-seltargetname-state'
+    ))
+
+    # ── 83. Edit modal: selectEditTarget helper ──
+    _late.append((
+        'function renderEditRecordModal() {\n',
+        'function selectEditTarget(n){\n'
+        '    if(!state.editRecord)return;\n'
+        '    state.editRecord.selTargetName=(state.editRecord.selTargetName===n?\'\':n);\n'
+        '    renderEditRecordModal();\n'
+        '}\n'
+        'function renderEditRecordModal() {\n',
+        'editrecord-selecttarget-fn'
+    ))
+
+    # ── 84. Edit modal: _erTgtList змінна в renderEditRecordModal ──
+    _late.append((
+        "const resOpts = _freqSortResults(state.results).map(r=>`<option value=\"${esc(r)}\" ${er.newResult===r?'selected':''}>${esc(r)}</option>`).join('');\n"
+        "    const _droneInList=",
+        "const resOpts = _freqSortResults(state.results).map(r=>`<option value=\"${esc(r)}\" ${er.newResult===r?'selected':''}>${esc(r)}</option>`).join('');\n"
+        "    const _erTgtList=(()=>{\n"
+        "        if(!er.newTarget)return'';\n"
+        "        const ab=er.newTarget,s={};\n"
+        "        state.records.forEach(r=>{ (r.target||'').split(', ').forEach(t=>{ const p=t.trim().split(' '),l=p[p.length-1]; if(/^\\d+$/.test(l)&&p.slice(0,-1).join(' ').toUpperCase()===ab.toUpperCase())s[t.trim()]=true; }); });\n"
+        "        er.targets.forEach(t=>{ const p=t.name.trim().split(' '),l=p[p.length-1]; if(/^\\d+$/.test(l)&&p.slice(0,-1).join(' ').toUpperCase()===ab.toUpperCase())s[t.name.trim()]=true; });\n"
+        "        const nm=Object.keys(s).sort((a,b)=>parseInt(b.split(' ').pop())-parseInt(a.split(' ').pop()));\n"
+        "        if(!nm.length)return'';\n"
+        "        const hl=er.selTargetName||'';\n"
+        "        return'<div style=\"margin:4px 0 2px\">'+nm.map(n=>'<button onclick=\"selectEditTarget(this.dataset.n)\" data-n=\"'+esc(n)+'\" class=\"btn-stencil\" style=\"margin:2px;padding:2px 10px;font-size:0.82em'+(hl===n?';background:var(--green);box-shadow:0 0 0 1px var(--khaki)':'')+'\">'+esc(n)+'</button>').join('')+'</div>';\n"
+        "    })();\n"
+        "    const _droneInList=",
+        'editrecord-tgtlist-var'
+    ))
+
+    # ── 85. Edit modal: HTML — список після grid ──
+    _late.append((
+        '<div class="grid gap-2" style="grid-template-columns:1fr 1fr auto">'
+        '<select onchange="state.editRecord.newTarget=this.value;renderEditRecordModal(true)" class="field">'
+        '<option value="">Ціль...</option>${scoreOpts}</select>'
+        '<select onchange="state.editRecord.newResult=this.value;renderEditRecordModal(true)" class="field">'
+        '<option value="">Результат...</option>${resOpts}</select>'
+        '<button onclick="addEditTarget()" class="btn-stencil btn-green" style="padding:0;font-size:22px;height:42px;min-width:42px">+</button></div>',
+
+        '<select onchange="state.editRecord.newTarget=this.value;state.editRecord.selTargetName=\'\';renderEditRecordModal(true)" class="field">'
+        '<option value="">Ціль...</option>${scoreOpts}</select>'
+        '${_erTgtList}'
+        '<div class="grid gap-2" style="grid-template-columns:1fr auto">'
+        '<select onchange="state.editRecord.newResult=this.value;renderEditRecordModal(true)" class="field">'
+        '<option value="">Результат...</option>${resOpts}</select>'
+        '<button onclick="addEditTarget()" class="btn-stencil btn-green" style="padding:0;font-size:22px;height:42px;min-width:42px">+</button></div>',
+
+        'editrecord-tgtlist-html'
+    ))
+
+    # ── 86. addEditTarget — selTargetName logic ──
+    _late.append((
+        "        name = abbr + ' ' + (maxN + 1);\n"
+        "    }\n"
+        "    er.targets.push({name, result: er.newResult});\n"
+        "    er.newTarget = ''; er.newResult = '';",
+
+        "        name = abbr + ' ' + (maxN + 1);\n"
+        "    }\n"
+        "    if(er.selTargetName){ name=er.selTargetName; }\n"
+        "    er.selTargetName='';\n"
+        "    er.targets.push({name, result: er.newResult});\n"
+        "    er.newTarget = ''; er.newResult = '';",
+
+        'addEditTarget-seltargetname'
+    ))
+
+    for old, new, name in _late:
+        if old in html:
+            html = html.replace(old, new, 1)
+            print(f"[OK]   Patch '{name}' applied")
+        else:
+            print(f"[WARN] Patch '{name}' not found in source — skipping")
+
     return html
 
 
