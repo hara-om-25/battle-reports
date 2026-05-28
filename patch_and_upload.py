@@ -1051,8 +1051,8 @@ def apply_patches(html):
         'function copyAllArchiveReport() {\n'
         '    const recs = state.allArchiveRecs;\n'
         '    if (!recs.length) return;\n'
-        '    const dates = recs.map(r => getDateOnly(r.datetime)).filter(Boolean).sort();\n'
-        '    const earliest = dates[0] || \'\';\n'
+        '    const _bd=state.archiveSheets.map(s=>{let m=s.match(/^(\\d{1,2})-(\\d{1,2})\\.(\\d{1,2})\\.(\\d{4})/);if(m)return{k:m[4]+m[3].padStart(2,\'0\')+m[1].padStart(2,\'0\'),d:m[1].padStart(2,\'0\')+\'.\'+m[3].padStart(2,\'0\')+\'.\'+m[4]};m=s.match(/^(\\d{1,2})\\.(\\d{1,2})-(\\d{1,2})\\.(\\d{1,2})\\.(\\d{4})/);if(m)return{k:m[5]+m[2].padStart(2,\'0\')+m[1].padStart(2,\'0\'),d:m[1].padStart(2,\'0\')+\'.\'+m[2].padStart(2,\'0\')+\'.\'+m[5]};return null;}).filter(Boolean);\n'
+        '    const earliest=_bd.length?_bd.reduce((a,b)=>a.k<b.k?a:b).d:(recs.map(r=>getDateOnly(r.datetime)).filter(Boolean).sort()[0]||\'\');\n'
         '    const lines = generateArchiveReport(recs, \'З \' + earliest + \' дотепер\');\n'
         '    navigator.clipboard.writeText(lines.join(\'\\n\')).catch(()=>{});\n'
         '}\n'
@@ -1203,8 +1203,8 @@ def apply_patches(html):
         "                _allSection='<div class=\"crate p-4\"><p class=\"stencil text-center py-4\" style=\"color:var(--text-dim)\">Завантаження всіх звітів...</p></div>';\n"
         "            } else if(state.allArchiveLoaded&&state.allArchiveRecs.length>0){\n"
         "                const _allRecs=state.allArchiveRecs;\n"
-        "                const _allDts=_allRecs.map(r=>getDateOnly(r.datetime)).filter(Boolean).sort();\n"
-        "                const _allEarliest=_allDts[0]||'';\n"
+        "                const _allBD=state.archiveSheets.map(s=>{let m=s.match(/^(\\d{1,2})-(\\d{1,2})\\.(\\d{1,2})\\.(\\d{4})/);if(m)return{k:m[4]+m[3].padStart(2,'0')+m[1].padStart(2,'0'),d:m[1].padStart(2,'0')+'.'+m[3].padStart(2,'0')+'.'+m[4]};m=s.match(/^(\\d{1,2})\\.(\\d{1,2})-(\\d{1,2})\\.(\\d{1,2})\\.(\\d{4})/);if(m)return{k:m[5]+m[2].padStart(2,'0')+m[1].padStart(2,'0'),d:m[1].padStart(2,'0')+'.'+m[2].padStart(2,'0')+'.'+m[5]};return null;}).filter(Boolean);\n"
+        "                const _allEarliest=_allBD.length?_allBD.reduce((a,b)=>a.k<b.k?a:b).d:(_allRecs.map(r=>getDateOnly(r.datetime)).filter(Boolean).sort()[0]||'');\n"
         "                const _allTotal=Math.round(_allRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n"
         "                const _allRptLines=generateArchiveReport(_allRecs,'З '+_allEarliest+' дотепер');\n"
         "                const _allRptBlock=`<div class=\"crate p-4\"><div class=\"flex justify-between items-center mb-3 flex-wrap gap-2\"><div style=\"display:flex;align-items:center;gap:1.5em;flex-wrap:wrap\"><h3 class=\"stencil-shadow\" style=\"color:var(--yellow)\">ПІДСУМКИ ЗА ВСІ ВИЇЗДИ З ${_allEarliest} ДОТЕПЕР</h3><span class=\"stencil\" style=\"color:var(--khaki)\">Уражено орієнтовно на <span style=\"color:var(--text)\">${_allTotal}</span> балів</span></div><div class=\"flex gap-2 flex-wrap\"><button onclick=\"copyAllArchiveReport()\" onmousedown=\"this.classList.add('active')\" onmouseup=\"this.classList.remove('active')\" ontouchstart=\"this.classList.add('active')\" ontouchend=\"this.classList.remove('active')\" class=\"btn-stencil btn-black\">КОПІЮВАТИ</button></div></div><div class=\"report-box\">${_allRptLines.join('\\n')}</div></div>`;\n"
