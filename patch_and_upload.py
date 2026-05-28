@@ -119,7 +119,7 @@ def apply_patches(html):
         "                const _tP=tgtTrim.split(' '),_tL=_tP[_tP.length-1];\n"
         "                const abbrDisp=/^\\d+$/.test(_tL)?_tP.slice(0,-1).join(' '):tgtTrim;\n"
         "                const _sce=Object.entries(state.scoreTable).find(([a,sc])=>a.toLowerCase()===abbrDisp.toLowerCase()||(sc.fullName&&sc.fullName.toLowerCase()===abbrDisp.toLowerCase()));\n"
-        "                const dispName=_sce?_sce[1].fullName:abbrDisp;\n"
+        "                const dispName=_sce?_sce[0]:abbrDisp;\n"
         "                const key=dispName.toUpperCase()+' '+res;\n"
         "                if(!otherGrouped[key])otherGrouped[key]={d:dispName,r:res,n:0};\n"
         "                otherGrouped[key].n++;\n"
