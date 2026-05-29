@@ -2212,23 +2212,37 @@ def apply_patches(html):
         'mobile-300-minwidth'
     ))
 
-    # ── 88. Mobile: КОПІЮВАТИ ПОПЕРЕДНІЙ — праворуч від дати, відступ ──
+    # ── 88. Mobile: КОПІЮВАТИ ПОПЕРЕДНІЙ — рядок 1: СЬОГОДНІ+ЦІЛІ+БАЛІВ; рядок 2: кнопка праворуч ──
     _late.append((
         '                <div class="stencil" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:var(--khaki)">\n'
         '                    <div style="display:flex;align-items:center">\n'
         '                        <span style="margin-right:2.5em">СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>\n'
         '                        <span style="margin-right:2em">ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>\n'
         '                        <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>\n'
-        '                    </div>',
+        '                    </div>\n'
+        '                    <button onclick="copyPrev()" '
+        'onmousedown="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
+        'onmouseup="this.style.background=\'\';this.style.transform=\'\'" '
+        'ontouchstart="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
+        'ontouchend="this.style.background=\'\';this.style.transform=\'\'" '
+        'class="btn-stencil" style="font-size:0.78em;padding:3px 10px">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>\n'
+        '                </div>',
 
-        '                <div class="stencil" style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;color:var(--khaki)">\n'
-        '                    <div style="display:flex;flex-direction:column;gap:4px">\n'
+        '                <div class="stencil" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;color:var(--khaki)">\n'
+        '                    <div style="display:flex;align-items:center;gap:1.5em">\n'
         '                        <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>\n'
-        '                        <div style="display:flex;gap:1.5em">\n'
         '                        <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>\n'
         '                        <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>\n'
-        '                        </div>\n'
-        '                    </div>',
+        '                    </div>\n'
+        '                    <div style="display:flex;justify-content:flex-end">\n'
+        '                    <button onclick="copyPrev()" '
+        'onmousedown="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
+        'onmouseup="this.style.background=\'\';this.style.transform=\'\'" '
+        'ontouchstart="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
+        'ontouchend="this.style.background=\'\';this.style.transform=\'\'" '
+        'class="btn-stencil" style="font-size:0.78em;padding:3px 10px">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>\n'
+        '                    </div>\n'
+        '                </div>',
 
         'mobile-copyprev-position'
     ))
