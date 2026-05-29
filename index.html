@@ -437,6 +437,10 @@ function showAlert(msg) {
     _ov.appendChild(_bx);
     document.body.appendChild(_ov);
     _ok.addEventListener('click', function() { document.body.removeChild(_ov); });
+    _ok.addEventListener('mousedown', function() { this.style.background='#5ab558'; });
+    _ok.addEventListener('mouseup', function() { this.style.background=''; });
+    _ok.addEventListener('touchstart', function() { this.style.background='#5ab558'; }, {passive:true});
+    _ok.addEventListener('touchend', function() { this.style.background=''; });
 }
 function login() { const _h=localStorage.getItem('email')||''; tokenClient.requestAccessToken(_h?{hint:_h}:{}); }
 
