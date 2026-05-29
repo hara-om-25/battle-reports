@@ -2461,6 +2461,16 @@ def apply_patches(html):
         'modal-cancel-press',
         True  # replace_all
     ))
+    # ── 97. showAlert: кнопка ОК — ефект натискання ──
+    _late.append((
+        "_ok.addEventListener('click', function() { document.body.removeChild(_ov); });",
+        "_ok.addEventListener('click', function() { document.body.removeChild(_ov); });\n"
+        "    _ok.addEventListener('mousedown', function() { this.style.background='#5ab558'; });\n"
+        "    _ok.addEventListener('mouseup', function() { this.style.background=''; });\n"
+        "    _ok.addEventListener('touchstart', function() { this.style.background='#5ab558'; }, {passive:true});\n"
+        "    _ok.addEventListener('touchend', function() { this.style.background=''; });",
+        'alert-ok-press'
+    ))
 
     for item in _late:
         old, new, name = item[0], item[1], item[2]
