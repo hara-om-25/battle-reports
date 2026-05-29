@@ -2175,6 +2175,26 @@ def apply_patches(html):
         'addEditTarget-seltargetname'
     ))
 
+    # ── 87. Mobile: MGRS/200/300 — MGRS на повну ширину, 200/300 нижче ──
+    _late.append((
+        'class="grid gap-4 mt-6" style="grid-template-columns: 2fr 1fr 1fr; border-top: 1px dashed var(--khaki); padding-top: 16px">\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2">MGRS</label>',
+
+        'class="grid gap-4 mt-6" style="grid-template-columns: 1fr 1fr; border-top: 1px dashed var(--khaki); padding-top: 16px">\n'
+        '                    <div style="grid-column:1/-1">\n'
+        '                        <label class="label block mb-2">MGRS</label>',
+
+        'mobile-mgrs-full-width'
+    ))
+
+    # ── 88. Mobile: КОПІЮВАТИ ПОПЕРЕДНІЙ — flex-wrap ──
+    _late.append((
+        ';align-items:center;justify-content:space-between;margin-bottom:8px;color:var(--khaki)">',
+        ';align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:8px;color:var(--khaki)">',
+        'mobile-copyprev-wrap'
+    ))
+
     for old, new, name in _late:
         if old in html:
             html = html.replace(old, new, 1)
