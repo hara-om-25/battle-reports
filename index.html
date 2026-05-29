@@ -1311,24 +1311,26 @@ function render() {
             </div>
             
             <div class="space-y-4">
-                <div>
-                    <label class="label block mb-2">ЦІЛЬ</label>
-                    <select onchange="state.form.newTarget=this.value; state.form.selTargetName=''; if(this.value!=='ОС'&&!state.form.targets.some(t=>t.abbr==='ОС')){state.form.q200=0;state.form.q300=0;} render()" class="field">
-                        <option value="">Виберіть...</option>
-                        ${_freqSortTargets(Object.keys(state.scoreTable)).map(x=>`<option value="${esc(x)}" ${state.form.newTarget===x?'selected':''}>${esc(x)}</option>`).join('')}
-                    </select>
-                </div>
-                ${_fmTgtList()}
-                <div>
-                    <label class="label block mb-2">РЕЗУЛЬТАТ</label>
-                    <div style="position:relative">
-                    <select onchange="state.form.newResult=this.value; render()" class="field" style="padding-right:52px;background-position:calc(100% - 58px) 50%,calc(100% - 53px) 50%">
-                        <option value="">Виберіть...</option>
-                        ${_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
-                    </select>
-                    <button onclick="addTargetToForm()" onmousedown="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318'" onmouseup="this.style.transform='translateY(-50%)';this.style.boxShadow=''" ontouchstart="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318'" ontouchend="this.style.transform='translateY(-50%)';this.style.boxShadow=''" class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 10px;font-size:12px">+</button>
+                <div class="grid gap-3" style="grid-template-columns: 1fr 1fr">
+                    <div>
+                        <label class="label block mb-2">ЦІЛЬ</label>
+                        <select onchange="state.form.newTarget=this.value; state.form.selTargetName=''; if(this.value!=='ОС'&&!state.form.targets.some(t=>t.abbr==='ОС')){state.form.q200=0;state.form.q300=0;} render()" class="field">
+                            <option value="">Виберіть...</option>
+                            ${_freqSortTargets(Object.keys(state.scoreTable)).map(x=>`<option value="${esc(x)}" ${state.form.newTarget===x?'selected':''}>${esc(x)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label block mb-2">РЕЗУЛЬТАТ</label>
+                        <div style="position:relative">
+                        <select onchange="state.form.newResult=this.value; render()" class="field" style="padding-right:52px;background-position:calc(100% - 58px) 50%,calc(100% - 53px) 50%">
+                            <option value="">Виберіть...</option>
+                            ${_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
+                        </select>
+                        <button onclick="addTargetToForm()" onmousedown="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318'" onmouseup="this.style.transform='translateY(-50%)';this.style.boxShadow=''" ontouchstart="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318'" ontouchend="this.style.transform='translateY(-50%)';this.style.boxShadow=''" class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 10px;font-size:12px">+</button>
+                        </div>
                     </div>
                 </div>
+                ${_fmTgtList()}
                 
                 <div class="grid gap-4 mt-6" style="grid-template-columns: 2fr 1fr 1fr; border-top: 1px dashed var(--khaki); padding-top: 16px">
                     <div>
