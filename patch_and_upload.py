@@ -2175,17 +2175,41 @@ def apply_patches(html):
         'addEditTarget-seltargetname'
     ))
 
-    # ── 87. Mobile: MGRS/200/300 — MGRS на повну ширину, 200/300 нижче ──
+    # ── 87. Mobile: MGRS/200/300 — 2fr 1fr 1fr в один рядок, min-width:0 ──
     _late.append((
         'class="grid gap-4 mt-6" style="grid-template-columns: 2fr 1fr 1fr; border-top: 1px dashed var(--khaki); padding-top: 16px">\n'
         '                    <div>\n'
         '                        <label class="label block mb-2">MGRS</label>',
 
-        'class="grid gap-4 mt-6" style="grid-template-columns: 1fr 1fr; border-top: 1px dashed var(--khaki); padding-top: 16px">\n'
-        '                    <div style="grid-column:1/-1">\n'
+        'class="grid gap-2 mt-6" style="grid-template-columns: 2fr 1fr 1fr; border-top: 1px dashed var(--khaki); padding-top: 16px">\n'
+        '                    <div style="min-width:0">\n'
         '                        <label class="label block mb-2">MGRS</label>',
 
         'mobile-mgrs-full-width'
+    ))
+
+    # ── 87b. Mobile: 200 та 300 divs — min-width:0 ──
+    _late.append((
+        '                    </div>\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2">200</label>',
+
+        '                    </div>\n'
+        '                    <div style="min-width:0">\n'
+        '                        <label class="label block mb-2">200</label>',
+
+        'mobile-200-minwidth'
+    ))
+    _late.append((
+        '                    </div>\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2">300</label>',
+
+        '                    </div>\n'
+        '                    <div style="min-width:0">\n'
+        '                        <label class="label block mb-2">300</label>',
+
+        'mobile-300-minwidth'
     ))
 
     # ── 88. Mobile: КОПІЮВАТИ ПОПЕРЕДНІЙ — flex-wrap ──
