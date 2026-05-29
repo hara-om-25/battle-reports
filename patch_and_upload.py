@@ -2234,13 +2234,13 @@ def apply_patches(html):
         '                        <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>\n'
         '                        <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>\n'
         '                    </div>\n'
-        '                    <div style="display:flex;justify-content:flex-end">\n'
+        '                    <div style="display:flex;justify-content:flex-end;margin-top:8px">\n'
         '                    <button onclick="copyPrev()" '
         'onmousedown="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
         'onmouseup="this.style.background=\'\';this.style.transform=\'\'" '
         'ontouchstart="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
         'ontouchend="this.style.background=\'\';this.style.transform=\'\'" '
-        'class="btn-stencil" style="font-size:0.78em;padding:3px 10px">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>\n'
+        'class="btn-stencil" style="font-size:0.78em;padding:3px 10px">ПОПЕРЕДНІЙ</button>\n'
         '                    </div>\n'
         '                </div>',
 
