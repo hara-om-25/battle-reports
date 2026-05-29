@@ -1296,8 +1296,8 @@ function render() {
                 <span style="color:var(--khaki)">ЗА ЗВІТНІЙ ПЕРІОД ЗДІЙСНЕНО <span style="color:var(--yellow)">${state.records.filter(r=>r.reportNum===state.report).length}</span> ВИЛЬОТІВ, ОРІЄНТОВНО НА <span style="color:var(--yellow)">${Math.round(state.records.filter(r=>r.reportNum===state.report).reduce((s,r)=>s+r.points,0))}</span> БАЛІВ</span>
             </div>
             
-            <div class="mb-6" style="border-top: 1px dashed var(--khaki); padding-top: 16px; margin-top: 16px">
-                <div class="stencil" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;color:var(--khaki)">
+            <div class="mb-2" style="border-top: 1px dashed var(--khaki); padding-top: 8px; margin-top: 8px">
+                <div class="stencil" style="display:flex;flex-direction:column;gap:6px;margin-bottom:4px;color:var(--khaki)">
                     <div style="display:flex;align-items:center;gap:1.5em">
                         <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>
                         <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>
