@@ -1303,7 +1303,7 @@ function render() {
                     <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>
                 </div>
                 <div class="space-y-2" style="max-height: 150px; overflow-y: auto">
-                    ${state.form.targets.map((t, i) => `<div class="list-item" style="display:flex; justify-content:space-between; align-items:center"><span>${esc(t.fullName)} - ${esc(t.result)} (${targetPoints[i]} балів)</span><button onclick="removeTargetFromForm(${i})" class="btn-stencil btn-danger" style="padding:4px 8px; font-size:12px">✕</button></div>`).join('')}
+                    ${state.form.targets.map((t, i) => `<div class="list-item" style="display:flex; justify-content:space-between; align-items:center"><span>${esc(t.fullName)} - ${esc(t.result)} (${targetPoints[i]} балів)</span><button onclick="removeTargetFromForm(${i})" onmousedown="this.style.transform='translateY(2px)';this.style.boxShadow='0 2px 0 #3d1810';this.style.background='#a04030'" onmouseup="this.style.transform='';this.style.boxShadow='';this.style.background=''" ontouchstart="this.style.transform='translateY(2px)';this.style.boxShadow='0 2px 0 #3d1810';this.style.background='#a04030'" ontouchend="this.style.transform='';this.style.boxShadow='';this.style.background=''" class="btn-stencil btn-danger" style="padding:4px 8px; font-size:12px">✕</button></div>`).join('')}
                 </div>
             </div>
             
@@ -1323,7 +1323,7 @@ function render() {
                             <option value="">Виберіть...</option>
                             ${_freqSortResults(state.results).map(r=>`<option value="${esc(r)}" ${state.form.newResult===r?'selected':''}>${esc(r)}</option>`).join('')}
                         </select>
-                        <button onclick="addTargetToForm()" onmousedown="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318';this.style.background='#2a5028'" onmouseup="this.style.transform='translateY(-50%)';this.style.boxShadow='';this.style.background=''" ontouchstart="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318';this.style.background='#2a5028'" ontouchend="this.style.transform='translateY(-50%)';this.style.boxShadow='';this.style.background=''" class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 10px;font-size:12px">+</button>
+                        <button onclick="addTargetToForm()" onmousedown="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318';this.style.background='#5ab558'" onmouseup="this.style.transform='translateY(-50%)';this.style.boxShadow='';this.style.background=''" ontouchstart="this.style.transform='translateY(calc(-50% + 2px))';this.style.boxShadow='0 2px 0 #1a3318';this.style.background='#5ab558'" ontouchend="this.style.transform='translateY(-50%)';this.style.boxShadow='';this.style.background=''" class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 10px;font-size:12px">+</button>
                         </div>
                     </div>
                 </div>
