@@ -1366,7 +1366,7 @@ function render() {
                             ${_freqSort(state.ammo,'ammo').map(a=>`<option value="${esc(a)}" ${state.form.ammo===a?'selected':''}>${esc(a)}</option>`).join('')}
                         </select>
                     </div>
-                    <div style="flex:0 0 auto">
+                    <div style="flex:0 0 auto;transform:translateY(-50%)">
                         <button onclick="copyPrev()" onmousedown="this.style.background='#9a9070';this.style.transform='translateY(2px)'" onmouseup="this.style.background='';this.style.transform=''" ontouchstart="this.style.background='#9a9070';this.style.transform='translateY(2px)'" ontouchend="this.style.background='';this.style.transform=''" class="btn-stencil" style="font-size:0.78em;padding:3px 10px;white-space:nowrap;display:block">ПОПЕРЕДНІЙ</button>
                     </div>
                 </div>
