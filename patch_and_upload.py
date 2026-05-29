@@ -2282,7 +2282,7 @@ def apply_patches(html):
         '${esc(a)}</option>`).join(\'\')}\n'
         '                        </select>\n'
         '                    </div>\n'
-        '                    <div style="flex:0 0 auto">\n'
+        '                    <div style="flex:0 0 auto;transform:translateY(-50%)">\n'
         '                        <button onclick="copyPrev()" '
         'onmousedown="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
         'onmouseup="this.style.background=\'\';this.style.transform=\'\'" '
