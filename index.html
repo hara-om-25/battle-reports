@@ -1297,11 +1297,13 @@ function render() {
             </div>
             
             <div class="mb-6" style="border-top: 1px dashed var(--khaki); padding-top: 16px; margin-top: 16px">
-                <div class="stencil" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:8px;color:var(--khaki)">
-                    <div style="display:flex;align-items:center">
-                        <span style="margin-right:2.5em">СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>
-                        <span style="margin-right:2em">ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>
+                <div class="stencil" style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;color:var(--khaki)">
+                    <div style="display:flex;flex-direction:column;gap:4px">
+                        <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>
+                        <div style="display:flex;gap:1.5em">
+                        <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>
                         <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>
+                        </div>
                     </div>
                     <button onclick="copyPrev()" onmousedown="this.style.background='#9a9070';this.style.transform='translateY(2px)'" onmouseup="this.style.background='';this.style.transform=''" ontouchstart="this.style.background='#9a9070';this.style.transform='translateY(2px)'" ontouchend="this.style.background='';this.style.transform=''" class="btn-stencil" style="font-size:0.78em;padding:3px 10px">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>
                 </div>
