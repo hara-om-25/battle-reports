@@ -2295,6 +2295,40 @@ def apply_patches(html):
         'form-copyprev-drone-row'
     ))
 
+    # ── 91. Кнопка "+": зміна кольору при натисканні ──
+    _late.append((
+        'onmousedown="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #1a3318\'" '
+        'onmouseup="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\'" '
+        'ontouchstart="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #1a3318\'" '
+        'ontouchend="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\'" '
+        'class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 10px;font-size:12px">+</button>',
+
+        'onmousedown="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #1a3318\';this.style.background=\'#2a5028\'" '
+        'onmouseup="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\';this.style.background=\'\'" '
+        'ontouchstart="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #1a3318\';this.style.background=\'#2a5028\'" '
+        'ontouchend="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\';this.style.background=\'\'" '
+        'class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 10px;font-size:12px">+</button>',
+
+        'form-plus-btn-press-color'
+    ))
+
+    # ── 92. Кнопка "↑" clipboard: зміна кольору при натисканні ──
+    _late.append((
+        'onmousedown="this.classList.add(\'active\')" '
+        'onmouseup="this.classList.remove(\'active\')" '
+        'ontouchstart="this.classList.add(\'active\')" '
+        'ontouchend="this.classList.remove(\'active\')" '
+        'class="btn-stencil" style="flex:0 0 auto;margin:4px 6px 4px 0;padding:4px 8px;font-size:12px" title="Вставити з буфера">&#x2B06;</button>',
+
+        'onmousedown="this.style.background=\'#9a9070\'" '
+        'onmouseup="this.style.background=\'\'" '
+        'ontouchstart="this.style.background=\'#9a9070\'" '
+        'ontouchend="this.style.background=\'\'" '
+        'class="btn-stencil" style="flex:0 0 auto;margin:4px 6px 4px 0;padding:4px 8px;font-size:12px" title="Вставити з буфера">&#x2B06;</button>',
+
+        'form-clipboard-btn-press-color'
+    ))
+
     for old, new, name in _late:
         if old in html:
             html = html.replace(old, new, 1)
