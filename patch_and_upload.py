@@ -2362,12 +2362,6 @@ def apply_patches(html):
         'edit-modal-300-minwidth'
     ))
 
-    # ── 94c. Edit modal: закрити зовнішній грід після 300 ──
-    _late.append((
-        '${q300opts}</select></div></div><div><label class="label block mb-1">ДРОН',
-        '${q300opts}</select></div></div></div><div><label class="label block mb-1">ДРОН',
-        'edit-modal-mgrs-grid-close'
-    ))
 
     # ── 95. Edit modal: ефекти натискання на всіх кнопках ──
     # ✓ зберегти (top)
