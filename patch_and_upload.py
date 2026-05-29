@@ -2341,6 +2341,83 @@ def apply_patches(html):
         'form-remove-target-press'
     ))
 
+    # ── 94a. Edit modal: MGRS+200+300 в один рядок — відкриття гріду ──
+    _late.append((
+        '<div><label class="label block mb-1">MGRS</label>'
+        '<input id="er_coord" oninput="saveEditModalState();checkEditDirty()" class="field" value="${esc(er.coordinates)}" placeholder="36U UA 24232 91610"/></div>'
+        '<div class="grid grid-cols-2 gap-2"><div>',
+
+        '<div class="grid gap-2" style="grid-template-columns:2fr 1fr 1fr">'
+        '<div style="min-width:0"><label class="label block mb-1">MGRS</label>'
+        '<input id="er_coord" oninput="saveEditModalState();checkEditDirty()" class="field" value="${esc(er.coordinates)}" placeholder="36U UA 24232 91610"/></div>'
+        '<div style="min-width:0">',
+
+        'edit-modal-mgrs-grid-open'
+    ))
+
+    # ── 94b. Edit modal: 300 div отримує min-width:0 ──
+    _late.append((
+        '${q200opts}</select></div><div><label class="label block mb-1">300',
+        '${q200opts}</select></div><div style="min-width:0"><label class="label block mb-1">300',
+        'edit-modal-300-minwidth'
+    ))
+
+    # ── 94c. Edit modal: закрити зовнішній грід після 300 ──
+    _late.append((
+        '${q300opts}</select></div></div><div><label class="label block mb-1">ДРОН',
+        '${q300opts}</select></div></div></div><div><label class="label block mb-1">ДРОН',
+        'edit-modal-mgrs-grid-close'
+    ))
+
+    # ── 95. Edit modal: ефекти натискання на всіх кнопках ──
+    # ✓ зберегти (top)
+    _late.append((
+        '<button id="edit-save-top" onclick="saveEditRecord()" class="btn-stencil btn-green"',
+        '<button id="edit-save-top" onclick="saveEditRecord()" '
+        'onmousedown="this.style.background=\'#5ab558\'" onmouseup="this.style.background=\'\'" '
+        'ontouchstart="this.style.background=\'#5ab558\'" ontouchend="this.style.background=\'\'" '
+        'class="btn-stencil btn-green"',
+        'edit-save-top-press'
+    ))
+    # ✕ закрити
+    _late.append((
+        '<button onclick="closeModal()" class="btn-stencil" style="padding:6px 14px;font-size:0.9em;opacity:0.6">&#10005;</button>',
+        '<button onclick="closeModal()" '
+        'onmousedown="this.style.background=\'#9a9070\'" onmouseup="this.style.background=\'\'" '
+        'ontouchstart="this.style.background=\'#9a9070\'" ontouchend="this.style.background=\'\'" '
+        'class="btn-stencil" style="padding:6px 14px;font-size:0.9em;opacity:0.6">&#10005;</button>',
+        'edit-close-press'
+    ))
+    # + додати ціль
+    _late.append((
+        '<button onclick="addEditTarget()" class="btn-stencil btn-green" style="padding:0;font-size:22px;height:42px;min-width:42px">+</button>',
+        '<button onclick="addEditTarget()" '
+        'onmousedown="this.style.background=\'#5ab558\'" onmouseup="this.style.background=\'\'" '
+        'ontouchstart="this.style.background=\'#5ab558\'" ontouchend="this.style.background=\'\'" '
+        'class="btn-stencil btn-green" style="padding:0;font-size:22px;height:42px;min-width:42px">+</button>',
+        'edit-add-target-press'
+    ))
+    # ✕ видалити ціль зі списку
+    _late.append((
+        'onclick="removeEditTarget(${i})" class="btn-stencil btn-danger" style="padding:2px 8px;font-size:12px">&#10005;</button>',
+        'onclick="removeEditTarget(${i})" '
+        'onmousedown="this.style.transform=\'translateY(2px)\';this.style.background=\'#a04030\'" '
+        'onmouseup="this.style.transform=\'\';this.style.background=\'\'" '
+        'ontouchstart="this.style.transform=\'translateY(2px)\';this.style.background=\'#a04030\'" '
+        'ontouchend="this.style.transform=\'\';this.style.background=\'\'" '
+        'class="btn-stencil btn-danger" style="padding:2px 8px;font-size:12px">&#10005;</button>',
+        'edit-remove-target-press'
+    ))
+    # ЗБЕРЕГТИ (bottom)
+    _late.append((
+        '<button id="edit-save-bottom" onclick="saveEditRecord()" class="btn-stencil btn-green w-full"',
+        '<button id="edit-save-bottom" onclick="saveEditRecord()" '
+        'onmousedown="this.style.background=\'#5ab558\'" onmouseup="this.style.background=\'\'" '
+        'ontouchstart="this.style.background=\'#5ab558\'" ontouchend="this.style.background=\'\'" '
+        'class="btn-stencil btn-green w-full"',
+        'edit-save-bottom-press'
+    ))
+
     for old, new, name in _late:
         if old in html:
             html = html.replace(old, new, 1)
