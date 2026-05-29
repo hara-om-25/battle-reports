@@ -2212,7 +2212,7 @@ def apply_patches(html):
         'mobile-300-minwidth'
     ))
 
-    # ── 88. Mobile: КОПІЮВАТИ ПОПЕРЕДНІЙ — рядок 1: СЬОГОДНІ+ЦІЛІ+БАЛІВ; рядок 2: кнопка праворуч ──
+    # ── 88. СЬОГОДНІ+ЦІЛІ+БАЛІВ — 1 рядок без кнопки ──
     _late.append((
         '                <div class="stencil" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:var(--khaki)">\n'
         '                    <div style="display:flex;align-items:center">\n'
@@ -2228,30 +2228,71 @@ def apply_patches(html):
         'class="btn-stencil" style="font-size:0.78em;padding:3px 10px">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>\n'
         '                </div>',
 
-        '                <div class="stencil" style="display:flex;flex-direction:column;gap:6px;margin-bottom:4px;color:var(--khaki)">\n'
-        '                    <div style="display:flex;align-items:center;gap:1.5em">\n'
-        '                        <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>\n'
-        '                        <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>\n'
-        '                        <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>\n'
-        '                    </div>\n'
-        '                    <div style="display:flex;justify-content:flex-end;margin-top:8px">\n'
-        '                    <button onclick="copyPrev()" '
-        'onmousedown="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
-        'onmouseup="this.style.background=\'\';this.style.transform=\'\'" '
-        'ontouchstart="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
-        'ontouchend="this.style.background=\'\';this.style.transform=\'\'" '
-        'class="btn-stencil" style="font-size:0.78em;padding:3px 10px">ПОПЕРЕДНІЙ</button>\n'
-        '                    </div>\n'
+        '                <div class="stencil" style="display:flex;align-items:center;gap:1.5em;margin-bottom:4px;color:var(--khaki)">\n'
+        '                    <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>\n'
+        '                    <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>\n'
+        '                    <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>\n'
         '                </div>',
 
-        'mobile-copyprev-position'
+        'form-stats-row'
     ))
 
-    # ── 89. Зменшити відстань між РЕЗУЛЬТАТ та ПОПЕРЕДНІЙ ──
+    # ── 89. Відновити відступи stats-блоку ──
     _late.append((
         '<div class="mb-6" style="border-top: 1px dashed var(--khaki); padding-top: 16px; margin-top: 16px">',
         '<div class="mb-2" style="border-top: 1px dashed var(--khaki); padding-top: 8px; margin-top: 8px">',
         'form-stats-margin'
+    ))
+
+    # ── 90. ПОПЕРЕДНІЙ кнопка в рядку ДРОН/БОЄПРИПАС ──
+    _late.append((
+        '                <div class="grid grid-cols-2 gap-4">\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2">ДРОН</label>\n'
+        '                        <select onchange="state.form.drone=this.value;render()" class="field">\n'
+        '                            <option value="">Виберіть...</option>\n'
+        '                            ${_freqSort(state.drones,\'drone\').map(d=>`<option value="${esc(d)}" ${state.form.drone===d?\'selected\':\'\'}>'+
+        '${esc(d)}</option>`).join(\'\')}\n'
+        '                        </select>\n'
+        '                    </div>\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2">БОЄПРИПАС</label>\n'
+        '                        <select onchange="state.form.ammo=this.value;render()" class="field">\n'
+        '                            <option value="">Виберіть...</option>\n'
+        '                            ${_freqSort(state.ammo,\'ammo\').map(a=>`<option value="${esc(a)}" ${state.form.ammo===a?\'selected\':\'\'}>'+
+        '${esc(a)}</option>`).join(\'\')}\n'
+        '                        </select>\n'
+        '                    </div>\n'
+        '                </div>',
+
+        '                <div class="grid gap-4" style="grid-template-columns:1fr 1fr auto;align-items:end">\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2">ДРОН</label>\n'
+        '                        <select onchange="state.form.drone=this.value;render()" class="field">\n'
+        '                            <option value="">Виберіть...</option>\n'
+        '                            ${_freqSort(state.drones,\'drone\').map(d=>`<option value="${esc(d)}" ${state.form.drone===d?\'selected\':\'\'}>'+
+        '${esc(d)}</option>`).join(\'\')}\n'
+        '                        </select>\n'
+        '                    </div>\n'
+        '                    <div>\n'
+        '                        <label class="label block mb-2">БОЄПРИПАС</label>\n'
+        '                        <select onchange="state.form.ammo=this.value;render()" class="field">\n'
+        '                            <option value="">Виберіть...</option>\n'
+        '                            ${_freqSort(state.ammo,\'ammo\').map(a=>`<option value="${esc(a)}" ${state.form.ammo===a?\'selected\':\'\'}>'+
+        '${esc(a)}</option>`).join(\'\')}\n'
+        '                        </select>\n'
+        '                    </div>\n'
+        '                    <div>\n'
+        '                        <button onclick="copyPrev()" '
+        'onmousedown="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
+        'onmouseup="this.style.background=\'\';this.style.transform=\'\'" '
+        'ontouchstart="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
+        'ontouchend="this.style.background=\'\';this.style.transform=\'\'" '
+        'class="btn-stencil" style="font-size:0.78em;padding:3px 10px;width:100%;height:42px;box-sizing:border-box">ПОПЕРЕДНІЙ</button>\n'
+        '                    </div>\n'
+        '                </div>',
+
+        'form-copyprev-drone-row'
     ))
 
     for old, new, name in _late:
