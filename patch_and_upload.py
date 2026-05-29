@@ -2228,7 +2228,7 @@ def apply_patches(html):
         'class="btn-stencil" style="font-size:0.78em;padding:3px 10px">КОПІЮВАТИ ПОПЕРЕДНІЙ</button>\n'
         '                </div>',
 
-        '                <div class="stencil" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;color:var(--khaki)">\n'
+        '                <div class="stencil" style="display:flex;flex-direction:column;gap:6px;margin-bottom:4px;color:var(--khaki)">\n'
         '                    <div style="display:flex;align-items:center;gap:1.5em">\n'
         '                        <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>\n'
         '                        <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>\n'
@@ -2245,6 +2245,13 @@ def apply_patches(html):
         '                </div>',
 
         'mobile-copyprev-position'
+    ))
+
+    # ── 89. Зменшити відстань між РЕЗУЛЬТАТ та ПОПЕРЕДНІЙ ──
+    _late.append((
+        '<div class="mb-6" style="border-top: 1px dashed var(--khaki); padding-top: 16px; margin-top: 16px">',
+        '<div class="mb-2" style="border-top: 1px dashed var(--khaki); padding-top: 8px; margin-top: 8px">',
+        'form-stats-margin'
     ))
 
     for old, new, name in _late:
