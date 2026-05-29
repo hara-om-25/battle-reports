@@ -2212,11 +2212,25 @@ def apply_patches(html):
         'mobile-300-minwidth'
     ))
 
-    # ── 88. Mobile: КОПІЮВАТИ ПОПЕРЕДНІЙ — flex-wrap ──
+    # ── 88. Mobile: КОПІЮВАТИ ПОПЕРЕДНІЙ — праворуч від дати, відступ ──
     _late.append((
-        ';align-items:center;justify-content:space-between;margin-bottom:8px;color:var(--khaki)">',
-        ';align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:8px;color:var(--khaki)">',
-        'mobile-copyprev-wrap'
+        '                <div class="stencil" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:var(--khaki)">\n'
+        '                    <div style="display:flex;align-items:center">\n'
+        '                        <span style="margin-right:2.5em">СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>\n'
+        '                        <span style="margin-right:2em">ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>\n'
+        '                        <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>\n'
+        '                    </div>',
+
+        '                <div class="stencil" style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;color:var(--khaki)">\n'
+        '                    <div style="display:flex;flex-direction:column;gap:4px">\n'
+        '                        <span>СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>\n'
+        '                        <div style="display:flex;gap:1.5em">\n'
+        '                        <span>ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>\n'
+        '                        <span>БАЛІВ (<span style="color:#ffffff">${totalPoints}</span>)</span>\n'
+        '                        </div>\n'
+        '                    </div>',
+
+        'mobile-copyprev-position'
     ))
 
     for old, new, name in _late:
