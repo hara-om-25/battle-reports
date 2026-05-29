@@ -2000,7 +2000,7 @@ def apply_patches(html):
         '    const ab=state.form.newTarget;\n'
         '    if(!ab)return\'\';\n'
         '    const s={};\n'
-        '    state.records.forEach(r=>{\n'
+        '    state.records.filter(r=>r.reportNum===state.report).forEach(r=>{\n'
         '        (r.target||\'\').split(\', \').forEach(t=>{\n'
         '            const p=t.trim().split(\' \'),l=p[p.length-1];\n'
         '            if(/^\\d+$/.test(l)&&p.slice(0,-1).join(\' \').toUpperCase()===ab.toUpperCase())s[t.trim()]=true;\n'
@@ -2125,7 +2125,7 @@ def apply_patches(html):
         "    const _erTgtList=(()=>{\n"
         "        if(!er.newTarget)return'';\n"
         "        const ab=er.newTarget,s={};\n"
-        "        state.records.forEach(r=>{ (r.target||'').split(', ').forEach(t=>{ const p=t.trim().split(' '),l=p[p.length-1]; if(/^\\d+$/.test(l)&&p.slice(0,-1).join(' ').toUpperCase()===ab.toUpperCase())s[t.trim()]=true; }); });\n"
+        "        state.records.filter(r=>r.reportNum===state.report).forEach(r=>{ (r.target||'').split(', ').forEach(t=>{ const p=t.trim().split(' '),l=p[p.length-1]; if(/^\\d+$/.test(l)&&p.slice(0,-1).join(' ').toUpperCase()===ab.toUpperCase())s[t.trim()]=true; }); });\n"
         "        er.targets.forEach(t=>{ const p=t.name.trim().split(' '),l=p[p.length-1]; if(/^\\d+$/.test(l)&&p.slice(0,-1).join(' ').toUpperCase()===ab.toUpperCase())s[t.name.trim()]=true; });\n"
         "        const nm=Object.keys(s).sort((a,b)=>parseInt(b.split(' ').pop())-parseInt(a.split(' ').pop()));\n"
         "        if(!nm.length)return'';\n"
