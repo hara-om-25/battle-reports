@@ -1297,7 +1297,7 @@ function render() {
             </div>
             
             <div class="mb-6" style="border-top: 1px dashed var(--khaki); padding-top: 16px; margin-top: 16px">
-                <div class="stencil" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:var(--khaki)">
+                <div class="stencil" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:8px;color:var(--khaki)">
                     <div style="display:flex;align-items:center">
                         <span style="margin-right:2.5em">СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>
                         <span style="margin-right:2em">ЦІЛІ (<span style="color:#ffffff">${state.form.targets.length}</span>)</span>
@@ -1332,8 +1332,8 @@ function render() {
                 </div>
                 ${_fmTgtList()}
                 
-                <div class="grid gap-4 mt-6" style="grid-template-columns: 2fr 1fr 1fr; border-top: 1px dashed var(--khaki); padding-top: 16px">
-                    <div>
+                <div class="grid gap-4 mt-6" style="grid-template-columns: 1fr 1fr; border-top: 1px dashed var(--khaki); padding-top: 16px">
+                    <div style="grid-column:1/-1">
                         <label class="label block mb-2">MGRS</label>
                         <div style="display:flex;align-items:center;border:2px solid var(--surface-light);border-radius:2px;background:rgba(0,0,0,0.3)">
                         <input id="form-coord" type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" style="flex:1;min-width:0;border:none;background:transparent;color:var(--text);padding:10px 12px;font-family:inherit;font-size:inherit;outline:none" />
