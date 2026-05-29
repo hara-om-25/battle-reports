@@ -772,7 +772,7 @@ function _fmTgtList(){
     const ab=state.form.newTarget;
     if(!ab)return'';
     const s={};
-    state.records.forEach(r=>{
+    state.records.filter(r=>r.reportNum===state.report).forEach(r=>{
         (r.target||'').split(', ').forEach(t=>{
             const p=t.trim().split(' '),l=p[p.length-1];
             if(/^\d+$/.test(l)&&p.slice(0,-1).join(' ').toUpperCase()===ab.toUpperCase())s[t.trim()]=true;
@@ -1019,7 +1019,7 @@ const tgtList = er.targets.length > 0
     const _erTgtList=(()=>{
         if(!er.newTarget)return'';
         const ab=er.newTarget,s={};
-        state.records.forEach(r=>{ (r.target||'').split(', ').forEach(t=>{ const p=t.trim().split(' '),l=p[p.length-1]; if(/^\d+$/.test(l)&&p.slice(0,-1).join(' ').toUpperCase()===ab.toUpperCase())s[t.trim()]=true; }); });
+        state.records.filter(r=>r.reportNum===state.report).forEach(r=>{ (r.target||'').split(', ').forEach(t=>{ const p=t.trim().split(' '),l=p[p.length-1]; if(/^\d+$/.test(l)&&p.slice(0,-1).join(' ').toUpperCase()===ab.toUpperCase())s[t.trim()]=true; }); });
         er.targets.forEach(t=>{ const p=t.name.trim().split(' '),l=p[p.length-1]; if(/^\d+$/.test(l)&&p.slice(0,-1).join(' ').toUpperCase()===ab.toUpperCase())s[t.name.trim()]=true; });
         const nm=Object.keys(s).sort((a,b)=>parseInt(b.split(' ').pop())-parseInt(a.split(' ').pop()));
         if(!nm.length)return'';
