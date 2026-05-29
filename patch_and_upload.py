@@ -2303,9 +2303,9 @@ def apply_patches(html):
         'ontouchend="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\'" '
         'class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 10px;font-size:12px">+</button>',
 
-        'onmousedown="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #1a3318\';this.style.background=\'#2a5028\'" '
+        'onmousedown="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #1a3318\';this.style.background=\'#5ab558\'" '
         'onmouseup="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\';this.style.background=\'\'" '
-        'ontouchstart="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #1a3318\';this.style.background=\'#2a5028\'" '
+        'ontouchstart="this.style.transform=\'translateY(calc(-50% + 2px))\';this.style.boxShadow=\'0 2px 0 #1a3318\';this.style.background=\'#5ab558\'" '
         'ontouchend="this.style.transform=\'translateY(-50%)\';this.style.boxShadow=\'\';this.style.background=\'\'" '
         'class="btn-stencil btn-green" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 10px;font-size:12px">+</button>',
 
@@ -2327,6 +2327,18 @@ def apply_patches(html):
         'class="btn-stencil" style="flex:0 0 auto;margin:4px 6px 4px 0;padding:4px 8px;font-size:12px" title="Вставити з буфера">&#x2B06;</button>',
 
         'form-clipboard-btn-press-color'
+    ))
+
+    # ── 93. Кнопка "×" у списку цілей: ефект натискання ──
+    _late.append((
+        'onclick="removeTargetFromForm(${i})" class="btn-stencil btn-danger" style="padding:4px 8px; font-size:12px">✕</button>',
+        'onclick="removeTargetFromForm(${i})" '
+        'onmousedown="this.style.transform=\'translateY(2px)\';this.style.boxShadow=\'0 2px 0 #3d1810\';this.style.background=\'#a04030\'" '
+        'onmouseup="this.style.transform=\'\';this.style.boxShadow=\'\';this.style.background=\'\'" '
+        'ontouchstart="this.style.transform=\'translateY(2px)\';this.style.boxShadow=\'0 2px 0 #3d1810\';this.style.background=\'#a04030\'" '
+        'ontouchend="this.style.transform=\'\';this.style.boxShadow=\'\';this.style.background=\'\'" '
+        'class="btn-stencil btn-danger" style="padding:4px 8px; font-size:12px">✕</button>',
+        'form-remove-target-press'
     ))
 
     for old, new, name in _late:
