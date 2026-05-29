@@ -2265,8 +2265,8 @@ def apply_patches(html):
         '                    </div>\n'
         '                </div>',
 
-        '                <div class="grid gap-4" style="grid-template-columns:1fr 1fr auto;align-items:end">\n'
-        '                    <div>\n'
+        '                <div style="display:flex;gap:1rem;align-items:flex-end">\n'
+        '                    <div style="flex:1;min-width:0">\n'
         '                        <label class="label block mb-2">ДРОН</label>\n'
         '                        <select onchange="state.form.drone=this.value;render()" class="field">\n'
         '                            <option value="">Виберіть...</option>\n'
@@ -2274,7 +2274,7 @@ def apply_patches(html):
         '${esc(d)}</option>`).join(\'\')}\n'
         '                        </select>\n'
         '                    </div>\n'
-        '                    <div>\n'
+        '                    <div style="flex:1;min-width:0">\n'
         '                        <label class="label block mb-2">БОЄПРИПАС</label>\n'
         '                        <select onchange="state.form.ammo=this.value;render()" class="field">\n'
         '                            <option value="">Виберіть...</option>\n'
@@ -2282,13 +2282,13 @@ def apply_patches(html):
         '${esc(a)}</option>`).join(\'\')}\n'
         '                        </select>\n'
         '                    </div>\n'
-        '                    <div>\n'
+        '                    <div style="flex:0 0 auto">\n'
         '                        <button onclick="copyPrev()" '
         'onmousedown="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
         'onmouseup="this.style.background=\'\';this.style.transform=\'\'" '
         'ontouchstart="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
         'ontouchend="this.style.background=\'\';this.style.transform=\'\'" '
-        'class="btn-stencil" style="font-size:0.78em;padding:3px 10px;height:42px;box-sizing:border-box;white-space:nowrap">ПОПЕРЕДНІЙ</button>\n'
+        'class="btn-stencil" style="font-size:0.78em;padding:3px 10px;white-space:nowrap;display:block">ПОПЕРЕДНІЙ</button>\n'
         '                    </div>\n'
         '                </div>',
 
