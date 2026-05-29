@@ -2288,7 +2288,7 @@ def apply_patches(html):
         'onmouseup="this.style.background=\'\';this.style.transform=\'\'" '
         'ontouchstart="this.style.background=\'#9a9070\';this.style.transform=\'translateY(2px)\'" '
         'ontouchend="this.style.background=\'\';this.style.transform=\'\'" '
-        'class="btn-stencil" style="font-size:0.78em;padding:3px 10px;width:100%;height:42px;box-sizing:border-box">ПОПЕРЕДНІЙ</button>\n'
+        'class="btn-stencil" style="font-size:0.78em;padding:3px 10px;height:42px;box-sizing:border-box;white-space:nowrap">ПОПЕРЕДНІЙ</button>\n'
         '                    </div>\n'
         '                </div>',
 
