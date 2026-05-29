@@ -2412,9 +2412,61 @@ def apply_patches(html):
         'edit-save-bottom-press'
     ))
 
-    for old, new, name in _late:
+    # ── 96. Всі діалогові вікна: ефекти натискання ──
+    _PRESS_GREEN  = 'onmousedown="this.style.background=\'#5ab558\'" onmouseup="this.style.background=\'\'" ontouchstart="this.style.background=\'#5ab558\'" ontouchend="this.style.background=\'\'" '
+    _PRESS_BLUE   = 'onmousedown="this.style.background=\'#4d7a9a\'" onmouseup="this.style.background=\'\'" ontouchstart="this.style.background=\'#4d7a9a\'" ontouchend="this.style.background=\'\'" '
+    _PRESS_CANCEL = 'onmousedown="this.style.background=\'#9a9070\'" onmouseup="this.style.background=\'\'" ontouchstart="this.style.background=\'#9a9070\'" ontouchend="this.style.background=\'\'" '
+    _PRESS_DANGER = ('onmousedown="this.style.transform=\'translateY(2px)\';this.style.background=\'#a04030\'" '
+                     'onmouseup="this.style.transform=\'\';this.style.background=\'\'" '
+                     'ontouchstart="this.style.transform=\'translateY(2px)\';this.style.background=\'#a04030\'" '
+                     'ontouchend="this.style.transform=\'\';this.style.background=\'\'" ')
+
+    # Списки: ДРОНИ / БОЄПРИПАС / РЕЗУЛЬТАТИ (btn-blue)
+    _late.append((
+        "<button onclick=\"addToList('drones');closeModal()\" class=\"btn-stencil btn-blue w-full\">ДРОНИ</button>",
+        "<button onclick=\"addToList('drones');closeModal()\" " + _PRESS_BLUE + "class=\"btn-stencil btn-blue w-full\">ДРОНИ</button>",
+        'modal-list-drones-press'
+    ))
+    _late.append((
+        "<button onclick=\"addToList('ammo');closeModal()\" class=\"btn-stencil btn-blue w-full\">БОЄПРИПАС</button>",
+        "<button onclick=\"addToList('ammo');closeModal()\" " + _PRESS_BLUE + "class=\"btn-stencil btn-blue w-full\">БОЄПРИПАС</button>",
+        'modal-list-ammo-press'
+    ))
+    _late.append((
+        "<button onclick=\"addToList('results');closeModal()\" class=\"btn-stencil btn-blue w-full\">РЕЗУЛЬТАТИ</button>",
+        "<button onclick=\"addToList('results');closeModal()\" " + _PRESS_BLUE + "class=\"btn-stencil btn-blue w-full\">РЕЗУЛЬТАТИ</button>",
+        'modal-list-results-press'
+    ))
+    # Списки: ЗБЕРЕГТИ (saveEdit)
+    _late.append((
+        '<button onclick="saveEdit()" class="btn-stencil btn-green w-full">ЗБЕРЕГТИ</button>',
+        '<button onclick="saveEdit()" ' + _PRESS_GREEN + 'class="btn-stencil btn-green w-full">ЗБЕРЕГТИ</button>',
+        'modal-lists-save-press'
+    ))
+    # Списки + вильоти: ВИДАЛИТИ (confirmDelete / confirmDeleteRecord)
+    _late.append((
+        '<button onclick="confirmDelete()" class="btn-stencil btn-danger w-full">ВИДАЛИТИ</button>',
+        '<button onclick="confirmDelete()" ' + _PRESS_DANGER + 'class="btn-stencil btn-danger w-full">ВИДАЛИТИ</button>',
+        'modal-lists-delete-press'
+    ))
+    _late.append((
+        '<button onclick="confirmDeleteRecord()" class="btn-stencil btn-danger w-full">ВИДАЛИТИ</button>',
+        '<button onclick="confirmDeleteRecord()" ' + _PRESS_DANGER + 'class="btn-stencil btn-danger w-full">ВИДАЛИТИ</button>',
+        'modal-record-delete-press'
+    ))
+    # СКАСУВАТИ — однаковий рядок у всіх модалках, замінюємо всі одразу
+    _late.append((
+        '<button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button>',
+        '<button onclick="closeModal()" ' + _PRESS_CANCEL + 'class="btn-stencil w-full">СКАСУВАТИ</button>',
+        'modal-cancel-press',
+        True  # replace_all
+    ))
+
+    for item in _late:
+        old, new, name = item[0], item[1], item[2]
+        replace_all = item[3] if len(item) > 3 else False
         if old in html:
-            html = html.replace(old, new, 1)
+            html = html.replace(old, new) if replace_all else html.replace(old, new, 1)
             print(f"[OK]   Patch '{name}' applied")
         else:
             print(f"[WARN] Patch '{name}' not found in source — skipping")
