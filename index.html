@@ -1252,7 +1252,7 @@ function copyZvityAllReport() {
     const _p=(m1===m2&&y1===y2)?d1+'-'+d2+'.'+m1+'.'+y1+'р.':(y1===y2)?d1+'.'+m1+'-'+d2+'.'+m2+'.'+y1+'р.':_zd[0]+'р. — '+_zd[_zd.length-1]+'р.';
     const _zvT2=Math.round(_recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     const lines=generateArchiveReport(_recs,_p);
-    lines.push('Загалом, орієнтовно уражено на '+_zvT2+' балів');
+    lines.push('Загалом уражено, орієнтовно на '+_zvT2+' балів');
     navigator.clipboard.writeText(lines.join('\n')).catch(()=>{});
     showAlert('✅ Скопійовано!');
 }
@@ -1559,7 +1559,7 @@ function render() {
             const _zvP=(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1+'р.':(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1+'р.':_zvD[0]+'р. — '+_zvD[_zvD.length-1]+'р.';
             const _zvT=Math.round(_zvR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
             const _zvL=generateArchiveReport(_zvR,_zvP);
-            _zvL.push('Загалом, орієнтовно уражено на '+_zvT+' балів');
+            _zvL.push('Загалом уражено, орієнтовно на '+_zvT+' балів');
             h+='<div class="p-4 zvity-wrap">'
              +'<div class="crate p-4">'
              +'<div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
