@@ -2472,6 +2472,71 @@ def apply_patches(html):
         'alert-ok-press'
     ))
 
+    # ── 98a. copyZvityAllReport() — копіювати ДОПОВІДЬ за весь період (ЗВІТИ) ──
+    _late.append((
+        "    navigator.clipboard.writeText(lines.join('\\n'));\n"
+        "    showAlert('✅ Скопійовано!');\n"
+        "}\n"
+        "\n"
+        "function getAbbr()",
+        "    navigator.clipboard.writeText(lines.join('\\n'));\n"
+        "    showAlert('✅ Скопійовано!');\n"
+        "}\n"
+        "\n"
+        "function copyZvityAllReport() {\n"
+        "    const _recs=state.records;\n"
+        "    if(!_recs.length)return;\n"
+        "    const _toYMD=s=>{const[d,m,y]=s.split('.');return y+m.padStart(2,'0')+d.padStart(2,'0');};\n"
+        "    const _zd=[...new Set(_recs.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_toYMD(a).localeCompare(_toYMD(b)));\n"
+        "    const[d1,m1,y1]=_zd[0].split('.'),[d2,m2,y2]=_zd[_zd.length-1].split('.');\n"
+        "    const _p=(m1===m2&&y1===y2)?d1+'-'+d2+'.'+m1+'.'+y1+'р.':(y1===y2)?d1+'.'+m1+'-'+d2+'.'+m2+'.'+y1+'р.':_zd[0]+'р. — '+_zd[_zd.length-1]+'р.';\n"
+        "    const lines=generateArchiveReport(_recs,_p);\n"
+        "    navigator.clipboard.writeText(lines.join('\\n')).catch(()=>{});\n"
+        "    showAlert('✅ Скопійовано!');\n"
+        "}\n"
+        "\n"
+        "function getAbbr()",
+        'zvity-copy-all-report-fn'
+    ))
+
+    # ── 98b. ДОПОВІДЬ ЗА ВЕСЬ ПЕРІОД — блок внизу сторінки ЗВІТИ ──
+    _late.append((
+        "        </div>`;\n"
+        "    }\n"
+        "    \n"
+        "    app.innerHTML = h;\n"
+        "}",
+        "        </div>`;\n"
+        "    }\n"
+        "    if(state.page==='reports'&&state.records.length>0){\n"
+        "        const _zvR=state.records;\n"
+        "        const _toYMD2=s=>{const[d,m,y]=s.split('.');return y+m.padStart(2,'0')+d.padStart(2,'0');};\n"
+        "        const _zvD=[...new Set(_zvR.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_toYMD2(a).localeCompare(_toYMD2(b)));\n"
+        "        if(_zvD.length){\n"
+        "            const[_d1,_m1,_y1]=_zvD[0].split('.'),[_d2,_m2,_y2]=_zvD[_zvD.length-1].split('.');\n"
+        "            const _zvP=(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1+'р.':(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1+'р.':_zvD[0]+'р. — '+_zvD[_zvD.length-1]+'р.';\n"
+        "            const _zvT=Math.round(_zvR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n"
+        "            const _zvL=generateArchiveReport(_zvR,_zvP);\n"
+        "            h+='<div class=\"p-4 zvity-wrap\">'\n"
+        "             +'<div class=\"crate p-4\">'\n"
+        "             +'<div class=\"flex justify-between items-center mb-3 flex-wrap gap-2\">'\n"
+        "             +'<div style=\"display:flex;align-items:center;gap:1.5em;flex-wrap:wrap\">'\n"
+        "             +'<h3 class=\"stencil-shadow\" style=\"color:var(--yellow)\">ДОПОВІДЬ ЗА ВЕСЬ ПЕРІОД</h3>'\n"
+        "             +'<span class=\"stencil\" style=\"color:var(--khaki)\">Уражено орієнтовно на <span style=\"color:var(--text)\">'+_zvT+'</span> балів</span>'\n"
+        "             +'</div>'\n"
+        "             +'<div class=\"flex gap-2 flex-wrap\">'\n"
+        "             +'<button onclick=\"copyZvityAllReport()\" onmousedown=\"this.classList.add(\\'active\\')\" onmouseup=\"this.classList.remove(\\'active\\')\" ontouchstart=\"this.classList.add(\\'active\\')\" ontouchend=\"this.classList.remove(\\'active\\')\" class=\"btn-stencil btn-black\">КОПІЮВАТИ</button>'\n"
+        "             +'</div></div>'\n"
+        "             +'<div class=\"report-box\">'+_zvL.join('\\n')+'</div>'\n"
+        "             +'</div></div>';\n"
+        "        }\n"
+        "    }\n"
+        "    \n"
+        "    app.innerHTML = h;\n"
+        "}",
+        'zvity-all-report-block'
+    ))
+
     for item in _late:
         old, new, name = item[0], item[1], item[2]
         replace_all = item[3] if len(item) > 3 else False
