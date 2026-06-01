@@ -124,8 +124,10 @@ body {
 .dropzone {
   border: 2px dashed var(--blue);
   border-radius: 3px;
-  padding: 12px 10px;
-  text-align: center;
+  padding: 9px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   cursor: pointer;
   background: rgba(42,80,128,.05);
   transition: .15s;
@@ -135,22 +137,22 @@ body {
 .dropzone:hover { border-color:var(--blue2); background:rgba(42,80,128,.1); }
 .dropzone.over  { border-color:var(--yellow); background:rgba(212,184,26,.08); }
 .dropzone input { display:none; }
-.dz-icon { font-size:1.4em; display:block; margin-bottom:3px; }
+.dz-icon { font-size:1.3em; flex-shrink:0; }
 .dz-main {
   font-family:'Tektur', serif;
-  letter-spacing:.07em; font-size:.88em;
-  color:var(--text); margin-bottom:1px;
+  letter-spacing:.05em; font-size:.88em;
+  color:var(--text);
 }
 .dz-sub { font-size:.75em; color:var(--dim); }
 
 /* ── FILE LIST ───────────────────────────────────── */
-.flist { max-height:120px; overflow-y:auto; }
+.flist { max-height:100px; overflow-y:auto; }
 .fi {
-  display:flex; align-items:center; gap:8px;
-  padding:7px 10px;
+  display:flex; align-items:center; gap:6px;
+  padding:4px 8px;
   background:rgba(0,0,0,.25);
   border:1px solid var(--surf2);
-  border-radius:2px; margin-bottom:4px;
+  border-radius:2px; margin-bottom:3px;
   transition:.1s;
 }
 .fi:hover { border-color:var(--blue); }
@@ -357,8 +359,7 @@ mark {
       <div class="dropzone" id="dz">
         <input type="file" id="fi" multiple accept=".docx">
         <span class="dz-icon">📄</span>
-        <div class="dz-main">Перетягніть .docx файли</div>
-        <div class="dz-sub">або натисніть для вибору</div>
+        <div><div class="dz-main">Натисніть або перетягніть .docx</div></div>
       </div>
       <div class="flist" id="flist"></div>
       <div class="sline" id="lstatus"></div>
