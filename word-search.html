@@ -91,14 +91,14 @@ body {
 .lay {
   display: grid;
   grid-template-columns: 400px 1fr;
+  grid-template-rows: 1fr;
   gap: 16px;
   padding: 18px;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
 }
 .left-col { overflow-y: auto; min-height: 0; }
-@media(max-width:900px){ .lay{ grid-template-columns:1fr; overflow-y:auto; } }
+@media(max-width:900px){ .lay{ grid-template-columns:1fr; grid-template-rows:auto auto; } }
 
 /* ── CRATE (panel) ───────────────────────────────── */
 .crate {
@@ -273,7 +273,7 @@ body {
   border-radius:4px; padding:18px 20px;
   position:relative;
   box-shadow:0 4px 14px rgba(0,0,0,.45);
-  height: 100%;
+  overflow: hidden;
   min-height: 0;
 }
 .rpnl::before {
