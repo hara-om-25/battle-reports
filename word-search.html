@@ -2,10 +2,11 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
 <title>ПОШУК · WORD ФАЙЛИ</title>
-<link href="https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@400;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@400;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap');
 :root {
   --bg:       #171b22;
   --surface:  #1e2535;
@@ -21,7 +22,7 @@
   --danger:   #6b2a1a;
   --danger2:  #9c4530;
 }
-* { font-family: 'JetBrains Mono', monospace; box-sizing: border-box; margin:0; padding:0; }
+* { font-family: 'JetBrains Mono', 'Courier New', monospace; box-sizing: border-box; margin:0; padding:0; }
 body {
   background: var(--bg);
   background-image:
@@ -29,61 +30,62 @@ body {
     radial-gradient(circle at 85% 75%, rgba(212,184,26,.05) 0%, transparent 50%);
   color: var(--text);
   min-height: 100vh;
+  font-size: 17px;
 }
 
 /* ── TYPOGRAPHY ──────────────────────────────────── */
-.stencil       { font-family:'Stardos Stencil',serif; letter-spacing:.07em; }
+.stencil       { font-family:'Stardos Stencil',Impact,serif; letter-spacing:.07em; }
 .stencil-title {
-  font-family:'Stardos Stencil',serif;
+  font-family:'Stardos Stencil',Impact,serif;
   letter-spacing:.15em;
   text-shadow: 2px 2px 0 rgba(0,0,0,.45), 4px 4px 0 rgba(0,0,0,.2);
 }
 .label {
-  font-family:'Stardos Stencil',serif;
+  font-family:'Stardos Stencil',Impact,serif;
   letter-spacing:.1em;
   color: var(--slate);
-  font-size:.8em;
+  font-size:.88em;
   text-transform:uppercase;
   display:block;
-  margin-bottom:8px;
+  margin-bottom:10px;
 }
 
 /* ── HEADER ──────────────────────────────────────── */
 .hdr {
   background: var(--surface);
   border-bottom: 2px solid var(--blue);
-  padding: 11px 20px;
+  padding: 14px 24px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   box-shadow: 0 2px 10px rgba(0,0,0,.5);
 }
-.hdr-ico { font-size:1.5em; line-height:1; }
-.hdr-t   { font-size:1.25em; color:var(--yellow); }
+.hdr-ico { font-size:1.6em; line-height:1; }
+.hdr-t   { font-size:1.5em; color:var(--yellow); }
 .stamp {
-  font-family:'Stardos Stencil',serif;
+  font-family:'Stardos Stencil',Impact,serif;
   border: 2px solid var(--yellow);
   color: var(--yellow);
-  padding: 1px 7px;
+  padding: 2px 8px;
   letter-spacing:.12em;
   transform: rotate(-2deg);
   text-shadow: 1px 1px 0 rgba(0,0,0,.5);
-  font-size:.6em;
+  font-size:.65em;
   display:inline-block;
   vertical-align:middle;
   margin-left:4px;
 }
-.hdr-sub { margin-left:auto; font-size:.7em; color:var(--dim); letter-spacing:.06em; }
+.hdr-sub { margin-left:auto; font-size:.78em; color:var(--dim); letter-spacing:.06em; }
 
 /* ── LAYOUT ──────────────────────────────────────── */
 .lay {
   display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 14px;
-  padding: 16px;
-  min-height: calc(100vh - 48px);
+  grid-template-columns: 400px 1fr;
+  gap: 16px;
+  padding: 18px;
+  min-height: calc(100vh - 58px);
 }
-@media(max-width:760px){ .lay{ grid-template-columns:1fr; } }
+@media(max-width:900px){ .lay{ grid-template-columns:1fr; } }
 
 /* ── CRATE (panel) ───────────────────────────────── */
 .crate {
@@ -91,8 +93,8 @@ body {
   border: 2px solid var(--blue);
   border-radius: 4px;
   position: relative;
-  padding: 14px 16px;
-  margin-bottom: 14px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
   box-shadow: 0 4px 14px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.04);
 }
 .crate:last-child { margin-bottom:0; }
@@ -108,42 +110,42 @@ body {
 .dropzone {
   border: 2px dashed var(--blue);
   border-radius: 3px;
-  padding: 18px 10px;
+  padding: 26px 14px;
   text-align: center;
   cursor: pointer;
   background: rgba(42,80,128,.05);
   transition: .15s;
   user-select: none;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 .dropzone:hover { border-color:var(--blue2); background:rgba(42,80,128,.1); }
 .dropzone.over  { border-color:var(--yellow); background:rgba(212,184,26,.08); }
 .dropzone input { display:none; }
-.dz-icon { font-size:1.7em; display:block; margin-bottom:5px; }
+.dz-icon { font-size:2em; display:block; margin-bottom:7px; }
 .dz-main {
-  font-family:'Stardos Stencil',serif;
-  letter-spacing:.07em; font-size:.9em;
-  color:var(--text); margin-bottom:2px;
+  font-family:'Stardos Stencil',Impact,serif;
+  letter-spacing:.07em; font-size:1em;
+  color:var(--text); margin-bottom:4px;
 }
-.dz-sub { font-size:.74em; color:var(--dim); }
+.dz-sub { font-size:.82em; color:var(--dim); }
 
 /* ── FILE LIST ───────────────────────────────────── */
-.flist { max-height:152px; overflow-y:auto; }
+.flist { max-height:180px; overflow-y:auto; }
 .fi {
-  display:flex; align-items:center; gap:6px;
-  padding:5px 8px;
+  display:flex; align-items:center; gap:8px;
+  padding:7px 10px;
   background:rgba(0,0,0,.25);
   border:1px solid var(--surf2);
-  border-radius:2px; margin-bottom:3px;
+  border-radius:2px; margin-bottom:4px;
   transition:.1s;
 }
 .fi:hover { border-color:var(--blue); }
-.fi-n { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.8em; }
-.fi-c { font-size:.7em; color:var(--dim); white-space:nowrap; }
+.fi-n { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.88em; }
+.fi-c { font-size:.78em; color:var(--dim); white-space:nowrap; }
 .fi-r {
   cursor:pointer; background:none; border:none;
-  color:var(--dim); font-size:.78em; padding:2px 5px;
-  border-radius:2px; font-family:'JetBrains Mono',monospace;
+  color:var(--dim); font-size:.85em; padding:3px 6px;
+  border-radius:2px; font-family:'JetBrains Mono','Courier New',monospace;
 }
 .fi-r:hover { color:var(--danger2); background:rgba(100,40,20,.2); }
 
@@ -153,27 +155,27 @@ body {
   border: 2px solid var(--surf2);
   border-radius: 2px;
   color: var(--text);
-  padding: 7px 10px;
+  padding: 10px 12px;
   width: 100%;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: .88em;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: .94em;
   transition: border-color .1s;
 }
 .field:focus     { border-color:var(--blue2); outline:none; }
 .field::placeholder { color:var(--dim); }
-.field-sm { width:56px; text-align:center; padding:5px 6px; }
+.field-sm { width:68px; text-align:center; padding:7px 8px; }
 
 /* ── KEYWORD ROW ─────────────────────────────────── */
-.kwr { display:flex; gap:5px; margin-bottom:5px; }
+.kwr { display:flex; gap:6px; margin-bottom:7px; }
 
 /* ── BUTTONS ─────────────────────────────────────── */
 .btn {
   background: var(--blue);
   border: 2px solid var(--blue2);
   color: var(--text);
-  font-family: 'Stardos Stencil', serif;
+  font-family: 'Stardos Stencil', Impact, serif;
   letter-spacing: .1em;
-  padding: 8px 14px;
+  padding: 10px 18px;
   border-radius: 2px;
   cursor: pointer;
   transition: all .1s;
@@ -183,65 +185,65 @@ body {
 .btn:hover:not(:disabled)   { background:var(--blue2); }
 .btn:active:not(:disabled)  { transform:translateY(2px); box-shadow:0 2px 0 var(--blue-dk),0 3px 7px rgba(0,0,0,.4); }
 .btn:disabled               { opacity:.4; cursor:not-allowed; }
-.btn-full  { width:100%; font-size:1em; padding:10px; }
+.btn-full  { width:100%; font-size:1.05em; padding:13px; }
 .btn-yellow {
   background:var(--yellow); border-color:#f4d942;
   color:#1a1a10; box-shadow:0 4px 0 var(--yel-dim),0 5px 10px rgba(0,0,0,.4);
   text-shadow:none;
 }
 .btn-yellow:hover:not(:disabled) { background:#f4d942; }
-.btn-sm    { padding:4px 12px; font-size:.72em; letter-spacing:.08em; box-shadow:0 3px 0 var(--blue-dk); }
+.btn-sm    { padding:6px 14px; font-size:.78em; letter-spacing:.08em; box-shadow:0 3px 0 var(--blue-dk); }
 .btn-ghost {
   background:rgba(0,0,0,.15);
   border:1px solid var(--surf2);
   color:var(--dim);
-  font-family:'JetBrains Mono',monospace;
-  font-size:.85em; letter-spacing:0;
+  font-family:'JetBrains Mono','Courier New',monospace;
+  font-size:.9em; letter-spacing:0;
   box-shadow:none; text-shadow:none;
-  padding:6px 10px;
+  padding:8px 12px;
 }
 .btn-ghost:hover { border-color:var(--blue2); color:var(--blue2); }
 .btn-ghost.del:hover { border-color:var(--danger2); color:var(--danger2); }
 .add-kw-link {
-  font-size:.75em; color:var(--dim); cursor:pointer;
-  background:none; border:none; font-family:'JetBrains Mono',monospace;
-  padding:2px 0; letter-spacing:.03em;
+  font-size:.82em; color:var(--dim); cursor:pointer;
+  background:none; border:none; font-family:'JetBrains Mono','Courier New',monospace;
+  padding:3px 0; letter-spacing:.03em;
 }
 .add-kw-link:hover { color:var(--blue2); }
 
 /* ── TOGGLES ─────────────────────────────────────── */
 .tg { display:flex; border:2px solid var(--surf2); border-radius:2px; overflow:hidden; }
 .tb {
-  padding:4px 13px; cursor:pointer;
+  padding:7px 16px; cursor:pointer;
   background:rgba(0,0,0,.2); border:none;
   color:var(--dim);
-  font-family:'Stardos Stencil',serif;
-  font-size:.8em; letter-spacing:.1em;
+  font-family:'Stardos Stencil',Impact,serif;
+  font-size:.88em; letter-spacing:.1em;
   transition:.1s;
 }
 .tb.act { background:var(--blue); color:var(--text); }
 
 /* ── CHECKBOXES ──────────────────────────────────── */
 .copt {
-  display:flex; align-items:center; gap:5px;
-  font-size:.78em; color:var(--dim); cursor:pointer;
-  padding:4px 9px;
+  display:flex; align-items:center; gap:7px;
+  font-size:.86em; color:var(--dim); cursor:pointer;
+  padding:7px 11px;
   border:1px solid var(--surf2); border-radius:2px;
   transition:.1s; user-select:none;
 }
 .copt:hover { border-color:var(--blue); color:var(--text); }
-.copt input { cursor:pointer; accent-color:var(--blue2); }
+.copt input { cursor:pointer; accent-color:var(--blue2); width:16px; height:16px; }
 
 /* ── OPTION ROWS ─────────────────────────────────── */
-.opts { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 8px; }
+.opts { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 10px; }
 .crow {
-  display:flex; align-items:center; gap:7px;
-  font-size:.78em; color:var(--dim); margin-bottom:7px;
+  display:flex; align-items:center; gap:8px;
+  font-size:.86em; color:var(--dim); margin-bottom:9px;
 }
-.divider { border:none; border-top:1px solid var(--surf2); margin:12px 0; }
+.divider { border:none; border-top:1px solid var(--surf2); margin:14px 0; }
 
 /* ── STATUS ──────────────────────────────────────── */
-.sline { font-size:.74em; color:var(--dim); margin-top:5px; min-height:14px; }
+.sline { font-size:.82em; color:var(--dim); margin-top:6px; min-height:16px; }
 .sline.ok { color:var(--blue2); }
 .sline.er { color:var(--danger2); }
 
@@ -255,61 +257,61 @@ body {
   display:flex; flex-direction:column;
   background:var(--surface);
   border:2px solid var(--blue);
-  border-radius:4px; padding:14px 16px;
+  border-radius:4px; padding:18px 20px;
   position:relative;
   box-shadow:0 4px 14px rgba(0,0,0,.45);
-  min-height:calc(100vh - 80px);
+  min-height:calc(100vh - 94px);
 }
 .rpnl::before {
   content:''; position:absolute; inset:-1px;
   border:1px dashed rgba(74,120,176,.22);
   border-radius:4px; pointer-events:none;
 }
-.rh { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
-.rstat { font-size:.8em; color:var(--dim); }
+.rh { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+.rstat { font-size:.88em; color:var(--dim); }
 .rstat b { color:var(--yellow); }
-.exr { display:flex; gap:6px; margin-left:auto; }
-.rbody { flex:1; overflow-y:auto; max-height:calc(100vh - 140px); }
+.exr { display:flex; gap:7px; margin-left:auto; }
+.rbody { flex:1; overflow-y:auto; max-height:calc(100vh - 160px); }
 
 /* ── EMPTY STATE ─────────────────────────────────── */
-.empty { text-align:center; padding:50px 20px; color:var(--dim); }
-.empty .ei { font-size:2.2em; margin-bottom:10px; }
-.empty p { font-size:.83em; line-height:1.8; }
+.empty { text-align:center; padding:60px 20px; color:var(--dim); }
+.empty .ei { font-size:2.6em; margin-bottom:12px; }
+.empty p { font-size:.92em; line-height:1.9; }
 
 /* ── RESULT GROUPS ───────────────────────────────── */
-.rg { margin-bottom:14px; }
+.rg { margin-bottom:16px; }
 .rg-h {
   display:flex; justify-content:space-between; align-items:center;
-  font-family:'Stardos Stencil',serif;
-  font-size:.78em; letter-spacing:.06em;
+  font-family:'Stardos Stencil',Impact,serif;
+  font-size:.88em; letter-spacing:.06em;
   color:var(--yellow);
-  padding:4px 9px;
+  padding:6px 11px;
   background:rgba(212,184,26,.06);
   border-left:3px solid var(--yellow);
-  margin-bottom:5px;
+  margin-bottom:6px;
   word-break:break-all;
 }
 .rg-b {
   background:var(--yellow); color:#1a1808;
-  padding:0 7px; border-radius:10px;
-  font-size:.84em; font-weight:bold;
+  padding:1px 9px; border-radius:10px;
+  font-size:.9em; font-weight:bold;
   white-space:nowrap; margin-left:8px; flex-shrink:0;
 }
 .ri {
-  padding:7px 10px;
+  padding:9px 12px;
   background:rgba(0,0,0,.22);
   border:1px solid var(--surf2);
-  border-radius:2px; margin-bottom:3px;
-  font-size:.83em; line-height:1.6;
+  border-radius:2px; margin-bottom:4px;
+  font-size:.9em; line-height:1.65;
   transition:.1s;
 }
 .ri:hover { border-color:var(--blue); }
-.ri-m { font-size:.72em; color:var(--dim); margin-bottom:3px; }
+.ri-m { font-size:.78em; color:var(--dim); margin-bottom:4px; }
 .ri-t { word-break:break-word; }
 mark {
   background:rgba(212,184,26,.28);
   color:var(--yellow);
-  padding:0 1px; border-radius:1px;
+  padding:0 2px; border-radius:1px;
 }
 
 /* ── SCROLLBAR ───────────────────────────────────── */
