@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ПОШУК · WORD ФАЙЛИ</title>
+<link href="https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #171b22;
+  --surface:  #1e2535;
+  --surf2:    #2a3448;
+  --slate:    #3a6b8b;
+  --blue:     #2a5080;
+  --blue2:    #4a78b0;
+  --blue-dk:  #182840;
+  --yellow:   #d4b81a;
+  --yel-dim:  #8a7510;
+  --text:     #d2d6e0;
+  --dim:      #7a8090;
+  --danger:   #6b2a1a;
+  --danger2:  #9c4530;
+}
+* { font-family: 'JetBrains Mono', monospace; box-sizing: border-box; margin:0; padding:0; }
+body {
+  background: var(--bg);
+  background-image:
+    radial-gradient(circle at 15% 25%, rgba(74,120,176,.08) 0%, transparent 50%),
+    radial-gradient(circle at 85% 75%, rgba(212,184,26,.05) 0%, transparent 50%);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── TYPOGRAPHY ──────────────────────────────────── */
+.stencil       { font-family:'Stardos Stencil',serif; letter-spacing:.07em; }
+.stencil-title {
+  font-family:'Stardos Stencil',serif;
+  letter-spacing:.15em;
+  text-shadow: 2px 2px 0 rgba(0,0,0,.45), 4px 4px 0 rgba(0,0,0,.2);
+}
+.label {
+  font-family:'Stardos Stencil',serif;
+  letter-spacing:.1em;
+  color: var(--slate);
+  font-size:.8em;
+  text-transform:uppercase;
+  display:block;
+  margin-bottom:8px;
+}
+
+/* ── HEADER ──────────────────────────────────────── */
+.hdr {
+  background: var(--surface);
+  border-bottom: 2px solid var(--blue);
+  padding: 11px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.5);
+}
+.hdr-ico { font-size:1.5em; line-height:1; }
+.hdr-t   { font-size:1.25em; color:var(--yellow); }
+.stamp {
+  font-family:'Stardos Stencil',serif;
+  border: 2px solid var(--yellow);
+  color: var(--yellow);
+  padding: 1px 7px;
+  letter-spacing:.12em;
+  transform: rotate(-2deg);
+  text-shadow: 1px 1px 0 rgba(0,0,0,.5);
+  font-size:.6em;
+  display:inline-block;
+  vertical-align:middle;
+  margin-left:4px;
+}
+.hdr-sub { margin-left:auto; font-size:.7em; color:var(--dim); letter-spacing:.06em; }
+
+/* ── LAYOUT ──────────────────────────────────────── */
+.lay {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 14px;
+  padding: 16px;
+  min-height: calc(100vh - 48px);
+}
+@media(max-width:760px){ .lay{ grid-template-columns:1fr; } }
+
+/* ── CRATE (panel) ───────────────────────────────── */
+.crate {
+  background: var(--surface);
+  border: 2px solid var(--blue);
+  border-radius: 4px;
+  position: relative;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.crate:last-child { margin-bottom:0; }
+.crate::before {
+  content:'';
+  position:absolute; inset:-1px;
+  border: 1px dashed rgba(74,120,176,.22);
+  border-radius:4px;
+  pointer-events:none;
+}
+
+/* ── DROPZONE ────────────────────────────────────── */
+.dropzone {
+  border: 2px dashed var(--blue);
+  border-radius: 3px;
+  padding: 18px 10px;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(42,80,128,.05);
+  transition: .15s;
+  user-select: none;
+  margin-bottom: 10px;
+}
+.dropzone:hover { border-color:var(--blue2); background:rgba(42,80,128,.1); }
+.dropzone.over  { border-color:var(--yellow); background:rgba(212,184,26,.08); }
+.dropzone input { display:none; }
+.dz-icon { font-size:1.7em; display:block; margin-bottom:5px; }
+.dz-main {
+  font-family:'Stardos Stencil',serif;
+  letter-spacing:.07em; font-size:.9em;
+  color:var(--text); margin-bottom:2px;
+}
+.dz-sub { font-size:.74em; color:var(--dim); }
+
+/* ── FILE LIST ───────────────────────────────────── */
+.flist { max-height:152px; overflow-y:auto; }
+.fi {
+  display:flex; align-items:center; gap:6px;
+  padding:5px 8px;
+  background:rgba(0,0,0,.25);
+  border:1px solid var(--surf2);
+  border-radius:2px; margin-bottom:3px;
+  transition:.1s;
+}
+.fi:hover { border-color:var(--blue); }
+.fi-n { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.8em; }
+.fi-c { font-size:.7em; color:var(--dim); white-space:nowrap; }
+.fi-r {
+  cursor:pointer; background:none; border:none;
+  color:var(--dim); font-size:.78em; padding:2px 5px;
+  border-radius:2px; font-family:'JetBrains Mono',monospace;
+}
+.fi-r:hover { color:var(--danger2); background:rgba(100,40,20,.2); }
+
+/* ── FIELD ───────────────────────────────────────── */
+.field {
+  background: rgba(0,0,0,.3);
+  border: 2px solid var(--surf2);
+  border-radius: 2px;
+  color: var(--text);
+  padding: 7px 10px;
+  width: 100%;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .88em;
+  transition: border-color .1s;
+}
+.field:focus     { border-color:var(--blue2); outline:none; }
+.field::placeholder { color:var(--dim); }
+.field-sm { width:56px; text-align:center; padding:5px 6px; }
+
+/* ── KEYWORD ROW ─────────────────────────────────── */
+.kwr { display:flex; gap:5px; margin-bottom:5px; }
+
+/* ── BUTTONS ─────────────────────────────────────── */
+.btn {
+  background: var(--blue);
+  border: 2px solid var(--blue2);
+  color: var(--text);
+  font-family: 'Stardos Stencil', serif;
+  letter-spacing: .1em;
+  padding: 8px 14px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all .1s;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.5);
+  box-shadow: 0 4px 0 var(--blue-dk), 0 5px 10px rgba(0,0,0,.4);
+}
+.btn:hover:not(:disabled)   { background:var(--blue2); }
+.btn:active:not(:disabled)  { transform:translateY(2px); box-shadow:0 2px 0 var(--blue-dk),0 3px 7px rgba(0,0,0,.4); }
+.btn:disabled               { opacity:.4; cursor:not-allowed; }
+.btn-full  { width:100%; font-size:1em; padding:10px; }
+.btn-yellow {
+  background:var(--yellow); border-color:#f4d942;
+  color:#1a1a10; box-shadow:0 4px 0 var(--yel-dim),0 5px 10px rgba(0,0,0,.4);
+  text-shadow:none;
+}
+.btn-yellow:hover:not(:disabled) { background:#f4d942; }
+.btn-sm    { padding:4px 12px; font-size:.72em; letter-spacing:.08em; box-shadow:0 3px 0 var(--blue-dk); }
+.btn-ghost {
+  background:rgba(0,0,0,.15);
+  border:1px solid var(--surf2);
+  color:var(--dim);
+  font-family:'JetBrains Mono',monospace;
+  font-size:.85em; letter-spacing:0;
+  box-shadow:none; text-shadow:none;
+  padding:6px 10px;
+}
+.btn-ghost:hover { border-color:var(--blue2); color:var(--blue2); }
+.btn-ghost.del:hover { border-color:var(--danger2); color:var(--danger2); }
+.add-kw-link {
+  font-size:.75em; color:var(--dim); cursor:pointer;
+  background:none; border:none; font-family:'JetBrains Mono',monospace;
+  padding:2px 0; letter-spacing:.03em;
+}
+.add-kw-link:hover { color:var(--blue2); }
+
+/* ── TOGGLES ─────────────────────────────────────── */
+.tg { display:flex; border:2px solid var(--surf2); border-radius:2px; overflow:hidden; }
+.tb {
+  padding:4px 13px; cursor:pointer;
+  background:rgba(0,0,0,.2); border:none;
+  color:var(--dim);
+  font-family:'Stardos Stencil',serif;
+  font-size:.8em; letter-spacing:.1em;
+  transition:.1s;
+}
+.tb.act { background:var(--blue); color:var(--text); }
+
+/* ── CHECKBOXES ──────────────────────────────────── */
+.copt {
+  display:flex; align-items:center; gap:5px;
+  font-size:.78em; color:var(--dim); cursor:pointer;
+  padding:4px 9px;
+  border:1px solid var(--surf2); border-radius:2px;
+  transition:.1s; user-select:none;
+}
+.copt:hover { border-color:var(--blue); color:var(--text); }
+.copt input { cursor:pointer; accent-color:var(--blue2); }
+
+/* ── OPTION ROWS ─────────────────────────────────── */
+.opts { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 8px; }
+.crow {
+  display:flex; align-items:center; gap:7px;
+  font-size:.78em; color:var(--dim); margin-bottom:7px;
+}
+.divider { border:none; border-top:1px solid var(--surf2); margin:12px 0; }
+
+/* ── STATUS ──────────────────────────────────────── */
+.sline { font-size:.74em; color:var(--dim); margin-top:5px; min-height:14px; }
+.sline.ok { color:var(--blue2); }
+.sline.er { color:var(--danger2); }
+
+/* ── PROGRESS ────────────────────────────────────── */
+.pgw { margin-top:8px; }
+.pgb { height:3px; background:var(--surf2); border-radius:2px; overflow:hidden; }
+.pgf { height:100%; background:var(--blue2); width:0; transition:width .12s; }
+
+/* ── RIGHT PANEL ─────────────────────────────────── */
+.rpnl {
+  display:flex; flex-direction:column;
+  background:var(--surface);
+  border:2px solid var(--blue);
+  border-radius:4px; padding:14px 16px;
+  position:relative;
+  box-shadow:0 4px 14px rgba(0,0,0,.45);
+  min-height:calc(100vh - 80px);
+}
+.rpnl::before {
+  content:''; position:absolute; inset:-1px;
+  border:1px dashed rgba(74,120,176,.22);
+  border-radius:4px; pointer-events:none;
+}
+.rh { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.rstat { font-size:.8em; color:var(--dim); }
+.rstat b { color:var(--yellow); }
+.exr { display:flex; gap:6px; margin-left:auto; }
+.rbody { flex:1; overflow-y:auto; max-height:calc(100vh - 140px); }
+
+/* ── EMPTY STATE ─────────────────────────────────── */
+.empty { text-align:center; padding:50px 20px; color:var(--dim); }
+.empty .ei { font-size:2.2em; margin-bottom:10px; }
+.empty p { font-size:.83em; line-height:1.8; }
+
+/* ── RESULT GROUPS ───────────────────────────────── */
+.rg { margin-bottom:14px; }
+.rg-h {
+  display:flex; justify-content:space-between; align-items:center;
+  font-family:'Stardos Stencil',serif;
+  font-size:.78em; letter-spacing:.06em;
+  color:var(--yellow);
+  padding:4px 9px;
+  background:rgba(212,184,26,.06);
+  border-left:3px solid var(--yellow);
+  margin-bottom:5px;
+  word-break:break-all;
+}
+.rg-b {
+  background:var(--yellow); color:#1a1808;
+  padding:0 7px; border-radius:10px;
+  font-size:.84em; font-weight:bold;
+  white-space:nowrap; margin-left:8px; flex-shrink:0;
+}
+.ri {
+  padding:7px 10px;
+  background:rgba(0,0,0,.22);
+  border:1px solid var(--surf2);
+  border-radius:2px; margin-bottom:3px;
+  font-size:.83em; line-height:1.6;
+  transition:.1s;
+}
+.ri:hover { border-color:var(--blue); }
+.ri-m { font-size:.72em; color:var(--dim); margin-bottom:3px; }
+.ri-t { word-break:break-word; }
+mark {
+  background:rgba(212,184,26,.28);
+  color:var(--yellow);
+  padding:0 1px; border-radius:1px;
+}
+
+/* ── SCROLLBAR ───────────────────────────────────── */
+::-webkit-scrollbar       { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--surf2); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <span class="hdr-ico">🔍</span>
+  <span class="stencil-title hdr-t">ПОШУК · WORD ФАЙЛИ</span>
+  <span class="stamp">OFFLINE</span>
+  <span class="hdr-sub">локально · без інтернету · .docx</span>
+</div>
+
+<div class="lay">
+
+  <!-- ── LEFT COLUMN ──────────────────────────────── -->
+  <div>
+
+    <!-- FILES -->
+    <div class="crate">
+      <span class="label">📁 Файли (.docx)</span>
+      <div class="dropzone" id="dz">
+        <input type="file" id="fi" multiple accept=".docx">
+        <span class="dz-icon">📄</span>
+        <div class="dz-main">Перетягніть .docx файли</div>
+        <div class="dz-sub">або натисніть для вибору</div>
+      </div>
+      <div class="flist" id="flist"></div>
+      <div class="sline" id="lstatus"></div>
+    </div>
+
+    <!-- SEARCH PARAMS -->
+    <div class="crate">
+      <span class="label">🔍 Ключові слова</span>
+      <div id="kwc"></div>
+      <button class="add-kw-link" id="baddkw">+ додати ключове слово</button>
+
+      <hr class="divider">
+      <span class="label" style="margin-bottom:6px">Параметри пошуку</span>
+
+      <div class="opts">
+        <div class="tg" title="AND — всі слова | OR — будь-яке слово">
+          <button class="tb act" id="band" onclick="setLogic('AND')">AND</button>
+          <button class="tb"     id="bor"  onclick="setLogic('OR')">OR</button>
+        </div>
+        <label class="copt" title="Враховувати регістр літер">
+          <input type="checkbox" id="ocase"> Регістр
+        </label>
+        <label class="copt" title="Шукати лише цілі слова">
+          <input type="checkbox" id="oword"> Ціле слово
+        </label>
+      </div>
+
+      <div class="crow">
+        <span>Контекст ±</span>
+        <input class="field field-sm" type="number" id="octx" value="120" min="0" max="2000" step="20">
+        <span>символів</span>
+      </div>
+      <div class="crow">
+        <span>Макс. на файл:</span>
+        <input class="field field-sm" type="number" id="omax" value="500" min="1" max="9999">
+        <span>збігів</span>
+      </div>
+
+      <button class="btn btn-full" id="bsrch" onclick="runSearch()" disabled>
+        🔎 Шукати
+      </button>
+
+      <div class="pgw" id="pgw" style="display:none">
+        <div class="pgb"><div class="pgf" id="pgf"></div></div>
+        <div class="sline" id="sstatus"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── RIGHT COLUMN ─────────────────────────────── -->
+  <div class="rpnl">
+    <div class="rh">
+      <span class="label" style="margin:0">📋 Результати</span>
+      <div class="rstat" id="rstat"></div>
+      <div class="exr" id="exr" style="display:none">
+        <button class="btn btn-sm"         onclick="expTxt()">↓ TXT</button>
+        <button class="btn btn-yellow btn-sm" onclick="expCsv()">↓ CSV</button>
+      </div>
+    </div>
+    <div class="rbody" id="rbody">
+      <div class="empty">
+        <div class="ei">📂</div>
+        <p>Завантажте .docx файли<br>та введіть ключові слова</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /lay -->
+
+<script>
+'use strict';
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+const files = {};
+let results  = [];
+let logic    = 'AND';
+let lastPats = [];
+
+// ── UTILS ─────────────────────────────────────────────────────────────────
+const esc   = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const xmlDec = s => s
+  .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'")
+  .replace(/&#(\d+);/g,  (_,n) => String.fromCodePoint(+n))
+  .replace(/&#x([0-9a-fA-F]+);/g, (_,h) => String.fromCodePoint(parseInt(h,16)));
+
+function dl(content, name, mime) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], {type:mime}));
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function setStat(id, msg, cls='') {
+  const e = document.getElementById(id);
+  e.textContent = msg;
+  e.className = 'sline' + (cls ? ' '+cls : '');
+}
+
+// ── ZIP READER ────────────────────────────────────────────────────────────
+async function readZip(buf) {
+  const u8 = new Uint8Array(buf), dv = new DataView(buf);
+  const dec = new TextDecoder('utf-8');
+  let eocd = -1;
+  for (let i = u8.length-22; i >= Math.max(0, u8.length-65558); i--)
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error('Файл не є ZIP-архівом (.docx)');
+  const n = dv.getUint16(eocd+8, true), cdOff = dv.getUint32(eocd+16, true);
+  const ent = {}; let p = cdOff;
+  for (let i = 0; i < n; i++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) break;
+    const meth=dv.getUint16(p+10,true), cSz=dv.getUint32(p+20,true),
+          fnL =dv.getUint16(p+28,true), exL=dv.getUint16(p+30,true),
+          cmL =dv.getUint16(p+32,true), lh =dv.getUint32(p+42,true);
+    ent[dec.decode(u8.subarray(p+46, p+46+fnL))] = {meth, cSz, lh};
+    p += 46 + fnL + exL + cmL;
+  }
+  return {ent, u8, dv};
+}
+
+async function extract(zip, name) {
+  const e = zip.ent[name]; if (!e) return null;
+  const {u8, dv} = zip;
+  const fnL = dv.getUint16(e.lh+26, true), exL = dv.getUint16(e.lh+28, true);
+  const raw = u8.subarray(e.lh+30+fnL+exL, e.lh+30+fnL+exL+e.cSz);
+  if (e.meth === 0) return raw.slice();
+  if (e.meth === 8) {
+    const ds = new DecompressionStream('deflate-raw');
+    const wr = ds.writable.getWriter(), rd = ds.readable.getReader();
+    wr.write(raw); wr.close();
+    const chunks = [];
+    for (;;) { const {done,value} = await rd.read(); if (done) break; chunks.push(value); }
+    const out = new Uint8Array(chunks.reduce((s,c) => s+c.length, 0)); let off = 0;
+    for (const c of chunks) { out.set(c, off); off += c.length; }
+    return out;
+  }
+  throw new Error(`ZIP: метод стиснення ${e.meth} не підтримується`);
+}
+
+// ── DOCX PARSER ───────────────────────────────────────────────────────────
+function parseDocx(xml) {
+  const paras = [], pRe = /<w:p[\s>\/]([\s\S]*?)<\/w:p>/g; let pm;
+  while ((pm = pRe.exec(xml)) !== null) {
+    const seg = pm[0].replace(/<w:del[\s\S]*?<\/w:del>/g, '');
+    const tRe = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g; let tm, txt = '';
+    while ((tm = tRe.exec(seg)) !== null) txt += tm[1];
+    txt = xmlDec(txt);
+    if (txt.trim()) paras.push(txt);
+  }
+  return paras;
+}
+
+async function loadDocx(file) {
+  const zip  = await readZip(await file.arrayBuffer());
+  const xmlB = await extract(zip, 'word/document.xml');
+  if (!xmlB) throw new Error('word/document.xml не знайдено');
+  return parseDocx(new TextDecoder('utf-8').decode(xmlB));
+}
+
+// ── FILE LOADING ──────────────────────────────────────────────────────────
+async function handleFiles(list) {
+  const valid = [...list].filter(f => f.name.toLowerCase().endsWith('.docx'));
+  if (!valid.length) { setStat('lstatus', 'Підтримуються лише .docx файли', 'er'); return; }
+  for (const f of valid) {
+    setStat('lstatus', `Читаю: ${f.name}…`);
+    try   { files[f.name] = {name:f.name, paragraphs:await loadDocx(f)}; }
+    catch (e) { setStat('lstatus', `Помилка: ${f.name} — ${e.message}`, 'er'); await sleep(1500); }
+  }
+  const n = Object.keys(files).length;
+  setStat('lstatus', `Завантажено: ${n} файл${n===1?'':n<5?'и':'ів'}`, 'ok');
+  renderFlist(); updBtn();
+}
+
+function renderFlist() {
+  const el = document.getElementById('flist'); el.innerHTML = '';
+  for (const [name, f] of Object.entries(files)) {
+    const d  = document.createElement('div');    d.className  = 'fi';
+    const ns = document.createElement('span');   ns.className = 'fi-n'; ns.textContent = '📄 '+name; ns.title = name;
+    const cs = document.createElement('span');   cs.className = 'fi-c'; cs.textContent = f.paragraphs.length+' абз.';
+    const rb = document.createElement('button'); rb.className = 'fi-r'; rb.textContent = '✕'; rb.title = 'Видалити';
+    rb.onclick = () => {
+      delete files[name]; renderFlist(); updBtn();
+      const n = Object.keys(files).length;
+      setStat('lstatus', n ? `Файлів: ${n}` : '');
+    };
+    d.append(ns, cs, rb); el.appendChild(d);
+  }
+}
+
+// ── KEYWORDS ─────────────────────────────────────────────────────────────
+let kwN = 0;
+function addKw(focus = false) {
+  const c = document.getElementById('kwc'), id = `kw${++kwN}`;
+  const row = document.createElement('div'); row.className = 'kwr'; row.id = 'kr'+id;
+  const inp = document.createElement('input');
+  inp.className = 'field'; inp.type = 'text';
+  inp.placeholder = 'Ключове слово або фраза…'; inp.id = id;
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
+  const del = document.createElement('button');
+  del.className = 'btn btn-ghost del';
+  del.style.padding = '5px 10px';
+  del.textContent = '✕'; del.title = 'Видалити';
+  del.onclick = () => {
+    const rows = c.querySelectorAll('.kwr');
+    if (rows.length > 1) row.remove(); else inp.value = '';
+  };
+  row.append(inp, del); c.appendChild(row);
+  if (focus) inp.focus();
+}
+const getKws = () => [...document.querySelectorAll('.kwr input')].map(i => i.value.trim()).filter(Boolean);
+
+// ── OPTIONS ───────────────────────────────────────────────────────────────
+function setLogic(v) {
+  logic = v;
+  document.getElementById('band').classList.toggle('act', v === 'AND');
+  document.getElementById('bor') .classList.toggle('act', v === 'OR');
+}
+function updBtn() { document.getElementById('bsrch').disabled = !Object.keys(files).length; }
+
+// ── SEARCH ────────────────────────────────────────────────────────────────
+function makePat(kw, cs, ww) {
+  let s = reEsc(kw); if (ww) s = `\\b${s}\\b`;
+  return {src:s, flags:cs?'':'i', gflags:cs?'g':'gi'};
+}
+function testText(txt, pats) {
+  return pats[logic === 'AND' ? 'every' : 'some'](p => new RegExp(p.src, p.flags).test(txt));
+}
+function snippet(txt, pats, ctx) {
+  if (!ctx || txt.length <= ctx*2+40) return txt;
+  let first = txt.length;
+  for (const p of pats) {
+    const m = new RegExp(p.src, p.flags).exec(txt);
+    if (m && m.index < first) first = m.index;
+  }
+  const s = Math.max(0, first-ctx), e = Math.min(txt.length, first+ctx+40);
+  return (s > 0 ? '…' : '') + txt.slice(s, e) + (e < txt.length ? '…' : '');
+}
+function highlight(txt, pats) {
+  let ranges = [];
+  for (const p of pats) {
+    const re = new RegExp(p.src, p.gflags); let m;
+    while ((m = re.exec(txt)) !== null) ranges.push([m.index, m.index+m[0].length]);
+  }
+  if (!ranges.length) return esc(txt);
+  ranges.sort((a,b) => a[0]-b[0]);
+  const mg = [ranges[0]];
+  for (let i=1; i<ranges.length; i++) {
+    const l = mg[mg.length-1];
+    if (ranges[i][0] <= l[1]) l[1] = Math.max(l[1], ranges[i][1]);
+    else mg.push(ranges[i]);
+  }
+  let out = '', pos = 0;
+  for (const [a,b] of mg) { out += esc(txt.slice(pos,a)); out += `<mark>${esc(txt.slice(a,b))}</mark>`; pos = b; }
+  return out + esc(txt.slice(pos));
+}
+
+async function runSearch() {
+  const kws = getKws();
+  if (!kws.length) { alert('Введіть хоча б одне ключове слово'); return; }
+  const cs   = document.getElementById('ocase').checked;
+  const ww   = document.getElementById('oword').checked;
+  const ctx  = Math.max(0, parseInt(document.getElementById('octx').value) || 120);
+  const maxN = Math.max(1, parseInt(document.getElementById('omax').value) || 500);
+  lastPats = kws.map(k => makePat(k, cs, ww));
+  const allFiles = Object.values(files); results = [];
+  const btn = document.getElementById('bsrch');
+  const pgw = document.getElementById('pgw');
+  const pgf = document.getElementById('pgf');
+  btn.disabled = true; pgw.style.display = 'block';
+  for (let fi = 0; fi < allFiles.length; fi++) {
+    const f = allFiles[fi];
+    pgf.style.width = `${Math.round(fi / allFiles.length * 100)}%`;
+    setStat('sstatus', `Обробляю: ${f.name}…`);
+    await sleep(0);
+    const matches = [];
+    for (let pi = 0; pi < f.paragraphs.length && matches.length < maxN; pi++)
+      if (testText(f.paragraphs[pi], lastPats))
+        matches.push({idx:pi+1, text:snippet(f.paragraphs[pi], lastPats, ctx)});
+    if (matches.length) results.push({fileName:f.name, matches});
+  }
+  pgf.style.width = '100%';
+  const tot = results.reduce((s,r) => s+r.matches.length, 0);
+  setStat('sstatus', `Знайдено: ${tot} збігів у ${results.length} з ${allFiles.length} файлів`);
+  renderResults();
+  btn.disabled = false;
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function renderResults() {
+  const body = document.getElementById('rbody');
+  const rstat = document.getElementById('rstat');
+  const exr   = document.getElementById('exr');
+  const tot   = results.reduce((s,r) => s+r.matches.length, 0);
+  if (!tot) {
+    body.innerHTML = '<div class="empty"><div class="ei">🔍</div><p>Нічого не знайдено</p></div>';
+    rstat.innerHTML = ''; exr.style.display = 'none'; return;
+  }
+  rstat.innerHTML = `<b>${tot}</b> збігів у <b>${results.length}</b> файлах`;
+  exr.style.display = 'flex';
+  body.innerHTML = results.map(r => `
+    <div class="rg">
+      <div class="rg-h">
+        <span>📄 ${esc(r.fileName)}</span>
+        <span class="rg-b">${r.matches.length}</span>
+      </div>
+      ${r.matches.map(m => `
+        <div class="ri">
+          <div class="ri-m">Абзац #${m.idx}</div>
+          <div class="ri-t">${highlight(m.text, lastPats)}</div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+// ── EXPORT ────────────────────────────────────────────────────────────────
+function expTxt() {
+  if (!results.length) return;
+  const kws = getKws(), now = new Date().toLocaleString('uk-UA');
+  let o = `ПОШУК У WORD ФАЙЛАХ\nДата: ${now}\nСлова (${logic}): ${kws.join(' | ')}\n${'─'.repeat(60)}\n\n`;
+  for (const r of results) {
+    o += `ФАЙЛ: ${r.fileName}  [${r.matches.length} збігів]\n${'─'.repeat(50)}\n`;
+    for (const m of r.matches) o += `[Абзац #${m.idx}]\n${m.text}\n\n`;
+    o += '\n';
+  }
+  dl(o, `пошук_${Date.now()}.txt`, 'text/plain;charset=utf-8');
+}
+function expCsv() {
+  if (!results.length) return;
+  const kws = getKws(), q = s => '"'+String(s).replace(/"/g,'""')+'"';
+  const rows = [['Файл','Абзац №','Текст','Ключові слова','Логіка'].map(q).join(',')];
+  for (const r of results)
+    for (const m of r.matches)
+      rows.push([r.fileName, m.idx, m.text, kws.join(' | '), logic].map(q).join(','));
+  dl('﻿'+rows.join('\r\n'), `пошук_${Date.now()}.csv`, 'text/csv;charset=utf-8');
+}
+
+// ── DRAG & DROP ───────────────────────────────────────────────────────────
+const dz = document.getElementById('dz'), fi = document.getElementById('fi');
+dz.addEventListener('click',    () => fi.click());
+fi.addEventListener('change',   e  => { handleFiles(e.target.files); fi.value = ''; });
+dz.addEventListener('dragover', e  => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave',() => dz.classList.remove('over'));
+dz.addEventListener('drop',     e  => { e.preventDefault(); dz.classList.remove('over'); handleFiles(e.dataTransfer.files); });
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+document.getElementById('baddkw').addEventListener('click', () => addKw(true));
+addKw();
+
+if (!window.DecompressionStream) {
+  document.body.innerHTML = '<div style="padding:40px;color:#f66;font-family:monospace"><b>Браузер не підтримується.</b><br><br>Необхідний Chrome 80+, Firefox 113+, Edge 80+, Safari 16.4+</div>';
+}
+</script>
+</body>
+</html>
