@@ -93,15 +93,16 @@ body {
 /* ── LAYOUT ──────────────────────────────────────── */
 .lay {
   display: grid;
-  grid-template-columns: 400px 1fr;
-  grid-template-rows: 1fr;
+  grid-template-columns: 3fr 7fr;
+  grid-template-rows: auto 1fr;
   gap: 16px;
   padding: 18px;
   flex: 1;
   min-height: 0;
 }
-.left-col { overflow-y: auto; min-height: 0; }
-@media(max-width:900px){ .lay{ grid-template-columns:1fr; grid-template-rows:auto auto; } }
+.kw-panel  { grid-column: 1 / -1; }
+.fi-panel  { overflow-y: auto; min-height: 0; }
+@media(max-width:900px){ .lay{ grid-template-columns:1fr; grid-template-rows:auto auto auto; } .kw-panel{ grid-column:1; } }
 
 /* ── CRATE (panel) ───────────────────────────────── */
 .crate {
@@ -352,11 +353,9 @@ mark {
 
 <div class="lay">
 
-  <!-- ── LEFT COLUMN ──────────────────────────────── -->
-  <div class="left-col">
-
-    <!-- SEARCH PARAMS -->
-    <div class="crate">
+  <!-- ── TOP ROW: KEYWORDS (100%) ─────────────────── -->
+  <div class="kw-panel">
+    <div class="crate" style="margin-bottom:0">
       <span class="label">🔍 Ключові слова</span>
       <div id="kwc"></div>
       <button class="add-kw-link" id="baddkw">+ додати ключове слово</button>
@@ -375,31 +374,31 @@ mark {
         <label class="copt" title="Шукати лише цілі слова">
           <input type="checkbox" id="oword"> Ціле слово
         </label>
+        <div class="crow" style="margin:0">
+          <span>Контекст ±</span>
+          <input class="field field-sm" type="number" id="octx" value="120" min="0" max="2000" step="20">
+          <span>символів</span>
+        </div>
+        <div class="crow" style="margin:0">
+          <span>Макс. на файл:</span>
+          <input class="field field-sm" type="number" id="omax" value="500" min="1" max="9999">
+          <span>збігів</span>
+        </div>
+        <button class="btn" id="bsrch" onclick="runSearch()" disabled style="white-space:nowrap">
+          🔎 Шукати
+        </button>
       </div>
 
-      <div class="crow">
-        <span>Контекст ±</span>
-        <input class="field field-sm" type="number" id="octx" value="120" min="0" max="2000" step="20">
-        <span>символів</span>
-      </div>
-      <div class="crow">
-        <span>Макс. на файл:</span>
-        <input class="field field-sm" type="number" id="omax" value="500" min="1" max="9999">
-        <span>збігів</span>
-      </div>
-
-      <button class="btn btn-full" id="bsrch" onclick="runSearch()" disabled>
-        🔎 Шукати
-      </button>
-
-      <div class="pgw" id="pgw" style="display:none">
+      <div class="pgw" id="pgw" style="display:none;margin-top:8px">
         <div class="pgb"><div class="pgf" id="pgf"></div></div>
         <div class="sline" id="sstatus"></div>
       </div>
     </div>
+  </div>
 
-    <!-- FILES -->
-    <div class="crate crate-sm">
+  <!-- ── BOTTOM-LEFT: FILES (30%) ──────────────────── -->
+  <div class="fi-panel">
+    <div class="crate crate-sm" style="margin-bottom:0;height:100%;box-sizing:border-box">
       <span class="label">📁 Файли (.docx · .xlsx · .pdf · .txt)</span>
       <div class="dropzone" id="dz">
         <input type="file" id="fi" multiple accept=".docx,.xlsx,.pdf,.txt">
@@ -409,10 +408,9 @@ mark {
       <div class="flist" id="flist"></div>
       <div class="sline" id="lstatus"></div>
     </div>
-
   </div>
 
-  <!-- ── RIGHT COLUMN ─────────────────────────────── -->
+  <!-- ── BOTTOM-RIGHT: RESULTS (70%) ───────────────── -->
   <div class="rpnl">
     <div class="rh">
       <span class="label" style="margin:0">📋 Результати</span>
