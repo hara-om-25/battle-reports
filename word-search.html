@@ -903,7 +903,7 @@ function expTxt() {
     for (const m of r.matches) o += `[Абзац #${m.idx}]\n${m.text}\n\n`;
     o += '\n';
   }
-  dl(o, `пошук_${Date.now()}.txt`, 'text/plain;charset=utf-8');
+  dl('﻿' + o, `пошук_${Date.now()}.txt`, 'text/plain;charset=utf-8');
 }
 function expCsv() {
   if (!results.length) return;
