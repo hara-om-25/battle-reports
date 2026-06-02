@@ -100,10 +100,13 @@ body {
   flex: 1;
   min-height: 0;
 }
-.kw-panel     { overflow-y: auto; min-height: 0; }
-.params-panel { min-height: 0; }
-.fi-panel     { overflow-y: auto; min-height: 0; }
-@media(max-width:900px){ .lay{ grid-template-columns:1fr; grid-template-rows:auto auto auto auto; } }
+.kw-panel  { grid-column: 1 / -1; }
+.kw-inner  { display:flex; gap:0; min-height:0; }
+.kw-left   { flex:0 0 30%; min-width:0; padding-right:20px; }
+.kw-sep    { width:1px; background:var(--surf2); flex-shrink:0; align-self:stretch; }
+.kw-right  { flex:1; min-width:0; padding-left:20px; }
+.fi-panel  { overflow-y:auto; min-height:0; }
+@media(max-width:900px){ .lay{ grid-template-columns:1fr; grid-template-rows:auto auto auto; } .kw-panel{ grid-column:1; } .kw-inner{ flex-direction:column; } .kw-sep{ width:100%; height:1px; align-self:auto; margin:12px 0; } .kw-left,.kw-right{ padding:0; } }
 
 /* ── CRATE (panel) ───────────────────────────────── */
 .crate {
@@ -354,42 +357,49 @@ mark {
 
 <div class="lay">
 
-  <!-- ── TOP-LEFT: KEYWORDS (30%) ────────────────── -->
-  <div class="crate kw-panel" style="margin-bottom:0;overflow-y:auto">
-    <span class="label">🔍 Ключові слова</span>
-    <div id="kwc"></div>
-    <button class="add-kw-link" id="baddkw">+ додати ключове слово</button>
-  </div>
+  <!-- ── TOP: ONE BLOCK (Keywords left 30% | Params right 70%) ── -->
+  <div class="crate kw-panel" style="margin-bottom:0">
+    <div class="kw-inner">
 
-  <!-- ── TOP-RIGHT: PARAMS (70%) ───────────────────── -->
-  <div class="crate params-panel" style="margin-bottom:0">
-    <span class="label" style="margin-bottom:8px">Параметри пошуку</span>
-    <div class="opts">
-      <div class="tg" title="AND — всі слова | OR — будь-яке слово">
-        <button class="tb act" id="band" onclick="setLogic('AND')">AND</button>
-        <button class="tb"     id="bor"  onclick="setLogic('OR')">OR</button>
+      <div class="kw-left">
+        <span class="label">🔍 Ключові слова</span>
+        <div id="kwc"></div>
+        <button class="add-kw-link" id="baddkw">+ додати ключове слово</button>
       </div>
-      <label class="copt" title="Враховувати регістр літер">
-        <input type="checkbox" id="ocase"> Регістр
-      </label>
-      <label class="copt" title="Шукати лише цілі слова">
-        <input type="checkbox" id="oword"> Ціле слово
-      </label>
-      <div class="crow" style="margin:0">
-        <span>Контекст ±</span>
-        <input class="field field-sm" type="number" id="octx" value="120" min="0" max="2000" step="20">
-        <span>символів</span>
+
+      <div class="kw-sep"></div>
+
+      <div class="kw-right">
+        <span class="label" style="margin-bottom:8px">Параметри пошуку</span>
+        <div class="opts">
+          <div class="tg" title="AND — всі слова | OR — будь-яке слово">
+            <button class="tb act" id="band" onclick="setLogic('AND')">AND</button>
+            <button class="tb"     id="bor"  onclick="setLogic('OR')">OR</button>
+          </div>
+          <label class="copt" title="Враховувати регістр літер">
+            <input type="checkbox" id="ocase"> Регістр
+          </label>
+          <label class="copt" title="Шукати лише цілі слова">
+            <input type="checkbox" id="oword"> Ціле слово
+          </label>
+          <div class="crow" style="margin:0">
+            <span>Контекст ±</span>
+            <input class="field field-sm" type="number" id="octx" value="120" min="0" max="2000" step="20">
+            <span>символів</span>
+          </div>
+          <div class="crow" style="margin:0">
+            <span>Макс. на файл:</span>
+            <input class="field field-sm" type="number" id="omax" value="500" min="1" max="9999">
+            <span>збігів</span>
+          </div>
+          <button class="btn" id="bsrch" onclick="runSearch()" disabled>🔎 Шукати</button>
+        </div>
+        <div class="pgw" id="pgw" style="display:none;margin-top:8px">
+          <div class="pgb"><div class="pgf" id="pgf"></div></div>
+          <div class="sline" id="sstatus"></div>
+        </div>
       </div>
-      <div class="crow" style="margin:0">
-        <span>Макс. на файл:</span>
-        <input class="field field-sm" type="number" id="omax" value="500" min="1" max="9999">
-        <span>збігів</span>
-      </div>
-      <button class="btn" id="bsrch" onclick="runSearch()" disabled>🔎 Шукати</button>
-    </div>
-    <div class="pgw" id="pgw" style="display:none;margin-top:8px">
-      <div class="pgb"><div class="pgf" id="pgf"></div></div>
-      <div class="sline" id="sstatus"></div>
+
     </div>
   </div>
 
