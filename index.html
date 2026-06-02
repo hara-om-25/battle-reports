@@ -610,7 +610,7 @@ async function loadAllArchiveSheets() {
             const rows = await apiGet(name);
             for (let i = 1; i < rows.length; i++) {
                 const row = rows[i] || [];
-                if (row[0] || row[2]) {
+                if (row[0] || row[2] || row[5] || row[6] || row[7] || row[8]) {
                     allRecs.push({
                         reportNum: parseInt(row[0])||0,
                         datetime: row[1]||'',
@@ -666,7 +666,7 @@ async function loadArchiveSheet(name) {
         state.archiveRecs = [];
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i] || [];
-            if (row[0] || row[2]) {
+            if (row[0] || row[2] || row[5] || row[6] || row[7] || row[8]) {
                 state.archiveRecs.push({
                     reportNum: parseInt(row[0])||0,
                     datetime: row[1]||''  ,
@@ -719,7 +719,7 @@ async function loadDataFromAPI() {
         state.records = [];
         for (let i = 1; i < mainRows.length; i++) {
             const row = mainRows[i] || [];
-            if (row[0] || row[2]) {
+            if (row[0] || row[2] || row[5] || row[6] || row[7] || row[8]) {
                 state.records.push({
                     reportNum: parseInt(row[0]) || 0,
                     datetime: row[1] || '',
