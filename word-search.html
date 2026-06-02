@@ -353,46 +353,54 @@ mark {
 
 <div class="lay">
 
-  <!-- ── TOP ROW: KEYWORDS (100%) ─────────────────── -->
+  <!-- ── TOP ROW: ONE PANEL (Keywords left | Params right) ── -->
   <div class="kw-panel">
-    <div class="crate" style="margin-bottom:0">
-      <span class="label">🔍 Ключові слова</span>
-      <div id="kwc"></div>
-      <button class="add-kw-link" id="baddkw">+ додати ключове слово</button>
+    <div class="crate" style="margin-bottom:0;display:flex;gap:20px;align-items:flex-start">
 
-      <hr class="divider">
-      <span class="label" style="margin-bottom:6px">Параметри пошуку</span>
-
-      <div class="opts">
-        <div class="tg" title="AND — всі слова | OR — будь-яке слово">
-          <button class="tb act" id="band" onclick="setLogic('AND')">AND</button>
-          <button class="tb"     id="bor"  onclick="setLogic('OR')">OR</button>
-        </div>
-        <label class="copt" title="Враховувати регістр літер">
-          <input type="checkbox" id="ocase"> Регістр
-        </label>
-        <label class="copt" title="Шукати лише цілі слова">
-          <input type="checkbox" id="oword"> Ціле слово
-        </label>
-        <div class="crow" style="margin:0">
-          <span>Контекст ±</span>
-          <input class="field field-sm" type="number" id="octx" value="120" min="0" max="2000" step="20">
-          <span>символів</span>
-        </div>
-        <div class="crow" style="margin:0">
-          <span>Макс. на файл:</span>
-          <input class="field field-sm" type="number" id="omax" value="500" min="1" max="9999">
-          <span>збігів</span>
-        </div>
-        <button class="btn" id="bsrch" onclick="runSearch()" disabled style="white-space:nowrap">
-          🔎 Шукати
-        </button>
+      <!-- Keywords -->
+      <div style="flex:0 0 35%;min-width:0">
+        <span class="label">🔍 Ключові слова</span>
+        <div id="kwc"></div>
+        <button class="add-kw-link" id="baddkw">+ додати ключове слово</button>
       </div>
 
-      <div class="pgw" id="pgw" style="display:none;margin-top:8px">
-        <div class="pgb"><div class="pgf" id="pgf"></div></div>
-        <div class="sline" id="sstatus"></div>
+      <!-- Divider -->
+      <div style="width:1px;background:var(--surf2);align-self:stretch;flex-shrink:0"></div>
+
+      <!-- Params + Search -->
+      <div style="flex:1;min-width:0">
+        <span class="label" style="margin-bottom:8px">Параметри пошуку</span>
+        <div class="opts" style="margin-top:8px">
+          <div class="tg" title="AND — всі слова | OR — будь-яке слово">
+            <button class="tb act" id="band" onclick="setLogic('AND')">AND</button>
+            <button class="tb"     id="bor"  onclick="setLogic('OR')">OR</button>
+          </div>
+          <label class="copt" title="Враховувати регістр літер">
+            <input type="checkbox" id="ocase"> Регістр
+          </label>
+          <label class="copt" title="Шукати лише цілі слова">
+            <input type="checkbox" id="oword"> Ціле слово
+          </label>
+          <div class="crow" style="margin:0">
+            <span>Контекст ±</span>
+            <input class="field field-sm" type="number" id="octx" value="120" min="0" max="2000" step="20">
+            <span>символів</span>
+          </div>
+          <div class="crow" style="margin:0">
+            <span>Макс. на файл:</span>
+            <input class="field field-sm" type="number" id="omax" value="500" min="1" max="9999">
+            <span>збігів</span>
+          </div>
+          <button class="btn" id="bsrch" onclick="runSearch()" disabled style="white-space:nowrap">
+            🔎 Шукати
+          </button>
+        </div>
+        <div class="pgw" id="pgw" style="display:none;margin-top:8px">
+          <div class="pgb"><div class="pgf" id="pgf"></div></div>
+          <div class="sline" id="sstatus"></div>
+        </div>
       </div>
+
     </div>
   </div>
 
