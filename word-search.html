@@ -549,24 +549,75 @@ function pdfLit(s) {
   });
 }
 
-function pdfHex(s) {
-  s = s.replace(/\s/g, '');
-  if (s.length % 2) s += '0';
-  if (s.length % 4 === 0 && s.length >= 4) {
-    let u = '', ok = true;
-    for (let i = 0; i < s.length; i += 4) {
-      const cp = parseInt(s.slice(i, i+4), 16);
-      if (!cp) { ok = false; break; }
-      u += String.fromCodePoint(cp);
-    }
-    if (ok && /\S/.test(u)) return u;
+function hexToUcp(hex) {
+  hex = hex.replace(/\s/g,'');
+  if (hex.length % 4 === 0 && hex.length >= 4) {
+    let s = '';
+    for (let i = 0; i < hex.length; i += 4) s += String.fromCodePoint(parseInt(hex.slice(i,i+4),16));
+    return s;
   }
-  let r = '';
-  for (let i = 0; i < s.length; i += 2) r += String.fromCharCode(parseInt(s.slice(i,i+2), 16));
+  return String.fromCharCode(parseInt(hex,16));
+}
+
+function parseCmapStr(str, map) {
+  const charRe = /beginbfchar([\s\S]*?)endbfchar/g;
+  let m;
+  while ((m = charRe.exec(str)) !== null) {
+    const pr = /<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g; let p;
+    while ((p = pr.exec(m[1])) !== null)
+      map[p[1].toUpperCase()] = hexToUcp(p[2]);
+  }
+  const rangeRe = /beginbfrange([\s\S]*?)endbfrange/g;
+  while ((m = rangeRe.exec(str)) !== null) {
+    const tr = /<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g; let t;
+    while ((t = tr.exec(m[1])) !== null) {
+      const s0=parseInt(t[1],16), s1=parseInt(t[2],16), d0=parseInt(t[3],16), kl=t[1].length;
+      for (let i=s0; i<=s1; i++)
+        map[i.toString(16).toUpperCase().padStart(kl,'0')] = String.fromCodePoint(d0+(i-s0));
+    }
+  }
+}
+
+function pdfHex(s, map) {
+  s = s.replace(/\s/g,'');
+  if (s.length % 2) s += '0';
+  const KEY = s.toUpperCase();
+  if (map) {
+    if (map[KEY]) return map[KEY];
+    // Try splitting into 2-byte (4 hex char) chunks
+    if (s.length % 4 === 0) {
+      let r='', ok=true;
+      for (let i=0; i<s.length; i+=4) {
+        const k=s.slice(i,i+4).toUpperCase();
+        if (map[k]) r+=map[k]; else { ok=false; break; }
+      }
+      if (ok && r.trim()) return r;
+    }
+    // Try 1-byte (2 hex char) chunks
+    if (s.length % 2 === 0) {
+      let r='', ok=true;
+      for (let i=0; i<s.length; i+=2) {
+        const k=s.slice(i,i+2).toUpperCase();
+        if (map[k]) r+=map[k]; else { ok=false; break; }
+      }
+      if (ok && r.trim()) return r;
+    }
+  }
+  // Fallback: treat as UTF-16BE unicode code points
+  if (s.length % 4 === 0 && s.length >= 4) {
+    let u='', ok=true;
+    for (let i=0; i<s.length; i+=4) {
+      const cp=parseInt(s.slice(i,i+4),16);
+      if (cp>0x1F && cp<0xFFFE) u+=String.fromCodePoint(cp); else { ok=false; break; }
+    }
+    if (ok && u.trim()) return u;
+  }
+  let r='';
+  for (let i=0; i<s.length; i+=2) r+=String.fromCharCode(parseInt(s.slice(i,i+2),16));
   return r;
 }
 
-function pdfBlockText(block) {
+function pdfBlockText(block, map) {
   let txt = '';
   const re = /(\((?:[^\\()]*|\\.)*\))\s*(?:Tj|'|")|\[([^\]]*)\]\s*TJ|(<[0-9A-Fa-f\s]*>)\s*(?:Tj|'|")/g;
   let m;
@@ -576,9 +627,9 @@ function pdfBlockText(block) {
       const arrRe = /\((?:[^\\()]*|\\.)*\)|<[0-9A-Fa-f\s]*>/g; let am;
       while ((am = arrRe.exec(m[2])) !== null) {
         const el = am[0];
-        txt += el[0]==='(' ? pdfLit(el.slice(1,-1)) : pdfHex(el.slice(1,-1));
+        txt += el[0]==='(' ? pdfLit(el.slice(1,-1)) : pdfHex(el.slice(1,-1), map);
       }
-    } else if (m[3]) { txt += pdfHex(m[3].slice(1,-1)); }
+    } else if (m[3]) { txt += pdfHex(m[3].slice(1,-1), map); }
   }
   return txt.trim();
 }
@@ -587,33 +638,48 @@ async function loadPdf(file) {
   const u8 = new Uint8Array(await file.arrayBuffer());
   const raw = new TextDecoder('latin1').decode(u8);
   if (!raw.startsWith('%PDF')) throw new Error('Не PDF файл');
-  const paras = [];
-  const sRe = /stream(\r?\n)/g;
-  let sm;
+
+  // Pass 1: decompress all streams
+  const streams = [];
+  const sRe = /stream(\r?\n)/g; let sm;
   while ((sm = sRe.exec(raw)) !== null) {
     const dataStart = sm.index + sm[0].length;
     const eIdx = raw.indexOf('endstream', dataStart);
     if (eIdx < 0) break;
     const dictStr = raw.slice(Math.max(0, sm.index-512), sm.index);
-    if (/\/Subtype\s*\/Image|\/Type\s*\/Font/.test(dictStr)) { sRe.lastIndex = eIdx+9; continue; }
     const hasFlate = /\/Filter\s*(?:\/FlateDecode|\[[^\]]*\/FlateDecode)/.test(dictStr);
     let end = eIdx;
     if (raw[end-1]==='\n') end--;
     if (raw[end-1]==='\r') end--;
     const bytes = u8.subarray(dataStart, end);
     const decoded = hasFlate ? await tryInflate(bytes) : bytes;
-    if (!decoded) { sRe.lastIndex = eIdx+9; continue; }
-    const str = new TextDecoder('utf-8', {fatal:false}).decode(decoded);
-    if (!str.includes('BT')) { sRe.lastIndex = eIdx+9; continue; }
-    const btRe = /BT\b([\s\S]*?)\bET\b/g; let bm;
-    while ((bm = btRe.exec(str)) !== null) {
-      const t = pdfBlockText(bm[1]);
-      if (t) paras.push(t);
+    if (decoded) {
+      const str = new TextDecoder('utf-8',{fatal:false}).decode(decoded);
+      streams.push({str, dictStr});
     }
     sRe.lastIndex = eIdx+9;
   }
+
+  // Pass 2: build ToUnicode map from CMap streams
+  const unicodeMap = {};
+  for (const {str} of streams)
+    if (str.includes('beginbfchar') || str.includes('beginbfrange'))
+      parseCmapStr(str, unicodeMap);
+
+  // Pass 3: extract text from content streams
+  const paras = [];
+  for (const {str, dictStr} of streams) {
+    if (/\/Subtype\s*\/Image/.test(dictStr)) continue;
+    if (!str.includes('BT')) continue;
+    const btRe = /BT\b([\s\S]*?)\bET\b/g; let bm;
+    while ((bm = btRe.exec(str)) !== null) {
+      const t = pdfBlockText(bm[1], unicodeMap);
+      if (t) paras.push(t);
+    }
+  }
   return paras.filter(p => p.trim());
 }
+
 
 
 async function handleFiles(list) {
