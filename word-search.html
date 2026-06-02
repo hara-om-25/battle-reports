@@ -355,6 +355,18 @@ mark {
   <!-- ── LEFT COLUMN ──────────────────────────────── -->
   <div class="left-col">
 
+    <!-- FILES -->
+    <div class="crate crate-sm">
+      <span class="label">📁 Файли (.docx · .xlsx · .pdf · .txt)</span>
+      <div class="dropzone" id="dz">
+        <input type="file" id="fi" multiple accept=".docx,.xlsx,.pdf,.txt">
+        <span class="dz-icon">📄</span>
+        <div><div class="dz-main">Натисніть або перетягніть .docx · .xlsx · .pdf · .txt</div></div>
+      </div>
+      <div class="flist" id="flist"></div>
+      <div class="sline" id="lstatus"></div>
+    </div>
+
     <!-- SEARCH PARAMS -->
     <div class="crate">
       <span class="label">🔍 Ключові слова</span>
@@ -396,18 +408,6 @@ mark {
         <div class="pgb"><div class="pgf" id="pgf"></div></div>
         <div class="sline" id="sstatus"></div>
       </div>
-    </div>
-
-    <!-- FILES -->
-    <div class="crate crate-sm">
-      <span class="label">📁 Файли (.docx · .xlsx · .pdf · .txt)</span>
-      <div class="dropzone" id="dz">
-        <input type="file" id="fi" multiple accept=".docx,.xlsx,.pdf,.txt">
-        <span class="dz-icon">📄</span>
-        <div><div class="dz-main">Натисніть або перетягніть .docx · .xlsx · .pdf · .txt</div></div>
-      </div>
-      <div class="flist" id="flist"></div>
-      <div class="sline" id="lstatus"></div>
     </div>
 
   </div>
