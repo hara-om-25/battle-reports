@@ -2475,6 +2475,89 @@ def apply_patches(html):
     # ── 99. Назва: БОЙОВІ ЗВІТИ → ХАРА ОМ (скрізь) ──
     _late.append(('БОЙОВІ ЗВІТИ', 'ХАРА ОМ', 'app-title-rename', True))
 
+    # ── 100a. SHEET_ID: const → let + читання з localStorage ──
+    _late.append((
+        "const SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';",
+        "let SHEET_ID = localStorage.getItem('sheetId') || '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';",
+        'sheet-id-dynamic'
+    ))
+
+    # ── 100b. Допоміжні функції: parseSheetId, applySheetAndLogin, showSheetSettings ──
+    _late.append((
+        "function login() { const _h=localStorage.getItem('email')||''; tokenClient.requestAccessToken(_h?{hint:_h}:{}); }",
+        "function login() { const _h=localStorage.getItem('email')||''; tokenClient.requestAccessToken(_h?{hint:_h}:{}); }\n"
+        "function parseSheetId(v) {\n"
+        "    v=(v||'').trim();\n"
+        "    const m=v.match(/\\/spreadsheets\\/d\\/([a-zA-Z0-9_-]+)/);\n"
+        "    return m?m[1]:(/^[a-zA-Z0-9_-]{20,}$/.test(v)?v:'');\n"
+        "}\n"
+        "function applySheetAndLogin() {\n"
+        "    const el=document.getElementById('_sheetUrlInp');\n"
+        "    const raw=el?el.value.trim():'';\n"
+        "    if(raw){\n"
+        "        const id=parseSheetId(raw);\n"
+        "        if(!id){showAlert('Невірне посилання на Google Таблицю!');return;}\n"
+        "        SHEET_ID=id;\n"
+        "        localStorage.setItem('sheetId',id);\n"
+        "    }\n"
+        "    login();\n"
+        "}\n"
+        "function showSheetSettings() {\n"
+        "    document.getElementById('modal').innerHTML=`<div class=\"modal-overlay\" onclick=\"if(event.target===this)closeModal()\"><div class=\"modal-box\"><h2 class=\"stencil-shadow text-xl mb-4\" style=\"color:var(--yellow)\">GOOGLE ТАБЛИЦЯ</h2><p class=\"stencil mb-2\" style=\"color:var(--khaki);font-size:0.85em\">Посилання або ID таблиці:</p><input id=\"_sheetModalInp\" class=\"field mb-4\" style=\"font-size:0.8em\" value=\"${esc(SHEET_ID)}\" placeholder=\"https://docs.google.com/spreadsheets/d/...\"/><div class=\"space-y-2\"><button onclick=\"_saveSheetModal()\" class=\"btn-stencil btn-green w-full\">ЗБЕРЕГТИ</button><button onclick=\"closeModal()\" class=\"btn-stencil w-full\">СКАСУВАТИ</button></div></div></div>`;\n"
+        "}\n"
+        "function _saveSheetModal() {\n"
+        "    const el=document.getElementById('_sheetModalInp');\n"
+        "    const raw=el?el.value.trim():'';\n"
+        "    const id=parseSheetId(raw)||raw;\n"
+        "    if(!id){showAlert('Введіть посилання!');return;}\n"
+        "    SHEET_ID=id;\n"
+        "    localStorage.setItem('sheetId',id);\n"
+        "    closeModal();\n"
+        "    showAlert('✅ Таблицю збережено!\\nНатисніть ↻ для перезавантаження даних');\n"
+        "}",
+        'sheet-settings-fns'
+    ))
+
+    # ── 100c. Екран входу: додати поле вводу Google Sheets URL ──
+    _late.append((
+        'app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6">'
+        '<div class="crate p-8 max-w-md w-full text-center">'
+        '<h1 class="stencil-shadow text-3xl mb-4" style="color: var(--yellow)">ХАРА ОМ</h1>'
+        '<p class="stencil mb-8" style="color: var(--khaki)">АВТОРИЗУЙТЕСЬ ДЛЯ ДОСТУПУ</p>'
+        '<button onclick="login()" class="btn-stencil btn-yellow-dim w-full text-lg">🔐 УВІЙТИ ЧЕРЕЗ GOOGLE</button>'
+        '</div></div>`;',
+        'app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6">'
+        '<div class="crate p-8 max-w-md w-full text-center">'
+        '<h1 class="stencil-shadow text-3xl mb-4" style="color: var(--yellow)">ХАРА ОМ</h1>'
+        '<p class="stencil mb-2" style="color: var(--khaki)">GOOGLE ТАБЛИЦЯ</p>'
+        '<input id="_sheetUrlInp" class="field mb-4" style="text-align:left;font-size:0.8em" '
+        'placeholder="https://docs.google.com/spreadsheets/d/..." '
+        'value="${esc(localStorage.getItem(\'sheetId\')||\'\')}"/>'
+        '<button onclick="applySheetAndLogin()" class="btn-stencil btn-yellow-dim w-full text-lg">🔐 УВІЙТИ ЧЕРЕЗ GOOGLE</button>'
+        '</div></div>`;',
+        'sheet-login-input'
+    ))
+
+    # ── 100d. Кнопка ⚙ (налаштування таблиці) перед ВИЙТИ в навігації ──
+    _late.append((
+        '<button onclick="logout()" onmousedown="this.classList.add(\'pressing\')" '
+        'onmouseup="this.classList.remove(\'pressing\')" '
+        'ontouchstart="this.classList.add(\'pressing\')" '
+        'ontouchend="this.classList.remove(\'pressing\')" '
+        'class="nav-btn logout">ВИЙТИ</button>',
+        '<button onclick="showSheetSettings()" onmousedown="this.classList.add(\'pressing\')" '
+        'onmouseup="this.classList.remove(\'pressing\')" '
+        'ontouchstart="this.classList.add(\'pressing\')" '
+        'ontouchend="this.classList.remove(\'pressing\')" '
+        'class="nav-btn" title="Налаштування таблиці" style="font-size:1.1em;padding:0 10px">⚙</button>'
+        '<button onclick="logout()" onmousedown="this.classList.add(\'pressing\')" '
+        'onmouseup="this.classList.remove(\'pressing\')" '
+        'ontouchstart="this.classList.add(\'pressing\')" '
+        'ontouchend="this.classList.remove(\'pressing\')" '
+        'class="nav-btn logout">ВИЙТИ</button>',
+        'sheet-settings-nav-btn'
+    ))
+
     # ── 98a. copyZvityAllReport() — копіювати ДОПОВІДЬ за весь період (ЗВІТИ) ──
     _late.append((
         "    navigator.clipboard.writeText(lines.join('\\n'));\n"
