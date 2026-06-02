@@ -2625,6 +2625,29 @@ def apply_patches(html):
         'zvity-all-report-block'
     ))
 
+    # ── 101. Fix archive filter: include rows without target/reportNum but with coords/drone/ammo/result ──
+    _late.append((
+        '                if (row[0] || row[2]) {\n'
+        '                    allRecs.push({',
+        '                if (row[0] || row[2] || row[5] || row[6] || row[7] || row[8]) {\n'
+        '                    allRecs.push({',
+        'fix-archive-filter-allrecs'
+    ))
+    _late.append((
+        '            if (row[0] || row[2]) {\n'
+        '                state.archiveRecs.push({',
+        '            if (row[0] || row[2] || row[5] || row[6] || row[7] || row[8]) {\n'
+        '                state.archiveRecs.push({',
+        'fix-archive-filter-archiverecs'
+    ))
+    _late.append((
+        '            if (row[0] || row[2]) {\n'
+        '                state.records.push({',
+        '            if (row[0] || row[2] || row[5] || row[6] || row[7] || row[8]) {\n'
+        '                state.records.push({',
+        'fix-archive-filter-records'
+    ))
+
     for item in _late:
         old, new, name = item[0], item[1], item[2]
         replace_all = item[3] if len(item) > 3 else False
