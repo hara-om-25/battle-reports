@@ -2556,7 +2556,7 @@ def apply_patches(html):
     # ── 100e. Email в хедері → клік відкриває налаштування таблиці ──
     _late.append((
         '<span style="color: var(--khaki); font-size: 1.15em;margin-left:0.5em">${esc(state.user)}</span>',
-        '<span onclick="showSheetSettings()" style="color:var(--khaki);font-size:1.15em;margin-left:0.5em;cursor:pointer;border-bottom:1px dotted var(--khaki)" title="Налаштування таблиці">${esc(state.user)}</span>',
+        '<span onclick="showSheetSettings()" style="color:var(--khaki);font-size:1.15em;margin-left:0.5em;cursor:pointer" title="Налаштування таблиці">${esc(state.user)}</span>',
         'email-opens-sheet-settings'
     ))
 
