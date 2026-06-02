@@ -779,9 +779,6 @@ function addKw(focus = false) {
   inp.className = 'field'; inp.type = 'text';
   inp.placeholder = 'Ключове слово або фраза…'; inp.id = id;
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
-  const add = document.createElement('button');
-  add.className = 'tb'; add.textContent = '+'; add.style.padding = '7px 10px'; add.title = 'Додати ключове слово';
-  add.onclick = () => addKw(true);
   const del = document.createElement('button');
   del.className = 'tb'; del.style.color = 'var(--danger2)';
   del.textContent = '✕'; del.title = 'Видалити';
@@ -789,7 +786,17 @@ function addKw(focus = false) {
     const rows = c.querySelectorAll('.kwr');
     if (rows.length > 1) row.remove(); else inp.value = '';
   };
-  row.append(add, inp, del); c.appendChild(row);
+  if (c.children.length === 0) {
+    const add = document.createElement('button');
+    add.className = 'tb'; add.textContent = '+';
+    add.style.cssText = 'font-size:2em;line-height:1;padding:2px 10px';
+    add.title = 'Додати ключове слово';
+    add.onclick = () => addKw(true);
+    row.append(add, inp, del);
+  } else {
+    row.append(inp, del);
+  }
+  c.appendChild(row);
   if (focus) inp.focus();
 }
 const getKws = () => [...document.querySelectorAll('.kwr input')].map(i => i.value.trim()).filter(Boolean);
