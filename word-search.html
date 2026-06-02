@@ -364,7 +364,6 @@ mark {
       <div class="kw-left">
         <span class="label">🔍 Ключові слова</span>
         <div id="kwc"></div>
-        <button class="btn btn-ghost" id="baddkw" style="margin-top:8px">+ додати ключове слово</button>
       </div>
 
       <div class="kw-sep"></div>
@@ -780,15 +779,17 @@ function addKw(focus = false) {
   inp.className = 'field'; inp.type = 'text';
   inp.placeholder = 'Ключове слово або фраза…'; inp.id = id;
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
+  const add = document.createElement('button');
+  add.className = 'tb'; add.textContent = '+'; add.title = 'Додати ключове слово';
+  add.onclick = () => addKw(true);
   const del = document.createElement('button');
-  del.className = 'btn btn-ghost del';
-  del.style.padding = '5px 10px';
+  del.className = 'tb'; del.style.color = 'var(--danger2)';
   del.textContent = '✕'; del.title = 'Видалити';
   del.onclick = () => {
     const rows = c.querySelectorAll('.kwr');
     if (rows.length > 1) row.remove(); else inp.value = '';
   };
-  row.append(inp, del); c.appendChild(row);
+  row.append(add, inp, del); c.appendChild(row);
   if (focus) inp.focus();
 }
 const getKws = () => [...document.querySelectorAll('.kwr input')].map(i => i.value.trim()).filter(Boolean);
@@ -924,7 +925,6 @@ dz.addEventListener('dragleave',() => dz.classList.remove('over'));
 dz.addEventListener('drop',     e  => { e.preventDefault(); dz.classList.remove('over'); handleFiles(e.dataTransfer.files); });
 
 // ── INIT ──────────────────────────────────────────────────────────────────
-document.getElementById('baddkw').addEventListener('click', () => addKw(true));
 addKw();
 
 if (!window.DecompressionStream) {
