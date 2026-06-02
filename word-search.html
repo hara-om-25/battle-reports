@@ -808,7 +808,8 @@ function updBtn() { document.getElementById('bsrch').disabled = !Object.keys(fil
 
 // ── SEARCH ────────────────────────────────────────────────────────────────
 function makePat(kw, cs, ww) {
-  let s = reEsc(kw); if (ww) s = `\\b${s}\\b`;
+  let s = kw.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*').replace(/\?/g,'.');
+  if (ww) s = `\\b${s}\\b`;
   return {src:s, flags:cs?'':'i', gflags:cs?'g':'gi'};
 }
 function testText(txt, pats) {
