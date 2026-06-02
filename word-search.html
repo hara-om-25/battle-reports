@@ -780,7 +780,7 @@ function addKw(focus = false) {
   inp.placeholder = 'Ключове слово або фраза…'; inp.id = id;
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
   const add = document.createElement('button');
-  add.className = 'tb'; add.textContent = '+'; add.title = 'Додати ключове слово';
+  add.className = 'tb'; add.textContent = '+'; add.style.padding = '7px 10px'; add.title = 'Додати ключове слово';
   add.onclick = () => addKw(true);
   const del = document.createElement('button');
   del.className = 'tb'; del.style.color = 'var(--danger2)';
