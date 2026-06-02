@@ -153,14 +153,6 @@ body {
 }
 .dz-sub { font-size:.75em; color:var(--dim); }
 
-/* ── URL ROW ─────────────────────────────────────── */
-.url-row {
-  display:flex; gap:6px; align-items:center;
-  margin-bottom:7px;
-}
-.url-row .field { flex:1; font-size:.82em; padding:5px 8px; }
-.url-row .btn   { flex-shrink:0; white-space:nowrap; }
-
 /* ── FILE LIST ───────────────────────────────────── */
 .flist { max-height:100px; overflow-y:auto; }
 .fi {
@@ -412,10 +404,6 @@ mark {
         <input type="file" id="fi" multiple accept=".docx,.xlsx,.pdf,.txt">
         <span class="dz-icon">📄</span>
         <div><div class="dz-main">Натисніть або перетягніть .docx · .xlsx · .pdf · .txt</div></div>
-      </div>
-      <div class="url-row">
-        <input class="field" type="url" id="urlinp" placeholder="https://… посилання на файл">
-        <button class="btn btn-sm" onclick="loadUrl()">↓ URL</button>
       </div>
       <div class="flist" id="flist"></div>
       <div class="sline" id="lstatus"></div>
@@ -765,28 +753,6 @@ async function handleFiles(list) {
   renderFlist(); updBtn();
 }
 
-async function loadUrl() {
-  const inp = document.getElementById('urlinp');
-  const url = inp.value.trim();
-  if (!url) return;
-  let name = url.split('/').pop().split('?')[0].split('#')[0];
-  if (!name) name = 'file';
-  if (!/\.(docx|xlsx|pdf|txt)$/i.test(name)) {
-    setStat('lstatus', 'URL має вказувати на .docx, .xlsx, .pdf або .txt', 'er'); return;
-  }
-  setStat('lstatus', `Завантажую: ${name}…`);
-  try {
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const blob = await resp.blob();
-    const file = new File([blob], name, {type: blob.type});
-    inp.value = '';
-    await handleFiles([file]);
-  } catch(e) {
-    setStat('lstatus', `Помилка: ${e.message} (можливо CORS)`, 'er');
-  }
-}
-
 function renderFlist() {
   const el = document.getElementById('flist'); el.innerHTML = '';
   for (const [name, f] of Object.entries(files)) {
@@ -963,7 +929,6 @@ fi.addEventListener('change',   e  => { handleFiles(e.target.files); fi.value = 
 dz.addEventListener('dragover', e  => { e.preventDefault(); dz.classList.add('over'); });
 dz.addEventListener('dragleave',() => dz.classList.remove('over'));
 dz.addEventListener('drop',     e  => { e.preventDefault(); dz.classList.remove('over'); handleFiles(e.dataTransfer.files); });
-document.getElementById('urlinp').addEventListener('keydown', e => { if (e.key === 'Enter') loadUrl(); });
 
 // ── INIT ──────────────────────────────────────────────────────────────────
 addKw();
