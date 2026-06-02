@@ -2472,6 +2472,9 @@ def apply_patches(html):
         'alert-ok-press'
     ))
 
+    # ── 99. Назва: БОЙОВІ ЗВІТИ → ХАРА ОМ (скрізь) ──
+    _late.append(('БОЙОВІ ЗВІТИ', 'ХАРА ОМ', 'app-title-rename', True))
+
     # ── 98a. copyZvityAllReport() — копіювати ДОПОВІДЬ за весь період (ЗВІТИ) ──
     _late.append((
         "    navigator.clipboard.writeText(lines.join('\\n'));\n"
