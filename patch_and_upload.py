@@ -2545,17 +2545,19 @@ def apply_patches(html):
         'ontouchstart="this.classList.add(\'pressing\')" '
         'ontouchend="this.classList.remove(\'pressing\')" '
         'class="nav-btn logout">ВИЙТИ</button>',
-        '<button onclick="showSheetSettings()" onmousedown="this.classList.add(\'pressing\')" '
-        'onmouseup="this.classList.remove(\'pressing\')" '
-        'ontouchstart="this.classList.add(\'pressing\')" '
-        'ontouchend="this.classList.remove(\'pressing\')" '
-        'class="nav-btn" title="Налаштування таблиці" style="font-size:1.1em;padding:0 10px">⚙</button>'
         '<button onclick="logout()" onmousedown="this.classList.add(\'pressing\')" '
         'onmouseup="this.classList.remove(\'pressing\')" '
         'ontouchstart="this.classList.add(\'pressing\')" '
         'ontouchend="this.classList.remove(\'pressing\')" '
         'class="nav-btn logout">ВИЙТИ</button>',
         'sheet-settings-nav-btn'
+    ))
+
+    # ── 100e. Email в хедері → клік відкриває налаштування таблиці ──
+    _late.append((
+        '<span style="color: var(--khaki); font-size: 1.15em;margin-left:0.5em">${esc(state.user)}</span>',
+        '<span onclick="showSheetSettings()" style="color:var(--khaki);font-size:1.15em;margin-left:0.5em;cursor:pointer;border-bottom:1px dotted var(--khaki)" title="Налаштування таблиці">${esc(state.user)}</span>',
+        'email-opens-sheet-settings'
     ))
 
     # ── 98a. copyZvityAllReport() — копіювати ДОПОВІДЬ за весь період (ЗВІТИ) ──
