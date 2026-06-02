@@ -311,7 +311,7 @@ const SHIELD_SVG = `<svg class="shield-svg" width="40" height="50" viewBox="0 0 
 
 
 const CLIENT_ID = '1095528804215-gjcnuo3oc12osqm596dpda81slodrmvs.apps.googleusercontent.com';
-const SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
+let SHEET_ID = localStorage.getItem('sheetId') || '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 
 let state = {
     page: 'login', user: null, token: null, loaded: false,
@@ -443,6 +443,35 @@ function showAlert(msg) {
     _ok.addEventListener('touchend', function() { this.style.background=''; });
 }
 function login() { const _h=localStorage.getItem('email')||''; tokenClient.requestAccessToken(_h?{hint:_h}:{}); }
+function parseSheetId(v) {
+    v=(v||'').trim();
+    const m=v.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+    return m?m[1]:(/^[a-zA-Z0-9_-]{20,}$/.test(v)?v:'');
+}
+function applySheetAndLogin() {
+    const el=document.getElementById('_sheetUrlInp');
+    const raw=el?el.value.trim():'';
+    if(raw){
+        const id=parseSheetId(raw);
+        if(!id){showAlert('Невірне посилання на Google Таблицю!');return;}
+        SHEET_ID=id;
+        localStorage.setItem('sheetId',id);
+    }
+    login();
+}
+function showSheetSettings() {
+    document.getElementById('modal').innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color:var(--yellow)">GOOGLE ТАБЛИЦЯ</h2><p class="stencil mb-2" style="color:var(--khaki);font-size:0.85em">Посилання або ID таблиці:</p><input id="_sheetModalInp" class="field mb-4" style="font-size:0.8em" value="${esc(SHEET_ID)}" placeholder="https://docs.google.com/spreadsheets/d/..."/><div class="space-y-2"><button onclick="_saveSheetModal()" class="btn-stencil btn-green w-full">ЗБЕРЕГТИ</button><button onclick="closeModal()" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
+}
+function _saveSheetModal() {
+    const el=document.getElementById('_sheetModalInp');
+    const raw=el?el.value.trim():'';
+    const id=parseSheetId(raw)||raw;
+    if(!id){showAlert('Введіть посилання!');return;}
+    SHEET_ID=id;
+    localStorage.setItem('sheetId',id);
+    closeModal();
+    showAlert('✅ Таблицю збережено!\nНатисніть ↻ для перезавантаження даних');
+}
 
 function logout() {
     localStorage.removeItem('token');
@@ -1267,7 +1296,7 @@ function render() {
     const app = document.getElementById('app');
     
     if (state.page === 'login' || !state.user) {
-        app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><div class="crate p-8 max-w-md w-full text-center"><h1 class="stencil-shadow text-3xl mb-4" style="color: var(--yellow)">ХАРА ОМ</h1><p class="stencil mb-8" style="color: var(--khaki)">АВТОРИЗУЙТЕСЬ ДЛЯ ДОСТУПУ</p><button onclick="login()" class="btn-stencil btn-yellow-dim w-full text-lg">🔐 УВІЙТИ ЧЕРЕЗ GOOGLE</button></div></div>`;
+        app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><div class="crate p-8 max-w-md w-full text-center"><h1 class="stencil-shadow text-3xl mb-4" style="color: var(--yellow)">ХАРА ОМ</h1><p class="stencil mb-2" style="color: var(--khaki)">GOOGLE ТАБЛИЦЯ</p><input id="_sheetUrlInp" class="field mb-4" style="text-align:left;font-size:0.8em" placeholder="https://docs.google.com/spreadsheets/d/..." value="${esc(localStorage.getItem('sheetId')||'')}"/><button onclick="applySheetAndLogin()" class="btn-stencil btn-yellow-dim w-full text-lg">🔐 УВІЙТИ ЧЕРЕЗ GOOGLE</button></div></div>`;
         return;
     }
     
@@ -1292,7 +1321,7 @@ function render() {
                 <button onclick="state.page='form';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='form'?'active':''}">ФОРМА</button>
                 <button onclick="state.page='reports';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='reports'?'active':''}">ЗВІТИ</button>
                 <button onclick="state.page='lists';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='lists'?'active':''}">СПИСКИ</button>
-                <button onclick="loadDataFromAPI()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="font-size:1.5em;letter-spacing:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box" title="Синхронізація">↻</button><button onclick="goToArchive()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn-archive ${state.page==='archive'?'active':''}">АРХІВ</button><button onclick="logout()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn logout">ВИЙТИ</button>
+                <button onclick="loadDataFromAPI()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="font-size:1.5em;letter-spacing:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box" title="Синхронізація">↻</button><button onclick="goToArchive()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn-archive ${state.page==='archive'?'active':''}">АРХІВ</button><button onclick="showSheetSettings()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn" title="Налаштування таблиці" style="font-size:1.1em;padding:0 10px">⚙</button><button onclick="logout()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn logout">ВИЙТИ</button>
             </div>
         </div>
     </nav>`;
