@@ -654,17 +654,33 @@ function pdfHex(s, map) {
   return r;
 }
 
+function applyMap(str, map) {
+  if (!map) return str;
+  let r = '';
+  for (let i = 0; i < str.length; i++) {
+    // Try 2-byte key first (CIDFont in literal strings)
+    if (i + 1 < str.length) {
+      const k2 = ((str.charCodeAt(i) << 8) | str.charCodeAt(i+1)).toString(16).toUpperCase().padStart(4,'0');
+      if (map[k2]) { r += map[k2]; i++; continue; }
+    }
+    // Try 1-byte key (simple font with custom encoding)
+    const k1 = str.charCodeAt(i).toString(16).toUpperCase().padStart(2,'0');
+    r += map[k1] ?? str[i];
+  }
+  return r;
+}
+
 function pdfBlockText(block, map) {
   let txt = '';
   const re = /(\((?:[^\\()]*|\\.)*\))\s*(?:Tj|'|")|\[([^\]]*)\]\s*TJ|(<[0-9A-Fa-f\s]*>)\s*(?:Tj|'|")/g;
   let m;
   while ((m = re.exec(block)) !== null) {
-    if (m[1]) { txt += pdfLit(m[1].slice(1,-1)); }
+    if (m[1]) { txt += applyMap(pdfLit(m[1].slice(1,-1)), map); }
     else if (m[2] !== undefined) {
       const arrRe = /\((?:[^\\()]*|\\.)*\)|<[0-9A-Fa-f\s]*>/g; let am;
       while ((am = arrRe.exec(m[2])) !== null) {
         const el = am[0];
-        txt += el[0]==='(' ? pdfLit(el.slice(1,-1)) : pdfHex(el.slice(1,-1), map);
+        txt += el[0]==='(' ? applyMap(pdfLit(el.slice(1,-1)), map) : pdfHex(el.slice(1,-1), map);
       }
     } else if (m[3]) { txt += pdfHex(m[3].slice(1,-1), map); }
   }
