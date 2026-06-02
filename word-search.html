@@ -376,12 +376,7 @@ mark {
             <button class="tb act" id="band" onclick="setLogic('AND')">AND</button>
             <button class="tb"     id="bor"  onclick="setLogic('OR')">OR</button>
           </div>
-          <label class="copt" title="Враховувати регістр літер">
-            <input type="checkbox" id="ocase"> Регістр
-          </label>
-          <label class="copt" title="Шукати лише цілі слова">
-            <input type="checkbox" id="oword"> Ціле слово
-          </label>
+
           <div class="crow" style="margin:0">
             <span>Контекст ±</span>
             <input class="field field-sm" type="number" id="octx" value="120" min="0" max="2000" step="20">
@@ -807,10 +802,9 @@ function setLogic(v) {
 function updBtn() { document.getElementById('bsrch').disabled = !Object.keys(files).length; }
 
 // ── SEARCH ────────────────────────────────────────────────────────────────
-function makePat(kw, cs, ww) {
-  let s = kw.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*').replace(/\?/g,'.');
-  if (ww) s = `\\b${s}\\b`;
-  return {src:s, flags:cs?'':'i', gflags:cs?'g':'gi'};
+function makePat(kw) {
+  const s = kw.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*').replace(/\?/g,'.');
+  return {src:s, flags:'i', gflags:'gi'};
 }
 function testText(txt, pats) {
   return pats[logic === 'AND' ? 'every' : 'some'](p => new RegExp(p.src, p.flags).test(txt));
@@ -847,11 +841,9 @@ function highlight(txt, pats) {
 async function runSearch() {
   const kws = getKws();
   if (!kws.length) { alert('Введіть хоча б одне ключове слово'); return; }
-  const cs   = document.getElementById('ocase').checked;
-  const ww   = document.getElementById('oword').checked;
   const ctx  = Math.max(0, parseInt(document.getElementById('octx').value) || 120);
   const maxN = Math.max(1, parseInt(document.getElementById('omax').value) || 500);
-  lastPats = kws.map(k => makePat(k, cs, ww));
+  lastPats = kws.map(k => makePat(k));
   const allFiles = Object.values(files); results = [];
   const btn = document.getElementById('bsrch');
   const pgw = document.getElementById('pgw');
