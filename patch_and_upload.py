@@ -2648,6 +2648,13 @@ def apply_patches(html):
         'fix-archive-filter-records'
     ))
 
+    # ── 102. ДОДАТИ ЗАПИС — disable until first target added ──
+    _late.append((
+        '<button onclick="add()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-yellow-dim w-full text-lg mt-4">ДОДАТИ ЗАПИС</button>',
+        '<button onclick="add()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-yellow-dim w-full text-lg mt-4" ${state.form.targets.length===0?\'disabled style="opacity:0.38;cursor:not-allowed;pointer-events:none"\':\'\' }>ДОДАТИ ЗАПИС</button>',
+        'dodaty-zapis-disable-until-target'
+    ))
+
     for item in _late:
         old, new, name = item[0], item[1], item[2]
         replace_all = item[3] if len(item) > 3 else False
