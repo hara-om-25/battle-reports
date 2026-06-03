@@ -1418,7 +1418,7 @@ function render() {
                     </div>
                 </div>
                 
-                <button onclick="add()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim w-full text-lg mt-4">ДОДАТИ ЗАПИС</button>
+                <button onclick="add()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim w-full text-lg mt-4" ${state.form.targets.length===0?'disabled style="opacity:0.38;cursor:not-allowed;pointer-events:none"':'' }>ДОДАТИ ЗАПИС</button>
             </div>
         </div></div>`;
     }
