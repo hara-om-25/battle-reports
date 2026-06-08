@@ -2648,7 +2648,23 @@ def apply_patches(html):
         'fix-archive-filter-records'
     ))
 
-    # ── 102. ДОДАТИ ЗАПИС — disable until first target added ──
+    # ── 102. Час перед координатами в meta-рядку запису (ЗВІТИ та АРХІВ) ──
+    _late.append((
+        'const ysep = \'<span style="color:var(--yellow)"> | </span>\';\n'
+        '    const meta = [esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(ysep);',
+        'const ysep = \'<span style="color:var(--yellow)"> | </span>\';\n'
+        '    const _rTime=(r.datetime||\'\'  ).match(/\\d{1,2}:\\d{2}/)?.[0]||\'\';\n'
+        '    const meta = [_rTime?esc(_rTime):\'\',esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(ysep);',
+        'meta-time-zvity'
+    ))
+    _late.append((
+        'const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);',
+        'const _rTimeA=(r.datetime||\'\'  ).match(/\\d{1,2}:\\d{2}/)?.[0]||\'\';\n'
+        '                        const meta=[_rTimeA?esc(_rTimeA):\'\',esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);',
+        'meta-time-archive'
+    ))
+
+    # ── 103. ДОДАТИ ЗАПИС — disable until first target added ──
     _late.append((
         '<button onclick="add()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-yellow-dim w-full text-lg mt-4">ДОДАТИ ЗАПИС</button>',
         '<button onclick="add()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-yellow-dim w-full text-lg mt-4" ${state.form.targets.length===0?\'disabled style="opacity:0.38;cursor:not-allowed;pointer-events:none"\':\'\' }>ДОДАТИ ЗАПИС</button>',
