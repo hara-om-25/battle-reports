@@ -2657,12 +2657,6 @@ def apply_patches(html):
         '    const meta = [_rTime?esc(_rTime):\'\',esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(ysep);',
         'meta-time-zvity'
     ))
-    _late.append((
-        'const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);',
-        'const _rTimeA=(r.datetime||\'\'  ).match(/\\d{1,2}:\\d{2}/)?.[0]||\'\';\n'
-        '                        const meta=[_rTimeA?esc(_rTimeA):\'\',esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);',
-        'meta-time-archive'
-    ))
 
     # ── 103. ДОДАТИ ЗАПИС — disable until first target added ──
     _late.append((
