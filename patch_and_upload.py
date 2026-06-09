@@ -2670,7 +2670,7 @@ def apply_patches(html):
         "    if (!state.filterFrom || !state.filterTo || !state.allArchiveLoaded) return;\n"
         "    const _toYMD=s=>{const[d,m,y]=s.split('.');return y+m.padStart(2,'0')+d.padStart(2,'0');};\n"
         "    const _fFrom=state.filterFrom.replace(/-/g,''), _fTo=state.filterTo.replace(/-/g,'');\n"
-        "    const _fRecs=state.allArchiveRecs.filter(r=>{const d=getDateOnly(r.datetime);return d&&_toYMD(d)>=_fFrom&&_toYMD(d)<=_fTo;});\n"
+        "    const _fRecs=[...state.allArchiveRecs,...state.records].filter(r=>{const d=getDateOnly(r.datetime);return d&&_toYMD(d)>=_fFrom&&_toYMD(d)<=_fTo;});\n"
         "    if(!_fRecs.length){showAlert('Вильотів за цей період не знайдено');return;}\n"
         "    const _fPts=Math.round(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n"
         "    const _fLabelFrom=state.filterFrom.split('-').reverse().join('.');\n"
@@ -2706,7 +2706,7 @@ def apply_patches(html):
         '        if(state.filterPeriodShown&&state.filterFrom&&state.filterTo){\n'
         '            const _toYMD3=s=>{const[d,m,y]=s.split(\'.\');return y+m.padStart(2,\'0\')+d.padStart(2,\'0\');};\n'
         '            const _fFrom=state.filterFrom.replace(/-/g,\'\'),_fTo=state.filterTo.replace(/-/g,\'\');\n'
-        '            const _fRecs=state.allArchiveRecs.filter(r=>{const d=getDateOnly(r.datetime);return d&&_toYMD3(d)>=_fFrom&&_toYMD3(d)<=_fTo;});\n'
+        '            const _fRecs=[...state.allArchiveRecs,...state.records].filter(r=>{const d=getDateOnly(r.datetime);return d&&_toYMD3(d)>=_fFrom&&_toYMD3(d)<=_fTo;});\n'
         '            const _fLabelFrom=state.filterFrom.split(\'-\').reverse().join(\'.\');\n'
         '            const _fLabelTo=state.filterTo.split(\'-\').reverse().join(\'.\');\n'
         '            const _fLabel=_fLabelFrom+\' — \'+_fLabelTo+\'р.\';\n'
@@ -2728,9 +2728,9 @@ def apply_patches(html):
         '        }\n'
         '        h+=`<div class="p-4 space-y-4 zvity-wrap">\n'
         '            <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color=\'var(--olive-bright)\'" onmouseup="this.style.color=\'\'" ontouchstart="this.style.color=\'var(--olive-bright)\'" ontouchend="this.style.color=\'\'" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em">за період</span></div>\n'
-        '            <div class="crate p-4"><div class="flex flex-wrap gap-2">${state.archiveLoading&&!state.selArchive?\'<p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p>\':_arBtns}</div></div>\n'
+        '            ${!state.filterPeriodOpen?`<div class="crate p-4"><div class="flex flex-wrap gap-2">${state.archiveLoading&&!state.selArchive?\'<p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p>\':_arBtns}</div></div>`:\'\'}\n'
         '            ${_periodPickerHtml}\n'
-        '            ${state.filterPeriodShown?_periodResultHtml:(state.selArchive?_arContent:_allSection)}\n'
+        '            ${state.filterPeriodOpen?(state.filterPeriodShown?_periodResultHtml:\'\'):(state.selArchive?_arContent:_allSection)}\n'
         '        </div>`;\n'
         '        }',
         'filter-period-archive-block'
