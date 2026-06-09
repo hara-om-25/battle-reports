@@ -580,19 +580,25 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 async function processPDF(buf, fname) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js не завантажився. Перевірте інтернет-з\'єднання.');
   ld('Читаємо PDF…');
-  const pdf   = await pdfjsLib.getDocument({ data: buf }).promise;
+  const pdf   = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
   const total = pdf.numPages;
 
   const outline = await pdf.getOutline();
   let secs;
 
-  if (outline && outline.length) {
-    ld('Будуємо структуру…');
-    secs = await secsFromOutline(pdf, outline, total);
-  } else {
-    ld('Шукаємо заголовки…');
-    secs = await secsFromText(pdf, total);
+  try {
+    if (outline && outline.length) {
+      ld('Будуємо структуру…');
+      secs = await secsFromOutline(pdf, outline, total);
+    } else {
+      ld('Шукаємо заголовки…');
+      secs = await secsFromText(pdf, total);
+    }
+  } catch(e) {
+    console.warn('[reader] section parse error, falling back to pages:', e);
+    secs = pageSecs(pdf, total);
   }
 
   ul();
@@ -718,6 +724,7 @@ function pageSecs(pdf, total) {
 ═════════════════════════════════════════════ */
 
 async function processDocx(buf, fname) {
+  if (typeof mammoth === 'undefined') throw new Error('Mammoth.js не завантажився. Перевірте інтернет-з\'єднання.');
   ld('Читаємо документ…');
 
   const res = await mammoth.convertToHtml({ arrayBuffer: buf }, {
@@ -782,15 +789,16 @@ function parseDocxHTML(html) {
 async function openFile(file) {
   if (!file) return;
   const ext = file.name.split('.').pop().toLowerCase();
-  const buf = await file.arrayBuffer();
   try {
-    if (ext === 'pdf')  await processPDF (buf, file.name);
+    const buf = await file.arrayBuffer();
+    if (ext === 'pdf')       await processPDF (buf, file.name);
     else if (ext === 'docx') await processDocx(buf, file.name);
-    else toast('Непідтримуваний формат. Потрібно .pdf або .docx');
+    else { ul(); toast('Непідтримуваний формат. Потрібно .pdf або .docx'); }
   } catch(e) {
     ul();
-    toast('Помилка читання файлу: ' + e.message);
-    console.error(e);
+    const msg = e && e.message ? e.message : String(e);
+    toast('Помилка: ' + msg, 5000);
+    console.error('[reader]', e);
   }
 }
 
