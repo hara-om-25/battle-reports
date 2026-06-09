@@ -1,0 +1,33 @@
+name: Build APK
+
+on:
+  push:
+    branches: [claude/upload-battle-report-CyhPM]
+    paths: [twa-app/**, .github/workflows/build-apk.yml]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Make gradlew executable
+        run: chmod +x twa-app/gradlew
+
+      - name: Build debug APK
+        working-directory: twa-app
+        run: ./gradlew assembleDebug --no-daemon --info
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: battle-reports-apk
+          path: twa-app/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
