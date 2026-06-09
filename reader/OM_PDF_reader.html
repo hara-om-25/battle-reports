@@ -164,9 +164,9 @@
     .sec-body a:hover { text-decoration: underline; }
 
     /* PDF canvas */
-    .pdf-pages          { display: flex; flex-direction: column; gap: 6px; }
-    .pdf-pages canvas   { width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--border); display: block; }
-    .pdf-text           { font-size: var(--font-size); line-height: 1.78; white-space: pre-wrap; word-break: break-word; }
+    .pdf-text           { font-size: calc(var(--font-size) * var(--pdf-zoom, 1)); line-height: 1.82; word-break: break-word; }
+    .pdf-text p         { margin-bottom: .8em; }
+    .pdf-text p:last-child { margin-bottom: 0; }
 
     .placeholder {
       padding: 24px; text-align: center;
@@ -385,7 +385,7 @@
         <input type="range" id="f-rng" min="12" max="28" value="16" step="1">
       </div>
       <div class="s-row">
-        <label>Масштаб PDF <span id="zv">100%</span></label>
+        <label>Розмір тексту PDF <span id="zv">100%</span></label>
         <input type="range" id="z-rng" min="40" max="250" value="100" step="10">
       </div>
     </div>
@@ -451,6 +451,7 @@ function applyS() {
   r.setProperty('--text-dim',  shift(S.text, dark ? -42 : 42));
   r.setProperty('--accent',    dark ? '#5b8dd9' : '#1a5cbf');
   r.setProperty('--font-size', S.fontSize + 'px');
+  r.setProperty('--pdf-zoom',  S.zoom / 100);
 
   document.getElementById('bg-pick').value  = S.bg;
   document.getElementById('txt-pick').value = S.text;
@@ -541,35 +542,105 @@ async function fillBody(sec, el) {
   if (sec.type === 'docx-html') {
     el.innerHTML = sec.html || '<div class="placeholder">(порожній розділ)</div>';
   } else if (sec.type === 'pdf-pages') {
-    el.innerHTML = '';
-    const wrap = document.createElement('div');
-    wrap.className = 'pdf-pages';
-    el.appendChild(wrap);
-    await renderPDFPages(sec.pdf, sec.p0, sec.p1, wrap, S.zoom);
-  } else if (sec.type === 'pdf-text') {
-    el.innerHTML = '';
-    const d = document.createElement('div');
-    d.className = 'pdf-text'; d.textContent = sec.text;
-    el.appendChild(d);
+    el.innerHTML = '<div class="placeholder">Читаємо текст…</div>';
+    try {
+      const raw = await getSectionText(sec.pdf, sec.p0, sec.p1);
+      el.innerHTML = '';
+      const d = document.createElement('div');
+      d.className = 'pdf-text';
+      d.innerHTML = textToHtml(raw);
+      el.appendChild(d);
+    } catch(e) {
+      el.innerHTML = '<div class="placeholder">Помилка читання тексту</div>';
+      console.error('[reader] fillBody', e);
+    }
   }
 }
 
-async function renderPDFPages(pdf, p0, p1, wrap, zoom) {
-  const scale = (zoom / 100) * 1.5;
-  for (let p = p0; p <= p1; p++) {
-    try {
-      const page = await pdf.getPage(p);
-      const vp   = page.getViewport({ scale });
-      const cv   = document.createElement('canvas');
-      cv.width = vp.width; cv.height = vp.height;
-      await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
-      wrap.appendChild(cv);
-    } catch(e) {
-      const d = document.createElement('div');
-      d.textContent = `Помилка сторінки ${p}`; d.style.color = 'var(--text-dim)';
-      wrap.appendChild(d);
+/* ── TEXT EXTRACTION ─────────────────────── */
+
+const PG_CACHE = new Map();
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function textToHtml(raw) {
+  if (!raw.trim()) return '<p style="color:var(--text-dim)">(порожній розділ)</p>';
+  return raw
+    .split(/\n{2,}/)
+    .map(p => p.replace(/\n/g,' ').replace(/\s+/g,' ').trim())
+    .filter(Boolean)
+    .map(p => `<p>${escHtml(p)}</p>`)
+    .join('');
+}
+
+async function extractPageText(pdf, pg) {
+  if (PG_CACHE.has(pg)) return PG_CACHE.get(pg);
+
+  const page = await pdf.getPage(pg);
+  const tc   = await page.getTextContent();
+
+  const its = tc.items
+    .filter(it => it.str)
+    .map(it => ({
+      s: it.str,
+      x: it.transform[4],
+      y: it.transform[5],
+      h: Math.max(Math.abs(it.transform[0]), Math.abs(it.transform[3])) || 10,
+    }));
+
+  if (!its.length) { PG_CACHE.set(pg, ''); return ''; }
+
+  // sort top-to-bottom, left-to-right
+  its.sort((a, b) => b.y - a.y || a.x - b.x);
+
+  // group by Y into visual lines
+  const lines = [];
+  for (const it of its) {
+    const last = lines[lines.length - 1];
+    if (last && Math.abs(last.y - it.y) <= 3) {
+      last.parts.push(it);
+    } else {
+      lines.push({ y: it.y, h: it.h, parts: [it] });
     }
   }
+
+  // determine paragraph gap threshold from avg line height
+  const avgH   = lines.reduce((s, l) => s + l.h, 0) / lines.length || 12;
+  const parGap = avgH * 1.35;
+
+  let out = '';
+  for (let i = 0; i < lines.length; i++) {
+    // sort parts left-to-right within a line
+    lines[i].parts.sort((a, b) => a.x - b.x);
+    const txt = lines[i].parts.map(p => p.s).join('');
+
+    if (i > 0) {
+      const gap = lines[i - 1].y - lines[i].y;
+      if (gap > parGap) {
+        out += '\n\n';
+      } else {
+        // remove soft hyphen at line break
+        if (out.endsWith('-')) { out = out.slice(0, -1); }
+        else { out += ' '; }
+      }
+    }
+    out += txt;
+  }
+
+  const result = out.trim();
+  PG_CACHE.set(pg, result);
+  return result;
+}
+
+async function getSectionText(pdf, p0, p1) {
+  const parts = [];
+  for (let p = p0; p <= p1; p++) {
+    const t = await extractPageText(pdf, p);
+    if (t.trim()) parts.push(t);
+  }
+  return parts.join('\n\n');
 }
 
 /* ════════════════════════════════════════════
@@ -789,6 +860,7 @@ function parseDocxHTML(html) {
 async function openFile(file) {
   if (!file) return;
   const ext = file.name.split('.').pop().toLowerCase();
+  PG_CACHE.clear();
   try {
     const buf = await file.arrayBuffer();
     if (ext === 'pdf')       await processPDF (buf, file.name);
@@ -799,23 +871,6 @@ async function openFile(file) {
     const msg = e && e.message ? e.message : String(e);
     toast('Помилка: ' + msg, 5000);
     console.error('[reader]', e);
-  }
-}
-
-/* ════════════════════════════════════════════
-   ZOOM RERENDER
-═════════════════════════════════════════════ */
-
-async function rerenderOpenPDF() {
-  const open = document.querySelectorAll('.sec-item.open');
-  for (const el of open) {
-    const sec = SECS[+el.dataset.idx];
-    if (!sec || sec.type !== 'pdf-pages') continue;
-    const body = el.querySelector('.sec-body');
-    body.innerHTML = '<div class="placeholder">Перерендеринг…</div>';
-    sec._done = false;
-    sec._done = true;
-    await fillBody(sec, body);
   }
 }
 
@@ -881,13 +936,13 @@ document.addEventListener('DOMContentLoaded', () => {
     save();
   });
 
-  /* pdf zoom – rerender on release */
+  /* pdf text zoom */
   $('z-rng').addEventListener('input', e => {
     S.zoom = +e.target.value;
     $('zv').textContent = S.zoom + '%';
+    document.documentElement.style.setProperty('--pdf-zoom', S.zoom / 100);
     save();
   });
-  $('z-rng').addEventListener('change', () => rerenderOpenPDF());
 });
 </script>
 </body>
