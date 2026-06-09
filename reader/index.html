@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Читач документів</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" id="theme-meta" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="mobile-web-app-capable" content="yes">
+  <style>
+    :root {
+      --bg:           #1a1a2e;
+      --surface:      #1e2240;
+      --sec-bg:       #1c2035;
+      --sec-hover:    #232a48;
+      --border:       #2c3454;
+      --text:         #c8c8c8;
+      --text-dim:     #7a7a8a;
+      --accent:       #5b8dd9;
+      --font-size:    16px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-size: var(--font-size);
+      min-height: 100vh;
+      transition: background .3s, color .3s;
+    }
+
+    /* ── TOOLBAR ─────────────────────────── */
+    #toolbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 52px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 12px; gap: 8px;
+      z-index: 200;
+      box-shadow: 0 2px 10px rgba(0,0,0,.35);
+    }
+    #doc-title {
+      flex: 1; font-size: 13px; font-weight: 500;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      color: var(--text-dim);
+    }
+    .btn {
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 13px;
+      cursor: pointer; font-size: 13px;
+      display: flex; align-items: center; gap: 5px;
+      white-space: nowrap;
+      transition: background .15s;
+      flex-shrink: 0;
+    }
+    .btn:hover { background: rgba(255,255,255,.13); }
+    .btn.ico   { padding: 7px 10px; }
+
+    /* ── MAIN ────────────────────────────── */
+    #main {
+      padding: 16px;
+      padding-top: calc(52px + 16px);
+      max-width: 880px;
+      margin: 0 auto;
+    }
+
+    /* ── DROP ZONE ───────────────────────── */
+    #drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      padding: 64px 20px;
+      text-align: center; cursor: pointer;
+      transition: border-color .2s, background .2s;
+      background: var(--sec-bg);
+      margin: 20px 0;
+    }
+    #drop-zone:hover, #drop-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(91,141,217,.07);
+    }
+    .dz-icon  { font-size: 54px; margin-bottom: 14px; }
+    .dz-title { font-size: 16px; margin-bottom: 8px; }
+    .dz-hint  { color: var(--text-dim); font-size: 13px; }
+
+    /* ── DOC INFO BAR ────────────────────── */
+    #sections-wrapper { display: none; }
+    .doc-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 16px; margin-bottom: 12px;
+      background: var(--sec-bg); border: 1px solid var(--border);
+      border-radius: 10px; font-size: 13px;
+    }
+    .doc-bar .name { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .doc-bar .meta { color: var(--text-dim); flex-shrink: 0; }
+
+    /* ── ACCORDION ───────────────────────── */
+    .sec-list { display: flex; flex-direction: column; gap: 3px; }
+
+    .sec-item {
+      background: var(--sec-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: border-color .2s;
+    }
+    .sec-item:hover { border-color: var(--accent); }
+    .sec-item[data-lv="2"] { margin-left: 20px; }
+    .sec-item[data-lv="3"] { margin-left: 40px; }
+    .sec-item[data-lv="4"] { margin-left: 56px; }
+
+    .sec-head {
+      padding: 13px 16px; cursor: pointer;
+      display: flex; align-items: center; gap: 10px;
+      transition: background .15s; user-select: none;
+    }
+    .sec-head:hover { background: var(--sec-hover); }
+
+    .arrow {
+      color: var(--text-dim); font-size: 10px;
+      transition: transform .2s; width: 14px; flex-shrink: 0;
+    }
+    .sec-item.open .arrow { transform: rotate(90deg); }
+
+    .sec-title {
+      flex: 1;
+      font-size: calc(var(--font-size) * 0.93);
+      line-height: 1.45;
+    }
+    .sec-item[data-lv="1"] .sec-title { font-weight: 600; }
+    .sec-item[data-lv="2"] .sec-title { font-weight: 500; }
+
+    .badge {
+      font-size: 11px; color: var(--text-dim);
+      background: rgba(255,255,255,.05);
+      padding: 2px 8px; border-radius: 10px; flex-shrink: 0;
+    }
+
+    .sec-body {
+      display: none;
+      padding: 16px 20px 20px;
+      border-top: 1px solid var(--border);
+      line-height: 1.78;
+      font-size: var(--font-size);
+    }
+    .sec-item.open .sec-body { display: block; }
+
+    /* DOCX typography */
+    .sec-body p  { margin-bottom: .75em; }
+    .sec-body ul, .sec-body ol { margin: .4em 0 .75em 1.6em; }
+    .sec-body li { margin-bottom: .3em; }
+    .sec-body strong, .sec-body b { color: var(--text); }
+    .sec-body em, .sec-body i { color: var(--text-dim); }
+    .sec-body table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: .9em; }
+    .sec-body td, .sec-body th { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+    .sec-body th { background: rgba(255,255,255,.05); font-weight: 600; }
+    .sec-body a  { color: var(--accent); text-decoration: none; }
+    .sec-body a:hover { text-decoration: underline; }
+
+    /* PDF canvas */
+    .pdf-pages          { display: flex; flex-direction: column; gap: 6px; }
+    .pdf-pages canvas   { width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--border); display: block; }
+    .pdf-text           { font-size: var(--font-size); line-height: 1.78; white-space: pre-wrap; word-break: break-word; }
+
+    .placeholder {
+      padding: 24px; text-align: center;
+      color: var(--text-dim); font-size: 13px;
+    }
+
+    /* ── SETTINGS PANEL ──────────────────── */
+    #s-back {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.5); z-index: 299;
+    }
+    #s-back.show { display: block; }
+
+    #s-panel {
+      position: fixed; top: 0; right: 0; bottom: 0; width: 292px;
+      background: var(--surface); border-left: 1px solid var(--border);
+      z-index: 300; overflow-y: auto;
+      transform: translateX(100%);
+      transition: transform .25s ease;
+      display: flex; flex-direction: column;
+    }
+    #s-panel.open { transform: translateX(0); }
+
+    .s-top {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      font-weight: 600; font-size: 14px;
+      position: sticky; top: 0;
+      background: var(--surface); z-index: 1;
+    }
+    .s-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-dim); font-size: 18px; line-height: 1;
+      padding: 4px 6px; border-radius: 6px;
+      transition: background .15s;
+    }
+    .s-close:hover { background: rgba(255,255,255,.1); }
+
+    .s-body { padding: 16px; flex: 1; }
+
+    .s-group { margin-bottom: 22px; }
+    .s-label {
+      font-size: 11px; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+
+    .s-row { margin-bottom: 13px; }
+    .s-row > label {
+      display: flex; justify-content: space-between;
+      font-size: 13px; color: var(--text-dim); margin-bottom: 5px;
+    }
+    .s-row > label span { color: var(--accent); font-weight: 500; }
+    .s-row input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+
+    .color-row { display: flex; align-items: center; gap: 10px; }
+    .cpick {
+      width: 42px; height: 34px;
+      border: 1px solid var(--border); border-radius: 8px;
+      background: none; cursor: pointer; padding: 2px; flex-shrink: 0;
+    }
+    .swatches { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+    .sw {
+      width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color .15s, transform .15s;
+    }
+    .sw:hover { transform: scale(1.2); border-color: var(--accent); }
+
+    .theme-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .th-btn {
+      flex: 1 1 calc(50% - 3px);
+      padding: 9px 6px; text-align: center; font-size: 12px;
+      cursor: pointer; border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.04); color: var(--text);
+      transition: background .15s;
+    }
+    .th-btn:hover { background: rgba(255,255,255,.1); }
+
+    .divider { height: 1px; background: var(--border); margin: 4px 0 18px; }
+
+    /* ── LOADING ─────────────────────────── */
+    #loading {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.65); z-index: 400;
+      justify-content: center; align-items: center;
+      flex-direction: column; gap: 16px;
+    }
+    #loading.show { display: flex; }
+    .spin {
+      width: 44px; height: 44px;
+      border: 3px solid rgba(255,255,255,.12);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading p { color: var(--text-dim); font-size: 14px; }
+
+    /* ── TOAST ───────────────────────────── */
+    #toast {
+      position: fixed; bottom: 20px; left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px 20px; font-size: 13px; z-index: 500;
+      transition: transform .28s;
+      box-shadow: 0 4px 16px rgba(0,0,0,.4);
+      pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── SCROLLBAR ───────────────────────── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── MOBILE ──────────────────────────── */
+    @media (max-width: 600px) {
+      #s-panel { width: 100%; }
+      #main    { padding: 10px; padding-top: calc(52px + 10px); }
+      .sec-item[data-lv="2"] { margin-left: 12px; }
+      .sec-item[data-lv="3"] { margin-left: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── TOOLBAR ─────────────────────────────── -->
+<div id="toolbar">
+  <button class="btn" id="open-btn">📂 <span id="open-txt">Відкрити</span></button>
+  <span id="doc-title">Читач PDF і Word</span>
+  <button class="btn ico" id="s-btn" title="Налаштування">⚙️</button>
+</div>
+
+<input type="file" id="file-in" accept=".pdf,.docx" style="display:none">
+
+<!-- ── MAIN ────────────────────────────────── -->
+<div id="main">
+  <div id="drop-zone">
+    <div class="dz-icon">📄</div>
+    <div class="dz-title">Перетягніть PDF або Word сюди</div>
+    <div class="dz-hint">Підтримує .pdf та .docx &nbsp;•&nbsp; або натисніть «Відкрити»</div>
+  </div>
+
+  <div id="sections-wrapper">
+    <div class="doc-bar">
+      <span>📄</span>
+      <span id="info-name" class="name">—</span>
+      <span id="info-meta" class="meta">—</span>
+    </div>
+    <div id="sec-list" class="sec-list"></div>
+  </div>
+</div>
+
+<!-- ── SETTINGS ─────────────────────────────── -->
+<div id="s-back"></div>
+<div id="s-panel">
+  <div class="s-top">
+    <span>⚙️ Налаштування</span>
+    <button class="s-close" id="s-close">✕</button>
+  </div>
+  <div class="s-body">
+
+    <div class="s-group">
+      <div class="s-label">Швидкі теми</div>
+      <div class="theme-row">
+        <div class="th-btn" data-theme="dark">🌙 Темний</div>
+        <div class="th-btn" data-theme="dim">🌆 Сутінки</div>
+        <div class="th-btn" data-theme="sepia">📜 Сепія</div>
+        <div class="th-btn" data-theme="light">☀️ Світлий</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="s-group">
+      <div class="s-label">Колір фону</div>
+      <div class="color-row">
+        <input type="color" class="cpick" id="bg-pick" value="#1a1a2e">
+        <div class="swatches" id="bg-sw">
+          <div class="sw" style="background:#1a1a2e" data-c="#1a1a2e" title="Темно-синій"></div>
+          <div class="sw" style="background:#1e1e1e" data-c="#1e1e1e" title="Чорний"></div>
+          <div class="sw" style="background:#14201a" data-c="#14201a" title="Темно-зелений"></div>
+          <div class="sw" style="background:#1e1524" data-c="#1e1524" title="Фіолетовий"></div>
+          <div class="sw" style="background:#1a1c14" data-c="#1a1c14" title="Оливковий"></div>
+          <div class="sw" style="background:#f5f0e8" data-c="#f5f0e8" title="Сепія"></div>
+          <div class="sw" style="background:#f8f9fa" data-c="#f8f9fa" title="Білий"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="s-group">
+      <div class="s-label">Колір тексту</div>
+      <div class="color-row">
+        <input type="color" class="cpick" id="txt-pick" value="#c8c8c8">
+        <div class="swatches" id="txt-sw">
+          <div class="sw" style="background:#c8c8c8" data-c="#c8c8c8" title="Нейтральний сірий"></div>
+          <div class="sw" style="background:#d4d0c8" data-c="#d4d0c8" title="Теплий білий"></div>
+          <div class="sw" style="background:#a8c4a2" data-c="#a8c4a2" title="М'який зелений"></div>
+          <div class="sw" style="background:#b0c8e0" data-c="#b0c8e0" title="Сталевий синій"></div>
+          <div class="sw" style="background:#ddc8a8" data-c="#ddc8a8" title="Пшеничний"></div>
+          <div class="sw" style="background:#303438" data-c="#303438" title="Темний (для світлого)"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="s-group">
+      <div class="s-label">Шрифт і масштаб</div>
+      <div class="s-row">
+        <label>Розмір шрифту <span id="fv">16px</span></label>
+        <input type="range" id="f-rng" min="12" max="28" value="16" step="1">
+      </div>
+      <div class="s-row">
+        <label>Масштаб PDF <span id="zv">100%</span></label>
+        <input type="range" id="z-rng" min="40" max="250" value="100" step="10">
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── LOADING ──────────────────────────────── -->
+<div id="loading">
+  <div class="spin"></div>
+  <p id="load-txt">Завантаження…</p>
+</div>
+
+<!-- ── TOAST ────────────────────────────────── -->
+<div id="toast"></div>
+
+<!-- ── LIBS ─────────────────────────────────── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+<script>
+'use strict';
+
+/* ════════════════════════════════════════════
+   SETTINGS
+═════════════════════════════════════════════ */
+
+const THEMES = {
+  dark:  { bg: '#1a1a2e', text: '#c8c8c8' },
+  dim:   { bg: '#1e2228', text: '#c8ccd4' },
+  sepia: { bg: '#f5f0e8', text: '#3a3328' },
+  light: { bg: '#f8f9fa', text: '#202428' },
+};
+
+const DEF = { bg: '#1a1a2e', text: '#c8c8c8', fontSize: 16, zoom: 100 };
+
+let S = (() => {
+  try { return Object.assign({}, DEF, JSON.parse(localStorage.getItem('dr-s1') || '{}')); }
+  catch { return { ...DEF }; }
+})();
+
+const save = () => localStorage.setItem('dr-s1', JSON.stringify(S));
+
+function hexRgb(h) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);
+  return m ? [parseInt(m[1],16), parseInt(m[2],16), parseInt(m[3],16)] : [0,0,0];
+}
+function shift(h, d) {
+  return '#' + hexRgb(h).map(c => Math.max(0,Math.min(255,c+d)).toString(16).padStart(2,'0')).join('');
+}
+function luma(h) { const [r,g,b] = hexRgb(h); return (r*299+g*587+b*114)/1000; }
+
+function applyS() {
+  const dark = luma(S.bg) < 128;
+  const k = dark ? 1 : -1;
+  const r = document.documentElement.style;
+  r.setProperty('--bg',        S.bg);
+  r.setProperty('--surface',   shift(S.bg, k*20));
+  r.setProperty('--sec-bg',    shift(S.bg, k*13));
+  r.setProperty('--sec-hover', shift(S.bg, k*24));
+  r.setProperty('--border',    shift(S.bg, k*34));
+  r.setProperty('--text',      S.text);
+  r.setProperty('--text-dim',  shift(S.text, dark ? -42 : 42));
+  r.setProperty('--accent',    dark ? '#5b8dd9' : '#1a5cbf');
+  r.setProperty('--font-size', S.fontSize + 'px');
+
+  document.getElementById('bg-pick').value  = S.bg;
+  document.getElementById('txt-pick').value = S.text;
+  document.getElementById('f-rng').value    = S.fontSize;
+  document.getElementById('z-rng').value    = S.zoom;
+  document.getElementById('fv').textContent = S.fontSize + 'px';
+  document.getElementById('zv').textContent = S.zoom + '%';
+  document.getElementById('theme-meta')?.setAttribute('content', S.bg);
+}
+
+/* ════════════════════════════════════════════
+   UI HELPERS
+═════════════════════════════════════════════ */
+
+const $  = id => document.getElementById(id);
+const ld = (t) => { $('loading').classList.add('show'); $('load-txt').textContent = t || 'Завантаження…'; };
+const ul = () => $('loading').classList.remove('show');
+let _ti;
+function toast(msg, ms=2800) {
+  const el = $('toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(_ti); _ti = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+/* ════════════════════════════════════════════
+   ACCORDION
+═════════════════════════════════════════════ */
+
+let SECS = [];
+
+function buildAccordion(sections, fname) {
+  SECS = sections;
+  const list = $('sec-list');
+  list.innerHTML = '';
+
+  $('drop-zone').style.display = 'none';
+  $('sections-wrapper').style.display = 'block';
+  $('info-name').textContent = fname;
+  $('info-meta').textContent = sections.length + ' розділів';
+  $('doc-title').textContent = fname;
+
+  if (!sections.length) {
+    list.innerHTML = '<div class="placeholder">Структура не знайдена. Документ без заголовків.</div>';
+    return;
+  }
+
+  sections.forEach((sec, idx) => {
+    const item = document.createElement('div');
+    item.className = 'sec-item';
+    item.dataset.lv  = Math.min(sec.level || 1, 4);
+    item.dataset.idx = idx;
+
+    const head = document.createElement('div');
+    head.className = 'sec-head';
+
+    const arr = document.createElement('span');
+    arr.className = 'arrow'; arr.textContent = '▶';
+
+    const title = document.createElement('span');
+    title.className = 'sec-title';
+    title.textContent = sec.title;
+
+    head.appendChild(arr);
+    head.appendChild(title);
+
+    if (sec.badge) {
+      const b = document.createElement('span');
+      b.className = 'badge'; b.textContent = sec.badge;
+      head.appendChild(b);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'sec-body';
+    body.innerHTML = '<div class="placeholder">Відкривається…</div>';
+
+    head.addEventListener('click', () => {
+      const was = item.classList.contains('open');
+      item.classList.toggle('open');
+      if (!was && !sec._done) { sec._done = true; fillBody(sec, body); }
+    });
+
+    item.appendChild(head);
+    item.appendChild(body);
+    list.appendChild(item);
+  });
+}
+
+async function fillBody(sec, el) {
+  if (sec.type === 'docx-html') {
+    el.innerHTML = sec.html || '<div class="placeholder">(порожній розділ)</div>';
+  } else if (sec.type === 'pdf-pages') {
+    el.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'pdf-pages';
+    el.appendChild(wrap);
+    await renderPDFPages(sec.pdf, sec.p0, sec.p1, wrap, S.zoom);
+  } else if (sec.type === 'pdf-text') {
+    el.innerHTML = '';
+    const d = document.createElement('div');
+    d.className = 'pdf-text'; d.textContent = sec.text;
+    el.appendChild(d);
+  }
+}
+
+async function renderPDFPages(pdf, p0, p1, wrap, zoom) {
+  const scale = (zoom / 100) * 1.5;
+  for (let p = p0; p <= p1; p++) {
+    try {
+      const page = await pdf.getPage(p);
+      const vp   = page.getViewport({ scale });
+      const cv   = document.createElement('canvas');
+      cv.width = vp.width; cv.height = vp.height;
+      await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+      wrap.appendChild(cv);
+    } catch(e) {
+      const d = document.createElement('div');
+      d.textContent = `Помилка сторінки ${p}`; d.style.color = 'var(--text-dim)';
+      wrap.appendChild(d);
+    }
+  }
+}
+
+/* ════════════════════════════════════════════
+   PDF PROCESSING
+═════════════════════════════════════════════ */
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+async function processPDF(buf, fname) {
+  ld('Читаємо PDF…');
+  const pdf   = await pdfjsLib.getDocument({ data: buf }).promise;
+  const total = pdf.numPages;
+
+  const outline = await pdf.getOutline();
+  let secs;
+
+  if (outline && outline.length) {
+    ld('Будуємо структуру…');
+    secs = await secsFromOutline(pdf, outline, total);
+  } else {
+    ld('Шукаємо заголовки…');
+    secs = await secsFromText(pdf, total);
+  }
+
+  ul();
+  buildAccordion(secs, fname);
+}
+
+/* --- outline → sections --- */
+async function secsFromOutline(pdf, outline, total) {
+  const flat = [];
+
+  async function walk(items, lv) {
+    for (const item of items) {
+      if (!item.title) continue;
+      let pg = 1;
+      try {
+        let d = item.dest;
+        if (typeof d === 'string') d = await pdf.getDestination(d);
+        if (d && d[0]) pg = await pdf.getPageIndex(d[0]) + 1;
+      } catch {}
+      flat.push({ title: item.title.trim(), lv, pg });
+      if (item.items?.length) await walk(item.items, lv + 1);
+    }
+  }
+
+  await walk(outline, 1);
+  flat.sort((a, b) => a.pg - b.pg);
+
+  return flat.map((it, i) => ({
+    title: it.title,
+    level: it.lv,
+    type:  'pdf-pages',
+    p0:    it.pg,
+    p1:    i + 1 < flat.length ? Math.max(it.pg, flat[i+1].pg - 1) : total,
+    badge: `с. ${it.pg}`,
+    pdf,
+  }));
+}
+
+/* --- text scan → sections --- */
+async function secsFromText(pdf, total) {
+  const items = [];
+
+  for (let p = 1; p <= total; p++) {
+    const page = await pdf.getPage(p);
+    const tc   = await page.getTextContent();
+    for (const it of tc.items) {
+      if (!it.str?.trim()) continue;
+      const fs = Math.max(Math.abs(it.transform[0]), Math.abs(it.transform[3])) || 12;
+      items.push({ text: it.str.trim(), fs, pg: p });
+    }
+  }
+
+  if (!items.length) return pageSecs(pdf, total);
+
+  const sorted = items.map(i => i.fs).filter(v => v > 4 && v < 200).sort((a,b)=>a-b);
+  const med = sorted[Math.floor(sorted.length / 2)] || 12;
+  const thr = med * 1.22;
+
+  /* heading patterns (Ukrainian + English) */
+  const PAT = /^(\d{1,3}[\.\)]\s|\d{1,3}\.\d{1,3}[\. ]|РОЗДІЛ\b|Розділ\b|ГЛАВА\b|Глава\b|CHAPTER\b|Chapter\b|Section\b|SECTION\b|Part\b|PART\b|Частина\b|ЧАСТИНА\b)/;
+
+  const seen  = new Set();
+  const heads = [];
+
+  for (const it of items) {
+    const key = `${it.pg}::${it.text.slice(0,40)}`;
+    if (seen.has(key)) continue;
+
+    const isLarge   = it.fs >= thr && it.text.length < 130;
+    const isPat     = PAT.test(it.text) && it.text.length < 130;
+    const isAllCaps = /[А-ЯІЇЄA-Z]/.test(it.text)
+                   && it.text === it.text.toUpperCase()
+                   && it.text.length >= 4 && it.text.length < 90;
+
+    if (isLarge || isPat || isAllCaps) {
+      seen.add(key);
+      heads.push({ title: it.text, pg: it.pg, fs: it.fs });
+    }
+  }
+
+  /* merge consecutive same-page same-size lines (multi-word headings) */
+  const merged = [];
+  for (const h of heads) {
+    const prev = merged[merged.length - 1];
+    if (prev && prev.pg === h.pg && prev.fs === h.fs && prev.title.length + h.title.length < 140) {
+      prev.title += ' ' + h.title;
+    } else {
+      merged.push({ ...h });
+    }
+  }
+
+  if (merged.length < 2) return pageSecs(pdf, total);
+
+  return merged.map((h, i) => ({
+    title: h.title,
+    level: 1,
+    type:  'pdf-pages',
+    p0:    h.pg,
+    p1:    i + 1 < merged.length ? Math.max(h.pg, merged[i+1].pg - 1) : total,
+    badge: `с. ${h.pg}`,
+    pdf,
+  }));
+}
+
+function pageSecs(pdf, total) {
+  const step = Math.max(1, Math.min(5, Math.ceil(total / 20)));
+  const out  = [];
+  for (let p = 1; p <= total; p += step) {
+    const end = Math.min(p + step - 1, total);
+    out.push({
+      title: `Сторінки ${p}–${end}`,
+      level: 1, type: 'pdf-pages',
+      p0: p, p1: end,
+      badge: `${end - p + 1} стор.`,
+      pdf,
+    });
+  }
+  return out;
+}
+
+/* ════════════════════════════════════════════
+   DOCX PROCESSING
+═════════════════════════════════════════════ */
+
+async function processDocx(buf, fname) {
+  ld('Читаємо документ…');
+
+  const res = await mammoth.convertToHtml({ arrayBuffer: buf }, {
+    styleMap: [
+      "p[style-name='Heading 1']    => h1:fresh",
+      "p[style-name='Heading 2']    => h2:fresh",
+      "p[style-name='Heading 3']    => h3:fresh",
+      "p[style-name='Heading 4']    => h4:fresh",
+      "p[style-name='Заголовок 1']  => h1:fresh",
+      "p[style-name='Заголовок 2']  => h2:fresh",
+      "p[style-name='Заголовок 3']  => h3:fresh",
+      "p[style-name='Заголовок 4']  => h4:fresh",
+    ]
+  });
+
+  const secs = parseDocxHTML(res.value);
+  ul();
+  buildAccordion(secs, fname);
+}
+
+function parseDocxHTML(html) {
+  const doc  = new DOMParser().parseFromString('<div>' + html + '</div>', 'text/html');
+  const root = doc.querySelector('div');
+
+  const secs  = [];
+  let cur     = null;
+  let hasH    = false;
+  const PNUM  = /^(\d{1,3}[\.\)]\s{0,3}\S|\d{1,3}\.\d{1,3}[\. ])/;
+
+  const push = (node) => { if (cur) cur._chunks.push(node.outerHTML); };
+
+  for (const node of root.children) {
+    const tag = node.tagName.toLowerCase();
+    if (/^h[1-6]$/.test(tag)) {
+      hasH = true;
+      if (cur) secs.push(cur);
+      cur = { title: node.textContent.trim() || '—', level: +tag[1], type: 'docx-html', _chunks: [] };
+    } else {
+      /* try numbered headings if no H tags yet */
+      if (!hasH && PNUM.test(node.textContent.trim()) && node.textContent.trim().length < 140) {
+        if (cur) secs.push(cur);
+        cur = { title: node.textContent.trim(), level: 1, type: 'docx-html', _chunks: [] };
+      } else {
+        push(node);
+      }
+    }
+  }
+  if (cur) secs.push(cur);
+
+  secs.forEach(s => { s.html = s._chunks.join(''); delete s._chunks; });
+
+  if (!secs.length) {
+    return [{ title: 'Вміст документу', level: 1, type: 'docx-html', html: root.innerHTML }];
+  }
+  return secs;
+}
+
+/* ════════════════════════════════════════════
+   FILE OPEN
+═════════════════════════════════════════════ */
+
+async function openFile(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const buf = await file.arrayBuffer();
+  try {
+    if (ext === 'pdf')  await processPDF (buf, file.name);
+    else if (ext === 'docx') await processDocx(buf, file.name);
+    else toast('Непідтримуваний формат. Потрібно .pdf або .docx');
+  } catch(e) {
+    ul();
+    toast('Помилка читання файлу: ' + e.message);
+    console.error(e);
+  }
+}
+
+/* ════════════════════════════════════════════
+   ZOOM RERENDER
+═════════════════════════════════════════════ */
+
+async function rerenderOpenPDF() {
+  const open = document.querySelectorAll('.sec-item.open');
+  for (const el of open) {
+    const sec = SECS[+el.dataset.idx];
+    if (!sec || sec.type !== 'pdf-pages') continue;
+    const body = el.querySelector('.sec-body');
+    body.innerHTML = '<div class="placeholder">Перерендеринг…</div>';
+    sec._done = false;
+    sec._done = true;
+    await fillBody(sec, body);
+  }
+}
+
+/* ════════════════════════════════════════════
+   INIT
+═════════════════════════════════════════════ */
+
+document.addEventListener('DOMContentLoaded', () => {
+  applyS();
+
+  /* file open */
+  const fi = $('file-in');
+  $('open-btn').addEventListener('click', () => fi.click());
+  fi.addEventListener('change', e => { if (e.target.files[0]) openFile(e.target.files[0]); });
+
+  /* drop zone */
+  const dz = $('drop-zone');
+  dz.addEventListener('click', () => fi.click());
+  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) openFile(e.dataTransfer.files[0]);
+  });
+  /* body-level drop */
+  document.body.addEventListener('dragover', e => e.preventDefault());
+  document.body.addEventListener('drop', e => {
+    e.preventDefault();
+    if (e.dataTransfer.files[0]) openFile(e.dataTransfer.files[0]);
+  });
+
+  /* settings open / close */
+  $('s-btn').addEventListener('click',   () => { $('s-panel').classList.add('open');    $('s-back').classList.add('show'); });
+  $('s-close').addEventListener('click', () => { $('s-panel').classList.remove('open'); $('s-back').classList.remove('show'); });
+  $('s-back').addEventListener('click',  () => { $('s-panel').classList.remove('open'); $('s-back').classList.remove('show'); });
+
+  /* themes */
+  document.querySelectorAll('.th-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      const t = THEMES[b.dataset.theme]; if (!t) return;
+      S.bg = t.bg; S.text = t.text; applyS(); save();
+    });
+  });
+
+  /* color pickers */
+  $('bg-pick').addEventListener('input',  e => { S.bg   = e.target.value; applyS(); save(); });
+  $('txt-pick').addEventListener('input', e => { S.text = e.target.value; applyS(); save(); });
+
+  /* bg swatches */
+  document.querySelectorAll('#bg-sw .sw').forEach(s => {
+    s.addEventListener('click', () => { S.bg = s.dataset.c; applyS(); save(); });
+  });
+  /* text swatches */
+  document.querySelectorAll('#txt-sw .sw').forEach(s => {
+    s.addEventListener('click', () => { S.text = s.dataset.c; applyS(); save(); });
+  });
+
+  /* font size */
+  $('f-rng').addEventListener('input', e => {
+    S.fontSize = +e.target.value;
+    $('fv').textContent = S.fontSize + 'px';
+    document.documentElement.style.setProperty('--font-size', S.fontSize + 'px');
+    save();
+  });
+
+  /* pdf zoom – rerender on release */
+  $('z-rng').addEventListener('input', e => {
+    S.zoom = +e.target.value;
+    $('zv').textContent = S.zoom + '%';
+    save();
+  });
+  $('z-rng').addEventListener('change', () => rerenderOpenPDF());
+});
+</script>
+</body>
+</html>
