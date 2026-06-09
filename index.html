@@ -1291,7 +1291,7 @@ function copyFilteredPeriodReport() {
     if (!state.filterFrom || !state.filterTo || !state.allArchiveLoaded) return;
     const _toYMD=s=>{const[d,m,y]=s.split('.');return y+m.padStart(2,'0')+d.padStart(2,'0');};
     const _fFrom=state.filterFrom.replace(/-/g,''), _fTo=state.filterTo.replace(/-/g,'');
-    const _fRecs=state.allArchiveRecs.filter(r=>{const d=getDateOnly(r.datetime);return d&&_toYMD(d)>=_fFrom&&_toYMD(d)<=_fTo;});
+    const _fRecs=[...state.allArchiveRecs,...state.records].filter(r=>{const d=getDateOnly(r.datetime);return d&&_toYMD(d)>=_fFrom&&_toYMD(d)<=_fTo;});
     if(!_fRecs.length){showAlert('Вильотів за цей період не знайдено');return;}
     const _fPts=Math.round(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     const _fLabelFrom=state.filterFrom.split('-').reverse().join('.');
@@ -1523,7 +1523,7 @@ function render() {
         if(state.filterPeriodShown&&state.filterFrom&&state.filterTo){
             const _toYMD3=s=>{const[d,m,y]=s.split('.');return y+m.padStart(2,'0')+d.padStart(2,'0');};
             const _fFrom=state.filterFrom.replace(/-/g,''),_fTo=state.filterTo.replace(/-/g,'');
-            const _fRecs=state.allArchiveRecs.filter(r=>{const d=getDateOnly(r.datetime);return d&&_toYMD3(d)>=_fFrom&&_toYMD3(d)<=_fTo;});
+            const _fRecs=[...state.allArchiveRecs,...state.records].filter(r=>{const d=getDateOnly(r.datetime);return d&&_toYMD3(d)>=_fFrom&&_toYMD3(d)<=_fTo;});
             const _fLabelFrom=state.filterFrom.split('-').reverse().join('.');
             const _fLabelTo=state.filterTo.split('-').reverse().join('.');
             const _fLabel=_fLabelFrom+' — '+_fLabelTo+'р.';
@@ -1545,9 +1545,9 @@ function render() {
         }
         h+=`<div class="p-4 space-y-4 zvity-wrap">
             <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em">за період</span></div>
-            <div class="crate p-4"><div class="flex flex-wrap gap-2">${state.archiveLoading&&!state.selArchive?'<p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p>':_arBtns}</div></div>
+            ${!state.filterPeriodOpen?`<div class="crate p-4"><div class="flex flex-wrap gap-2">${state.archiveLoading&&!state.selArchive?'<p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p>':_arBtns}</div></div>`:''}
             ${_periodPickerHtml}
-            ${state.filterPeriodShown?_periodResultHtml:(state.selArchive?_arContent:_allSection)}
+            ${state.filterPeriodOpen?(state.filterPeriodShown?_periodResultHtml:''):(state.selArchive?_arContent:_allSection)}
         </div>`;
         }
     }
