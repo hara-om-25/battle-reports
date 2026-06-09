@@ -2658,7 +2658,85 @@ def apply_patches(html):
         'meta-time-zvity'
     ))
 
-    # ── 103. ДОДАТИ ЗАПИС — disable until first target added ──
+    # ── 103. АРХІВ: додати фільтр "за період" ──
+    _late.append((
+        "inputVal: '', inputList: null, inputIdx: null, editVal: ''",
+        "inputVal: '', inputList: null, inputIdx: null, editVal: '', filterFrom: '', filterTo: '', filterPeriodOpen: false, filterPeriodShown: false",
+        'filter-period-state'
+    ))
+    _late.append((
+        "\nfunction getAbbr()",
+        "\nfunction copyFilteredPeriodReport() {\n"
+        "    if (!state.filterFrom || !state.filterTo || !state.allArchiveLoaded) return;\n"
+        "    const _toYMD=s=>{const[d,m,y]=s.split('.');return y+m.padStart(2,'0')+d.padStart(2,'0');};\n"
+        "    const _fFrom=state.filterFrom.replace(/-/g,''), _fTo=state.filterTo.replace(/-/g,'');\n"
+        "    const _fRecs=state.allArchiveRecs.filter(r=>{const d=getDateOnly(r.datetime);return d&&_toYMD(d)>=_fFrom&&_toYMD(d)<=_fTo;});\n"
+        "    if(!_fRecs.length){showAlert('Вильотів за цей період не знайдено');return;}\n"
+        "    const _fPts=Math.round(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n"
+        "    const _fLabelFrom=state.filterFrom.split('-').reverse().join('.');\n"
+        "    const _fLabelTo=state.filterTo.split('-').reverse().join('.');\n"
+        "    const _fLabel=_fLabelFrom+' — '+_fLabelTo+'р.';\n"
+        "    const _fLines=generateArchiveReport(_fRecs,_fLabel);\n"
+        "    _fLines.push('Загалом уражено, орієнтовно на '+_fPts+' балів');\n"
+        "    navigator.clipboard.writeText(_fLines.join('\\n')).catch(()=>{});\n"
+        "    showAlert('✅ Скопіювано!');\n"
+        "}\n"
+        "function getAbbr()",
+        'filter-period-copy-fn'
+    ))
+    _late.append((
+        '        h+=`<div class="p-4 space-y-4 zvity-wrap">\n'
+        '            <h1 onclick="state.selArchive=null;render()" class="stencil-shadow text-3xl px-2" style="color:var(--yellow);cursor:pointer">АРХІВ</h1>\n'
+        '            <div class="crate p-4"><div class="flex flex-wrap gap-2">${state.archiveLoading&&!state.selArchive?\'<p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p>\':_arBtns}</div></div>\n'
+        '            ${state.selArchive?_arContent:_allSection}\n'
+        '        </div>`;',
+        '        {\n'
+        '        let _periodPickerHtml=\'\';\n'
+        '        let _periodResultHtml=\'\';\n'
+        '        if(state.filterPeriodOpen){\n'
+        '            const _btnDis=(!state.filterFrom||!state.filterTo)?\'disabled style="opacity:0.38;cursor:not-allowed;pointer-events:none"\':\'\' ;\n'
+        '            _periodPickerHtml=\'<div class="crate p-4"><div class="flex flex-wrap gap-3 items-end">\'\n'
+        '                +\'<div><label class="label block mb-1" style="font-size:0.85em">З</label>\'\n'
+        '                +\'<input type="date" class="field" style="min-width:140px" value="\'+state.filterFrom+\'" onchange="state.filterFrom=this.value;state.filterPeriodShown=false;render()"></div>\'\n'
+        '                +\'<div><label class="label block mb-1" style="font-size:0.85em">ПО</label>\'\n'
+        '                +\'<input type="date" class="field" style="min-width:140px" value="\'+state.filterTo+\'" onchange="state.filterTo=this.value;state.filterPeriodShown=false;render()"></div>\'\n'
+        '                +\'<button \'+_btnDis+\' onclick="state.filterPeriodShown=true;render()" onmousedown="this.classList.add(\\\'active\\\')" onmouseup="this.classList.remove(\\\'active\\\')" ontouchstart="this.classList.add(\\\'active\\\')" ontouchend="this.classList.remove(\\\'active\\\')" class="btn-stencil btn-yellow-dim">ПОКАЗАТИ</button>\'\n'
+        '                +\'</div></div>\';\n'
+        '        }\n'
+        '        if(state.filterPeriodShown&&state.filterFrom&&state.filterTo){\n'
+        '            const _toYMD3=s=>{const[d,m,y]=s.split(\'.\');return y+m.padStart(2,\'0\')+d.padStart(2,\'0\');};\n'
+        '            const _fFrom=state.filterFrom.replace(/-/g,\'\'),_fTo=state.filterTo.replace(/-/g,\'\');\n'
+        '            const _fRecs=state.allArchiveRecs.filter(r=>{const d=getDateOnly(r.datetime);return d&&_toYMD3(d)>=_fFrom&&_toYMD3(d)<=_fTo;});\n'
+        '            const _fLabelFrom=state.filterFrom.split(\'-\').reverse().join(\'.\');\n'
+        '            const _fLabelTo=state.filterTo.split(\'-\').reverse().join(\'.\');\n'
+        '            const _fLabel=_fLabelFrom+\' — \'+_fLabelTo+\'р.\';\n'
+        '            if(!state.allArchiveLoaded){\n'
+        '                _periodResultHtml=\'<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Завантаження архіву...</p></div>\';\n'
+        '            } else if(!_fRecs.length){\n'
+        '                _periodResultHtml=\'<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Вильотів за цей період не знайдено</p></div>\';\n'
+        '            } else {\n'
+        '                const _fPts=Math.round(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));\n'
+        '                const _fLines=generateArchiveReport(_fRecs,_fLabel);\n'
+        '                _fLines.push(\'Загалом уражено, орієнтовно на \'+_fPts+\' балів\');\n'
+        '                _periodResultHtml=\'<div class="crate p-4">\'\n'
+        '                    +\'<div class="flex justify-between items-center mb-3 flex-wrap gap-2">\'\n'
+        '                    +\'<h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ПЕРІОД</h3>\'\n'
+        '                    +\'<button onclick="copyFilteredPeriodReport()" onmousedown="this.classList.add(\\\'active\\\')" onmouseup="this.classList.remove(\\\'active\\\')" ontouchstart="this.classList.add(\\\'active\\\')" ontouchend="this.classList.remove(\\\'active\\\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>\'\n'
+        '                    +\'</div>\'\n'
+        '                    +\'<div class="report-box">\'+_fLines.join(\'\\n\')+\'</div></div>\';\n'
+        '            }\n'
+        '        }\n'
+        '        h+=`<div class="p-4 space-y-4 zvity-wrap">\n'
+        '            <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color=\'var(--olive-bright)\'" onmouseup="this.style.color=\'\'" ontouchstart="this.style.color=\'var(--olive-bright)\'" ontouchend="this.style.color=\'\'" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em">за період</span></div>\n'
+        '            <div class="crate p-4"><div class="flex flex-wrap gap-2">${state.archiveLoading&&!state.selArchive?\'<p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p>\':_arBtns}</div></div>\n'
+        '            ${_periodPickerHtml}\n'
+        '            ${state.filterPeriodShown?_periodResultHtml:(state.selArchive?_arContent:_allSection)}\n'
+        '        </div>`;\n'
+        '        }',
+        'filter-period-archive-block'
+    ))
+
+    # ── 104. ДОДАТИ ЗАПИС — disable until first target added ──
     _late.append((
         '<button onclick="add()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-yellow-dim w-full text-lg mt-4">ДОДАТИ ЗАПИС</button>',
         '<button onclick="add()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-yellow-dim w-full text-lg mt-4" ${state.form.targets.length===0?\'disabled style="opacity:0.38;cursor:not-allowed;pointer-events:none"\':\'\' }>ДОДАТИ ЗАПИС</button>',
