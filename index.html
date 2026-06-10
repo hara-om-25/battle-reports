@@ -319,7 +319,7 @@ let state = {
     report: 1, counts: {},
     form: {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:'', selTargetName:''},
     selReport: null, selDate: null, selVylotyDate: null, archiveSheets: [], selArchive: null, archiveRecs: [], archiveLoading: false, pvr: [], allArchiveRecs: [], allArchiveLoaded: false, allArchiveLoading: false,
-    inputVal: '', inputList: null, inputIdx: null, editVal: '', filterFrom: '', filterTo: '', filterPeriodOpen: false, filterPeriodShown: false
+    inputVal: '', inputList: null, inputIdx: null, editVal: '', filterFrom: '', filterTo: '', filterPeriodOpen: false, filterPeriodShown: false, zvityFilterFrom: '', zvityFilterTo: '', zvityFilterOpen: false, zvityFilterShown: false
 };
 
 let tokenClient = null;
@@ -1273,6 +1273,21 @@ function copyReport() {
     showAlert('✅ Скопійовано!');
 }
 
+function copyZvityPeriodReport() {
+    if (!state.zvityFilterFrom || !state.zvityFilterTo) return;
+    const _toYMD=s=>{const[d,m,y]=s.split('.');return y+m.padStart(2,'0')+d.padStart(2,'0');};
+    const _fFrom=state.zvityFilterFrom.replace(/-/g,''), _fTo=state.zvityFilterTo.replace(/-/g,'');
+    const _fRecs=state.records.filter(r=>{const d=getDateOnly(r.datetime);return d&&_toYMD(d)>=_fFrom&&_toYMD(d)<=_fTo;});
+    if(!_fRecs.length){showAlert('Вильотів за цей період не знайдено');return;}
+    const _fPts=Math.round(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+    const _fLabelFrom=state.zvityFilterFrom.split('-').reverse().join('.');
+    const _fLabelTo=state.zvityFilterTo.split('-').reverse().join('.');
+    const _fLabel=_fLabelFrom+' — '+_fLabelTo+'р.';
+    const _lines=generateArchiveReport(_fRecs,_fLabel);
+    _lines.push('Загалом уражено, орієнтовно на '+_fPts+' балів');
+    navigator.clipboard.writeText(_lines.join('\n')).catch(()=>{});
+    showAlert('✅ Скопійовано!');
+}
 function copyZvityAllReport() {
     const _recs=state.records;
     if(!_recs.length)return;
@@ -1577,8 +1592,57 @@ function render() {
         const dates = state.selReport ? [...new Set(state.records.filter(r=>r.reportNum===state.selReport).map(r=>getDateOnly(r.datetime)))].sort() : [];
         const dayRecs = state.selReport && state.selDate ? state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate) : [];
         const reportLines = dayRecs.length > 0 ? generateReport(dayRecs) : [];
+        {
+        let _zvPicker='';
+        let _zvResult='';
+        if(state.zvityFilterOpen){
+            const _zBtnDis=(!state.zvityFilterFrom||!state.zvityFilterTo)?'disabled style="opacity:0.38;cursor:not-allowed;pointer-events:none"':'' ;
+            _zvPicker='<div class="crate p-4"><div class="flex flex-wrap gap-3 items-end">'
+                +'<div><label class="label block mb-1" style="font-size:0.85em">З</label>'
+                +'<input type="date" class="field" style="min-width:140px" value="'+state.zvityFilterFrom+'" onchange="state.zvityFilterFrom=this.value;state.zvityFilterShown=false;render()"></div>'
+                +'<div><label class="label block mb-1" style="font-size:0.85em">ПО</label>'
+                +'<input type="date" class="field" style="min-width:140px" value="'+state.zvityFilterTo+'" onchange="state.zvityFilterTo=this.value;state.zvityFilterShown=false;render()"></div>'
+                +'<button '+_zBtnDis+' onclick="state.zvityFilterShown=true;render()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-yellow-dim">ПОКАЗАТИ</button>'
+                +'</div></div>';
+        }
+        if(state.zvityFilterShown&&state.zvityFilterFrom&&state.zvityFilterTo){
+            const _zToYMD=s=>{const[d,m,y]=s.split('.');return y+m.padStart(2,'0')+d.padStart(2,'0');};
+            const _zFrom=state.zvityFilterFrom.replace(/-/g,''),_zTo=state.zvityFilterTo.replace(/-/g,'');
+            const _zRecs=state.records.filter(r=>{const d=getDateOnly(r.datetime);return d&&_zToYMD(d)>=_zFrom&&_zToYMD(d)<=_zTo;});
+            const _zLblFrom=state.zvityFilterFrom.split('-').reverse().join('.');
+            const _zLblTo=state.zvityFilterTo.split('-').reverse().join('.');
+            const _zLabel=_zLblFrom+' — '+_zLblTo+'р.';
+            if(!_zRecs.length){
+                _zvResult='<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Вильотів за цей період не знайдено</p></div>';
+            } else {
+                const _zPts=Math.round(_zRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+                // вильоти grouped by day
+                const _zDates=[...new Set(_zRecs.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>_zToYMD(a)<_zToYMD(b)?-1:1);
+                let _zN=0;
+                const _zGroups=_zDates.map(d=>{
+                    const dayR=_zRecs.filter(r=>getDateOnly(r.datetime)===d);
+                    const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+                    const cards=[...dayR].map(r=>formatRecord(r,++_zN)).join('');
+                    return '<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">'+d+'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--yellow)">'+dayR.length+'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--yellow)">'+dayPts+'</span></span></div><div class="space-y-2">'+cards+'</div></div>';
+                }).join('');
+                // доповідь per day
+                const _zReports=_zDates.map(d=>{
+                    const dayR=_zRecs.filter(r=>getDateOnly(r.datetime)===d);
+                    if(!dayR.length)return '';
+                    const rLines=generateReport(dayR);
+                    const rPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+                    return '<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ДОПОВІДЬ НА '+d+'</h3><span class="stencil" style="color:var(--khaki)">Уражено орієнтовно на <span style="color:var(--text)">'+rPts+'</span> балів</span></div></div><div class="report-box">'+rLines.filter(l=>!l.startsWith('Уражено')).join('\n')+'</div></div>';
+                }).join('');
+                // підсумки
+                const _zSumLines=generateArchiveReport(_zRecs,_zLabel);
+                _zSumLines.push('Загалом уражено, орієнтовно на '+_zPts+' балів');
+                const _zSumBlock='<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ПЕРІОД</h3><button onclick="copyZvityPeriodReport()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div><div class="report-box">'+_zSumLines.join('\n')+'</div></div>';
+                _zvResult=_zGroups+_zReports+_zSumBlock;
+            }
+        }
         h += `<div class="p-4 space-y-4 zvity-wrap">
-            <h1 onclick="state.selReport=null;state.selDate=null;render()" class="stencil-shadow text-3xl px-2" style="color: var(--yellow); cursor: pointer">ЗВІТИ</h1>
+            <div class="flex justify-between items-center px-2"><h1 onclick="state.selReport=null;state.selDate=null;state.zvityFilterOpen=false;state.zvityFilterShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">ЗВІТИ</h1><span onclick="state.zvityFilterOpen=!state.zvityFilterOpen;state.zvityFilterShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em">за період</span></div>
+            ${state.zvityFilterOpen?'':`
             <div class="grid grid-cols-2 gap-4">
                 <div class="crate p-4">
                     <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ЗВІТИ В TRINITY</h3>
@@ -1631,7 +1695,11 @@ function render() {
                 </div>
                 <div class="report-box">${reportLines.filter(l=>!l.startsWith('Уражено')).join('\n')}</div>
             </div>` : ''}
+        `}
+            ${_zvPicker}
+            ${state.zvityFilterShown?_zvResult:''}
         </div>`;
+        }
     }
     if(state.page==='reports'&&state.records.length>0){
         const _zvR=state.records;
