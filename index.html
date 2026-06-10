@@ -1280,7 +1280,7 @@ function copyZvityPeriodReport() {
     const _fRecs=state.records.filter(r=>_recDT2(r)>=state.zvityFilterFrom&&_recDT2(r)<=state.zvityFilterTo);
     if(!_fRecs.length){showAlert('Вильотів за цей період не знайдено');return;}
     const _fPts=Math.round(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
-    const _zFmt=s=>{const[dt,tm]=s.split('T');const[y,m,d]=dt.split('-');return d+'.'+m+'.'+y+(tm?' '+tm:'');};
+    const _zFmt=s=>{const[dt,tm]=s.split('T');const[y,m,d]=dt.split('-');return (tm?tm+' ':'')+d+'.'+m+'.'+y;};
     const _fLabelFrom=_zFmt(state.zvityFilterFrom);
     const _fLabelTo=_zFmt(state.zvityFilterTo);
     const _fLabel=_fLabelFrom+' — '+_fLabelTo+'р.';
@@ -1665,8 +1665,8 @@ function render() {
             const _zRecDT=r=>{const p=(r.datetime||'').replace(',','').trim().split(/\s+/);const[d,m,y]=(p[0]||'').split('.');const t=(p[1]||'').substring(0,5)||'00:00';return (y||'').padStart(4,'0')+'-'+(m||'').padStart(2,'0')+'-'+(d||'').padStart(2,'0')+'T'+t;};
             const _zFrom=state.zvityFilterFrom,_zTo=state.zvityFilterTo;
             const _zRecs=state.records.filter(r=>_zRecDT(r)>=_zFrom&&_zRecDT(r)<=_zTo);
-            const _zFmtDT=s=>{const[dt,tm]=s.split('T');const[y,m,d]=dt.split('-');return d+'.'+m+'.'+y+(tm?' '+tm:'');};
-            const _zFmtDTr=s=>{const[dt,tm]=s.split('T');const[y,m,d]=dt.split('-');return d+'.'+m+'.'+y+'р.'+(tm?' '+tm:'');};
+            const _zFmtDT=s=>{const[dt,tm]=s.split('T');const[y,m,d]=dt.split('-');return (tm?tm+' ':'')+d+'.'+m+'.'+y;};
+            const _zFmtDTr=s=>{const[dt,tm]=s.split('T');const[y,m,d]=dt.split('-');return (tm?tm+' ':'')+d+'.'+m+'.'+y+'р.';};
             const _zLblFrom=_zFmtDT(state.zvityFilterFrom);
             const _zLblTo=_zFmtDT(state.zvityFilterTo);
             const _zLabel=_zLblFrom+' — '+_zLblTo+'р.';
