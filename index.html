@@ -1677,11 +1677,11 @@ function render() {
                 // вильоти grouped by day
                 const _zToYMD=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};
                 const _zDates=[...new Set(_zRecs.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>_zToYMD(a)>_zToYMD(b)?-1:1);
-                let _zN=0;
+                const _zTotal=_zRecs.length;let _zN=0;
                 const _zGroups=_zDates.map(d=>{
                     const dayR=[..._zRecs.filter(r=>getDateOnly(r.datetime)===d)].reverse();
                     const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
-                    const cards=[...dayR].map(r=>formatRecord(r,++_zN)).join('');
+                    const cards=[...dayR].map(r=>formatRecord(r,_zTotal-_zN++)).join('');
                     return '<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">'+d+'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--yellow)">'+dayR.length+'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--yellow)">'+dayPts+'</span></span></div><div class="space-y-2">'+cards+'</div></div>';
                 }).join('');
                 // доповідь combined for period
