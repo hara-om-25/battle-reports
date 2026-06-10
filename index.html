@@ -1661,9 +1661,9 @@ function render() {
             const _zBtnDis=(!state.zvityFilterFrom||!state.zvityFilterTo)?'disabled style="opacity:0.38;cursor:not-allowed;pointer-events:none"':'' ;
             _zvPicker='<div class="crate p-4"><div class="flex flex-wrap gap-3 items-end">'
                 +'<div><label class="label block mb-1" style="font-size:0.85em">З</label>'
-                +'<button onclick="_pckOpen(\'zvityFilterFrom\',true,state.zvityFilterFrom)" class="btn-stencil" style="min-width:155px;text-align:left;font-family:inherit;padding:7px 10px">'+(state.zvityFilterFrom?(()=>{const[dt,tm]=state.zvityFilterFrom.split('T');const[y,m,d]=dt.split('-');return d+'.'+m+'.'+y+(tm?' '+tm:'');})():'— оберіть —')+'</button></div>'
+                +'<button onclick="_pckOpen(\'zvityFilterFrom\',true,state.zvityFilterFrom)" class="btn-stencil" style="min-width:130px;text-align:left;font-family:inherit;padding:7px 10px">'+(state.zvityFilterFrom?(()=>{const[dt,tm]=state.zvityFilterFrom.split('T');const[y,m,d]=dt.split('-');return d+'.'+m+'.'+y+(tm?' '+tm:'');})():'— оберіть —')+'</button></div>'
                 +'<div><label class="label block mb-1" style="font-size:0.85em">ПО</label>'
-                +'<button onclick="_pckOpen(\'zvityFilterTo\',true,state.zvityFilterTo)" class="btn-stencil" style="min-width:155px;text-align:left;font-family:inherit;padding:7px 10px">'+(state.zvityFilterTo?(()=>{const[dt,tm]=state.zvityFilterTo.split('T');const[y,m,d]=dt.split('-');return d+'.'+m+'.'+y+(tm?' '+tm:'');})():'— оберіть —')+'</button></div>'
+                +'<button onclick="_pckOpen(\'zvityFilterTo\',true,state.zvityFilterTo)" class="btn-stencil" style="min-width:130px;text-align:left;font-family:inherit;padding:7px 10px">'+(state.zvityFilterTo?(()=>{const[dt,tm]=state.zvityFilterTo.split('T');const[y,m,d]=dt.split('-');return d+'.'+m+'.'+y+(tm?' '+tm:'');})():'— оберіть —')+'</button></div>'
                 +'<button '+_zBtnDis+' onclick="state.zvityFilterShown=true;render()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-yellow-dim">ПОКАЗАТИ</button>'
                 +'</div></div>';
         }
