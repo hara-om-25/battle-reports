@@ -1325,10 +1325,10 @@ function renderListSection(list, title) {
 }
 
 const _MNAMES=['СІЧЕНЬ','ЛЮТИЙ','БЕРЕЗЕНЬ','КВІТЕНЬ','ТРАВЕНЬ','ЧЕРВЕНЬ','ЛИПЕНЬ','СЕРПЕНЬ','ВЕРЕСЕНЬ','ЖОВТЕНЬ','ЛИСТОПАД','ГРУДЕНЬ'];
-let _pck={yr:2026,mo:0,dy:null,hr:0,mn:0,hasTime:false,key:null};
+let _pck={yr:2026,mo:0,dy:null,hr:0,mn:0,hasTime:false,key:null,hrOpen:false,mnOpen:false};
 function _pckOpen(key,hasTime,cur){
     const now=new Date();
-    _pck.key=key;_pck.hasTime=hasTime;
+    _pck.key=key;_pck.hasTime=hasTime;_pck.hrOpen=false;_pck.mnOpen=false;
     if(cur){
         const[dt,tm]=(cur||'').split('T');
         const pts=dt.split('-');
@@ -1336,9 +1336,10 @@ function _pckOpen(key,hasTime,cur){
         _pck.mo=(parseInt(pts[1])||1)-1;
         _pck.dy=parseInt(pts[2])||null;
         if(tm){const tp=tm.split(':');_pck.hr=parseInt(tp[0])||0;_pck.mn=parseInt(tp[1])||0;}
-        else{_pck.hr=0;_pck.mn=0;}
+        else{_pck.hr=hasTime?now.getHours():0;_pck.mn=hasTime?now.getMinutes():0;}
     } else {
-        _pck.yr=now.getFullYear();_pck.mo=now.getMonth();_pck.dy=null;_pck.hr=0;_pck.mn=0;
+        _pck.yr=now.getFullYear();_pck.mo=now.getMonth();_pck.dy=null;
+        _pck.hr=hasTime?now.getHours():0;_pck.mn=hasTime?now.getMinutes():0;
     }
     _pckRender();
 }
@@ -1355,9 +1356,14 @@ function _pckRender(){
     }
     const _hrs=Array.from({length:24},(_,i)=>i);
     const _mns=Array.from({length:60},(_,i)=>i);
-    const _hList=_hrs.map(h=>`<div onclick="_pck.hr=${h};_pckRender()" ${h===p.hr?'data-sel':''} style="padding:8px 0;cursor:pointer;text-align:center;background:${h===p.hr?'var(--yellow)':'transparent'};color:${h===p.hr?'#1a1a12':'var(--text)'};font-family:inherit;font-size:0.95em;border-radius:3px">${String(h).padStart(2,'0')}</div>`).join('');
-    const _mList=_mns.map(m=>`<div onclick="_pck.mn=${m};_pckRender()" ${m===p.mn?'data-sel':''} style="padding:8px 0;cursor:pointer;text-align:center;background:${m===p.mn?'var(--yellow)':'transparent'};color:${m===p.mn?'#1a1a12':'var(--text)'};font-family:inherit;font-size:0.95em;border-radius:3px">${String(m).padStart(2,'0')}</div>`).join('');
-    const timeHtml=p.hasTime?`<div style="display:flex;justify-content:center;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--surface-light)"><div style="text-align:center"><div style="color:var(--khaki);font-size:0.72em;letter-spacing:0.08em;margin-bottom:4px;font-family:inherit">ГОД</div><div id="_pckHrList" style="height:150px;overflow-y:auto;background:var(--surface);border-radius:6px;border:1px solid var(--surface-light);width:58px">${_hList}</div></div><div style="display:flex;align-items:center;padding-top:22px"><span style="color:var(--yellow);font-size:1.4em;font-weight:bold">:</span></div><div style="text-align:center"><div style="color:var(--khaki);font-size:0.72em;letter-spacing:0.08em;margin-bottom:4px;font-family:inherit">ХВ</div><div id="_pckMnList" style="height:150px;overflow-y:auto;background:var(--surface);border-radius:6px;border:1px solid var(--surface-light);width:58px">${_mList}</div></div></div>`:'';
+    const _hList=_hrs.map(h=>`<div onclick="_pck.hr=${h};_pck.hrOpen=false;_pckRender()" ${h===p.hr?'data-sel':''} style="padding:9px 0;cursor:pointer;text-align:center;background:${h===p.hr?'var(--yellow)':'transparent'};color:${h===p.hr?'#1a1a12':'var(--text)'};font-family:inherit;font-size:1em;border-radius:3px">${String(h).padStart(2,'0')}</div>`).join('');
+    const _mList=_mns.map(m=>`<div onclick="_pck.mn=${m};_pck.mnOpen=false;_pckRender()" ${m===p.mn?'data-sel':''} style="padding:9px 0;cursor:pointer;text-align:center;background:${m===p.mn?'var(--yellow)':'transparent'};color:${m===p.mn?'#1a1a12':'var(--text)'};font-family:inherit;font-size:1em;border-radius:3px">${String(m).padStart(2,'0')}</div>`).join('');
+    const _hBrd=p.hrOpen?'var(--yellow)':'var(--surface-light)';
+    const _mBrd=p.mnOpen?'var(--yellow)':'var(--surface-light)';
+    const _boxSt='width:62px;height:62px;display:flex;align-items:center;justify-content:center;background:var(--surface-light);border-radius:8px;cursor:pointer;font-size:1.8em;font-weight:bold;color:var(--yellow);font-family:inherit;border:2px solid ';
+    const _dropSt='margin-top:6px;max-height:190px;overflow-y:auto;background:var(--surface);border:1px solid var(--yellow);border-radius:6px';
+    const _lblSt='color:var(--khaki);font-size:0.72em;letter-spacing:0.08em;margin-bottom:5px;font-family:inherit';
+    const timeHtml=p.hasTime?`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--surface-light)"><div style="display:flex;justify-content:center;align-items:flex-start;gap:10px"><div><div style="${_lblSt}">ГОД</div><div onclick="_pck.hrOpen=!_pck.hrOpen;_pck.mnOpen=false;_pckRender()" style="${_boxSt}${_hBrd}">${String(p.hr).padStart(2,'0')}</div>${p.hrOpen?`<div id="_pckHrList" style="${_dropSt}">${_hList}</div>`:''}</div><div style="padding-top:28px;color:var(--yellow);font-size:1.5em;font-weight:bold">:</div><div><div style="${_lblSt}">ХВ</div><div onclick="_pck.mnOpen=!_pck.mnOpen;_pck.hrOpen=false;_pckRender()" style="${_boxSt}${_mBrd}">${String(p.mn).padStart(2,'0')}</div>${p.mnOpen?`<div id="_pckMnList" style="${_dropSt}">${_mList}</div>`:''}</div></div></div>`:'';
     const okDis=p.dy?'':'disabled';
     const okSt=p.dy?'':'opacity:0.38;pointer-events:none;';
     document.getElementById('modal').innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box" style="max-width:330px;width:95%;padding:18px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><button onclick="_pckNav(-1)" class="btn-stencil" style="padding:5px 14px;font-size:1em">◀</button><span class="stencil-shadow" style="color:var(--yellow);font-size:1.05em">${_MNAMES[p.mo]} ${p.yr}</span><button onclick="_pckNav(1)" class="btn-stencil" style="padding:5px 14px;font-size:1em">▶</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">${cells}</div>${timeHtml}<div style="display:flex;gap:10px;margin-top:14px"><button onclick="closeModal()" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil" style="flex:1">СКАСУВАТИ</button><button onclick="_pckConfirm()" onmousedown="this.style.background='#b8a020'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#b8a020'" ontouchend="this.style.background=''" class="btn-stencil btn-yellow-dim" style="flex:1;${okSt}" ${okDis}>ВСТАНОВИТИ</button></div></div></div>`;
