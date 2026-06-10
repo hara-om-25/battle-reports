@@ -645,136 +645,226 @@ async function getSectionText(pdf, p0, p1) {
 }
 
 /* ════════════════════════════════════════════
-   TOC PARSING
+   TOC PARSING  (повна переробка)
+
+   Стратегія визначення фізичних сторінок (3 рівні):
+   1. pdf.getPageLabels() — офіційні мітки сторінок у PDF
+   2. Зсув — знаходимо перший розділ поблизу заявленої сторінки
+   3. Повний пошук по тексту документа
 ═════════════════════════════════════════════ */
 
-const TOC_HEAD = /^(ЗМІСТ|зміст|СОДЕРЖАНИЕ|содержание|Contents?|TABLE\s+OF\s+CONTENTS|Table\s+of\s+Contents)$/i;
+const TOC_HEADS = /^(ЗМІСТ|зміст|СОДЕРЖАНИЕ|содержание|Contents?|TABLE\s+OF\s+CONTENTS|Table\s+of\s+Contents)$/i;
 
-/* Group raw PDF text items into visual lines by Y position */
-function groupLines(items) {
+/* Мітки сторінок PDF: label → фізична сторінка (1-based) */
+async function getLabelMap(pdf) {
+  try {
+    const labels = await pdf.getPageLabels();
+    if (!labels) return null;
+    const map = new Map();
+    labels.forEach((lbl, i) => {
+      if (lbl != null) {
+        const k = String(lbl).trim();
+        if (!map.has(k)) map.set(k, i + 1);
+      }
+    });
+    return map.size ? map : null;
+  } catch { return null; }
+}
+
+/* Текстові елементи + ширина сторінки */
+async function getPageItems(pdf, pg) {
+  const page = await pdf.getPage(pg);
+  const tc   = await page.getTextContent();
+  const vp   = page.getViewport({ scale: 1 });
+  return {
+    items: tc.items
+      .filter(it => it.str?.trim())
+      .map(it => ({ s: it.str.trim(), x: it.transform[4], y: it.transform[5] })),
+    width: vp.width,
+  };
+}
+
+/* Групуємо елементи в рядки за позицією Y */
+function groupToLines(items) {
   const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
-  const lines = [];
+  const lines  = [];
   for (const it of sorted) {
-    const last = lines[lines.length - 1];
-    if (last && Math.abs(last.y - it.y) <= 4) {
-      last.parts.push(it);
+    const prev = lines[lines.length - 1];
+    if (prev && Math.abs(prev.y - it.y) <= 4) {
+      prev.items.push(it);
     } else {
-      lines.push({ y: it.y, parts: [it] });
+      lines.push({ y: it.y, items: [it] });
     }
   }
   return lines;
 }
 
-/* Find physical pages where ЗМІСТ starts and ends */
-async function locateTOCPages(pdf, total) {
+/* Парсимо один рядок ЗМІСТУ → {title, pageLabel} або null.
+   pageLabel — перший номер з можливого діапазону "60–61". */
+function parseTOCLine(lineItems) {
+  const text = lineItems.map(x => x.s).join(' ').trim();
+  if (TOC_HEADS.test(text) || text.length < 2 || /^\d+$/.test(text)) return null;
+
+  // Варіант A: останній елемент — чисте число або "число-число"
+  const last = lineItems[lineItems.length - 1];
+  const mA = last.s.match(/^[.\s]*(\d+)(?:[–\-]\d+)?[.\s]*$/);
+  if (mA) {
+    const titleItems = lineItems.slice(0, -1);
+    if (!titleItems.length) return null;
+    const title = titleItems.map(x => x.s).join(' ').replace(/[\s.·•]+$/, '').trim();
+    if (title.length >= 2) return { title, pageLabel: mA[1] };
+  }
+
+  // Варіант B: останній елемент містить вбудоване число після крапок/пробілів
+  const mB = last.s.match(/^(.*?)[\s.·•]+(\d+)(?:[–\-]\d+)?[\s.·•]*$/);
+  if (mB && mB[2]) {
+    const before = lineItems.slice(0, -1).map(x => x.s).join(' ');
+    const title  = (before + (before ? ' ' : '') + mB[1]).replace(/[\s.·•]+$/, '').trim();
+    if (title.length >= 2) return { title, pageLabel: mB[2] };
+  }
+
+  // Варіант C: регекс по повному тексту рядка
+  const mC = text.match(/^(.+?)\s*\.{2,}\s*(\d+)(?:[–\-]\d+)?\s*$/) ||
+             text.match(/^(.+?)\s{3,}(\d+)(?:[–\-]\d+)?\s*$/);
+  if (mC) {
+    const title = mC[1].replace(/[\s.·•]+$/, '').trim();
+    if (title.length >= 2) return { title, pageLabel: mC[2] };
+  }
+
+  return null;
+}
+
+/* Знаходимо фізичні сторінки ЗМІСТУ */
+async function findTOCPages(pdf, total) {
   for (let p = 1; p <= Math.min(20, total); p++) {
-    const page = await pdf.getPage(p);
-    const tc   = await page.getTextContent();
-    const items = tc.items.filter(it => it.str?.trim())
-      .map(it => ({ s: it.str.trim(), x: it.transform[4], y: it.transform[5] }));
+    const { items } = await getPageItems(pdf, p);
+    const lines = groupToLines(items);
+    const isTOC = lines.some(l => TOC_HEADS.test(l.items.map(x => x.s).join(' ').trim()));
+    if (!isTOC) continue;
 
-    const hasTOCHead = groupLines(items).some(
-      l => TOC_HEAD.test(l.parts.map(x => x.s).join(' ').trim())
-    );
-    if (!hasTOCHead) continue;
-
-    /* Scan following pages: continue as long as lines still end in numbers */
     let tocEnd = p;
     for (let pp = p + 1; pp <= Math.min(p + 6, total); pp++) {
-      const pg2 = await pdf.getPage(pp);
-      const tc2 = await pg2.getTextContent();
-      const it2 = tc2.items.filter(it => it.str?.trim())
-        .map(it => ({ s: it.str.trim(), x: it.transform[4], y: it.transform[5] }));
-      const lines2 = groupLines(it2);
-      const looksLikeTOC = lines2.some(l => {
-        const t = l.parts.map(x => x.s).join(' ').trim();
-        return t.length > 5 && /\d{1,4}\s*$/.test(t);
-      });
-      if (looksLikeTOC) tocEnd = pp; else break;
+      const { items: it2 } = await getPageItems(pdf, pp);
+      const ls = groupToLines(it2);
+      const content = ls.filter(l => l.items.map(x => x.s).join('').trim().length > 3);
+      const numEnds = content.filter(l => /\d+\s*$/.test(l.items.map(x => x.s).join(' ')));
+      if (content.length && numEnds.length / content.length >= 0.35) tocEnd = pp;
+      else break;
     }
     return { tocStart: p, tocEnd };
   }
   return { tocStart: null, tocEnd: null };
 }
 
-/* Extract section titles from TOC pages — strip trailing page numbers / ranges */
-async function extractTOCTitles(pdf, tocStart, tocEnd) {
-  const titles = [];
+/* Парсимо записи ЗМІСТУ, підтримуємо багаторядкові записи */
+async function parseTOCEntries(pdf, tocStart, tocEnd) {
+  const entries = [];
+  let pending   = '';                        // накопичений заголовок без номера
 
   for (let p = tocStart; p <= tocEnd; p++) {
-    const page = await pdf.getPage(p);
-    const tc   = await page.getTextContent();
-    const items = tc.items.filter(it => it.str?.trim())
-      .map(it => ({ s: it.str.trim(), x: it.transform[4], y: it.transform[5] }));
-    const lines = groupLines(items);
+    const { items, width } = await getPageItems(pdf, p);
+    const lines = groupToLines(items);
 
     for (const line of lines) {
-      const raw = line.parts.map(x => x.s).join(' ').trim();
-      if (TOC_HEAD.test(raw)) continue;            // skip heading "ЗМІСТ"
-      if (raw.length < 3)     continue;            // skip noise
-      if (/^\d+$/.test(raw))  continue;            // skip lone page numbers
+      const text = line.items.map(x => x.s).join(' ').trim();
 
-      /* Strip trailing: "60-61", "... 5", " 5" */
-      let title = raw
-        .replace(/\s*\d{1,4}\s*[-–]\s*\d{1,4}\s*$/, '')
-        .replace(/[\s\.·•]+\d{1,4}\s*$/, '')
-        .replace(/[\.\s]+$/, '')
-        .trim();
+      if (TOC_HEADS.test(text))          { pending = ''; continue; } // назва ЗМІСТ
+      if (!text || /^\d+$/.test(text))   { continue; }               // порожньо / один номер
 
-      if (title.length >= 3 && !/^\d+$/.test(title)) {
-        titles.push(title);
+      const parsed = parseTOCLine(line.items);
+      if (parsed) {
+        const fullTitle = pending
+          ? (pending + ' ' + parsed.title).replace(/\s+/g, ' ').trim()
+          : parsed.title;
+        entries.push({ title: fullTitle, pageLabel: parsed.pageLabel });
+        pending = '';
+      } else {
+        // Рядок без номера — продовження попереднього заголовка
+        pending = pending ? (pending + ' ' + text).trim() : text;
       }
     }
   }
-  return titles;
+  return entries;
 }
 
-/* Find the first page (>= fromPage) that contains the given title text */
-async function findTitlePage(pdf, title, total, fromPage) {
-  /* Use first 4 meaningful words as search key */
-  const words = title.toLowerCase()
-    .replace(/[^а-яіїєґa-z0-9\s]/gi, ' ')
-    .replace(/\s+/g, ' ').trim()
-    .split(' ').filter(w => w.length > 1);
+/* Перетворюємо мітки сторінок у фізичні номери:
+   Рівень 1 — page labels;  Рівень 2 — зсув;  Рівень 3 — пошук по тексту */
+async function resolvePhysicalPages(entries, labelMap, tocEnd, pdf, total) {
 
-  if (words.length === 0) return null;
-  const key = words.slice(0, 4).join(' ');
-  if (key.length < 4) return null;
-
-  for (let p = fromPage; p <= total; p++) {
-    const text = (await extractPageText(pdf, p)).toLowerCase();
-    if (text.includes(key)) return p;
+  /* ── Рівень 1: getPageLabels ── */
+  if (labelMap) {
+    const r1 = [];
+    for (const e of entries) {
+      const pg = labelMap.get(e.pageLabel);
+      if (pg && pg > tocEnd && pg <= total) r1.push({ title: e.title, page: pg });
+    }
+    if (r1.length >= Math.floor(entries.length * 0.6)) {
+      return dedup(r1);
+    }
   }
-  return null;
+
+  /* ── Рівень 2: виявляємо зсув за першим записом ── */
+  const numericEntries = entries.filter(e => /^\d+$/.test(e.pageLabel));
+  if (numericEntries.length) {
+    const first    = numericEntries[0];
+    const statedN  = parseInt(first.pageLabel);
+    const key      = first.title.toLowerCase()
+      .replace(/\s+/g, ' ').trim()
+      .split(' ').filter(w => w.length > 1).slice(0, 3).join(' ');
+
+    let offset = null;
+    if (key.length >= 4) {
+      const lo = Math.max(tocEnd + 1, statedN - 10);
+      const hi = Math.min(total, statedN + 40);
+      for (let p = lo; p <= hi; p++) {
+        const text = (await extractPageText(pdf, p)).toLowerCase();
+        if (text.includes(key)) { offset = p - statedN; break; }
+      }
+    }
+
+    if (offset !== null) {
+      const r2 = numericEntries
+        .map(e => ({ title: e.title, page: parseInt(e.pageLabel) + offset }))
+        .filter(e => e.page > tocEnd && e.page <= total);
+      if (r2.length) return dedup(r2);
+    }
+  }
+
+  /* ── Рівень 3: повний пошук по тексту (fallback) ── */
+  const r3 = [];
+  for (const e of entries) {
+    const key = e.title.toLowerCase()
+      .replace(/\s+/g, ' ').trim()
+      .split(' ').filter(w => w.length > 1).slice(0, 4).join(' ');
+    if (key.length < 4) continue;
+    for (let p = tocEnd + 1; p <= total; p++) {
+      const text = (await extractPageText(pdf, p)).toLowerCase();
+      if (text.includes(key)) { r3.push({ title: e.title, page: p }); break; }
+    }
+  }
+  return dedup(r3);
 }
 
-/* Main entry point: find ЗМІСТ → extract titles → locate pages in document */
+function dedup(arr) {
+  arr.sort((a, b) => a.page - b.page);
+  const seen = new Set();
+  return arr.filter(e => { if (seen.has(e.page)) return false; seen.add(e.page); return true; });
+}
+
+/* Головна функція */
 async function findAndParseTOC(pdf, total) {
-  const { tocStart, tocEnd } = await locateTOCPages(pdf, total);
+  const [labelMap, { tocStart, tocEnd }] = await Promise.all([
+    getLabelMap(pdf),
+    findTOCPages(pdf, total),
+  ]);
   if (!tocStart) return null;
 
   ld('Читаємо ЗМІСТ…');
-  const titles = await extractTOCTitles(pdf, tocStart, tocEnd);
-  if (!titles.length) return null;
+  const rawEntries = await parseTOCEntries(pdf, tocStart, tocEnd);
+  if (!rawEntries.length) return null;
 
-  ld('Шукаємо розділи в документі…');
-  const entries = [];
-  const searchFrom = tocEnd + 1;
-
-  for (const title of titles) {
-    const pg = await findTitlePage(pdf, title, total, searchFrom);
-    if (pg) entries.push({ title, page: pg });
-  }
-
-  if (!entries.length) return null;
-
-  /* Sort, deduplicate by page (keep first occurrence) */
-  entries.sort((a, b) => a.page - b.page);
-  const seenPg = new Set();
-  return entries.filter(e => {
-    if (seenPg.has(e.page)) return false;
-    seenPg.add(e.page); return true;
-  });
+  ld('Визначаємо сторінки…');
+  return resolvePhysicalPages(rawEntries, labelMap, tocEnd, pdf, total);
 }
 
 /* ════════════════════════════════════════════
