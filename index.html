@@ -1323,6 +1323,51 @@ function renderListSection(list, title) {
     return `<div class="crate p-4"><h2 class="stencil-shadow text-lg mb-3" style="color: var(--yellow)">${title} <span style="color: var(--khaki)">(${state[list].length})</span></h2><div class="space-y-2">${state[list].map((x,i)=>`<div class="list-item" onclick="selectItem('${list}',${i})">${esc(x)}</div>`).join('')}</div></div>`;
 }
 
+const _MNAMES=['СІЧЕНЬ','ЛЮТИЙ','БЕРЕЗЕНЬ','КВІТЕНЬ','ТРАВЕНЬ','ЧЕРВЕНЬ','ЛИПЕНЬ','СЕРПЕНЬ','ВЕРЕСЕНЬ','ЖОВТЕНЬ','ЛИСТОПАД','ГРУДЕНЬ'];
+let _pck={yr:2026,mo:0,dy:null,hr:0,mn:0,hasTime:false,key:null};
+function _pckOpen(key,hasTime,cur){
+    const now=new Date();
+    _pck.key=key;_pck.hasTime=hasTime;
+    if(cur){
+        const[dt,tm]=(cur||'').split('T');
+        const pts=dt.split('-');
+        _pck.yr=parseInt(pts[0])||now.getFullYear();
+        _pck.mo=(parseInt(pts[1])||1)-1;
+        _pck.dy=parseInt(pts[2])||null;
+        if(tm){const tp=tm.split(':');_pck.hr=parseInt(tp[0])||0;_pck.mn=parseInt(tp[1])||0;}
+        else{_pck.hr=0;_pck.mn=0;}
+    } else {
+        _pck.yr=now.getFullYear();_pck.mo=now.getMonth();_pck.dy=null;_pck.hr=0;_pck.mn=0;
+    }
+    _pckRender();
+}
+function _pckRender(){
+    const p=_pck;
+    const fd=(d=>(d===0?6:d-1))(new Date(p.yr,p.mo,1).getDay());
+    const dim=new Date(p.yr,p.mo+1,0).getDate();
+    const HDR=['ПН','ВТ','СР','ЧТ','ПТ','СБ','НД'];
+    let cells=HDR.map(h=>`<div style="text-align:center;color:var(--khaki);font-size:0.72em;padding:3px 1px;font-family:inherit;letter-spacing:0.05em">${h}</div>`).join('');
+    for(let i=0;i<fd;i++)cells+='<div></div>';
+    for(let d=1;d<=dim;d++){
+        const sel=p.dy===d;
+        cells+=`<button onclick="_pckDay(${d})" style="padding:7px 2px;font-size:0.88em;border-radius:4px;border:none;cursor:pointer;font-family:inherit;letter-spacing:0.05em;background:${sel?'var(--yellow)':'var(--surface-light)'};color:${sel?'#1a1a12':'var(--text)'};transition:background 0.1s" onmousedown="this.style.opacity='0.7'" onmouseup="this.style.opacity='1'" ontouchstart="this.style.opacity='0.7'" ontouchend="this.style.opacity='1'">${d}</button>`;
+    }
+    const timeHtml=p.hasTime?`<div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--surface-light)"><span style="color:var(--khaki);font-family:inherit;font-size:0.82em;letter-spacing:0.08em">ЧАС</span><input type="number" min="0" max="23" value="${String(p.hr).padStart(2,'0')}" oninput="_pck.hr=Math.min(23,Math.max(0,parseInt(this.value)||0))" class="field" style="width:54px;text-align:center;padding:6px 4px;font-size:1em"><span style="color:var(--yellow);font-size:1.4em;font-weight:bold">:</span><input type="number" min="0" max="59" value="${String(p.mn).padStart(2,'0')}" oninput="_pck.mn=Math.min(59,Math.max(0,parseInt(this.value)||0))" class="field" style="width:54px;text-align:center;padding:6px 4px;font-size:1em"></div>`:'';
+    const okDis=p.dy?'':'disabled';
+    const okSt=p.dy?'':'opacity:0.38;pointer-events:none;';
+    document.getElementById('modal').innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box" style="max-width:330px;width:95%;padding:18px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><button onclick="_pckNav(-1)" class="btn-stencil" style="padding:5px 14px;font-size:1em">◀</button><span class="stencil-shadow" style="color:var(--yellow);font-size:1.05em">${_MNAMES[p.mo]} ${p.yr}</span><button onclick="_pckNav(1)" class="btn-stencil" style="padding:5px 14px;font-size:1em">▶</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">${cells}</div>${timeHtml}<div style="display:flex;gap:10px;margin-top:14px"><button onclick="closeModal()" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil" style="flex:1">СКАСУВАТИ</button><button onclick="_pckConfirm()" onmousedown="this.style.background='#b8a020'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#b8a020'" ontouchend="this.style.background=''" class="btn-stencil btn-yellow-dim" style="flex:1;${okSt}" ${okDis}>ВСТАНОВИТИ</button></div></div></div>`;
+}
+function _pckNav(dir){_pck.mo+=dir;if(_pck.mo<0){_pck.mo=11;_pck.yr--;}if(_pck.mo>11){_pck.mo=0;_pck.yr++;}  _pckRender();}
+function _pckDay(d){_pck.dy=d;_pckRender();}
+function _pckConfirm(){
+    if(!_pck.dy)return;
+    const y=String(_pck.yr),m=String(_pck.mo+1).padStart(2,'0'),d=String(_pck.dy).padStart(2,'0');
+    state[_pck.key]=_pck.hasTime?`${y}-${m}-${d}T${String(_pck.hr).padStart(2,'0')}:${String(_pck.mn).padStart(2,'0')}`:`${y}-${m}-${d}`;
+    state.zvityFilterShown=false;state.filterPeriodShown=false;
+    closeModal();render();
+}
+
+
 function render() {
     const app = document.getElementById('app');
     
@@ -1529,9 +1574,9 @@ function render() {
             const _btnDis=(!state.filterFrom||!state.filterTo)?'disabled style="opacity:0.38;cursor:not-allowed;pointer-events:none"':'' ;
             _periodPickerHtml='<div class="crate p-4"><div class="flex flex-wrap gap-3 items-end">'
                 +'<div><label class="label block mb-1" style="font-size:0.85em">З</label>'
-                +'<input type="date" class="field" style="min-width:140px" value="'+state.filterFrom+'" onchange="state.filterFrom=this.value;state.filterPeriodShown=false;render()"></div>'
+                +'<button onclick="_pckOpen(\'filterFrom\',false,state.filterFrom)" class="btn-stencil" style="min-width:130px;text-align:left;font-family:inherit;padding:7px 10px">'+(state.filterFrom?(()=>{const[y,m,d]=state.filterFrom.split('-');return d+'.'+m+'.'+y;})():'— оберіть —')+'</button></div>'
                 +'<div><label class="label block mb-1" style="font-size:0.85em">ПО</label>'
-                +'<input type="date" class="field" style="min-width:140px" value="'+state.filterTo+'" onchange="state.filterTo=this.value;state.filterPeriodShown=false;render()"></div>'
+                +'<button onclick="_pckOpen(\'filterTo\',false,state.filterTo)" class="btn-stencil" style="min-width:130px;text-align:left;font-family:inherit;padding:7px 10px">'+(state.filterTo?(()=>{const[y,m,d]=state.filterTo.split('-');return d+'.'+m+'.'+y;})():'— оберіть —')+'</button></div>'
                 +'<button '+_btnDis+' onclick="state.filterPeriodShown=true;render()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-yellow-dim">ПОКАЗАТИ</button>'
                 +'</div></div>';
         }
@@ -1599,9 +1644,9 @@ function render() {
             const _zBtnDis=(!state.zvityFilterFrom||!state.zvityFilterTo)?'disabled style="opacity:0.38;cursor:not-allowed;pointer-events:none"':'' ;
             _zvPicker='<div class="crate p-4"><div class="flex flex-wrap gap-3 items-end">'
                 +'<div><label class="label block mb-1" style="font-size:0.85em">З</label>'
-                +'<input type="datetime-local" class="field" style="min-width:160px" value="'+state.zvityFilterFrom+'" onchange="state.zvityFilterFrom=this.value;state.zvityFilterShown=false;render()"></div>'
+                +'<button onclick="_pckOpen(\'zvityFilterFrom\',true,state.zvityFilterFrom)" class="btn-stencil" style="min-width:155px;text-align:left;font-family:inherit;padding:7px 10px">'+(state.zvityFilterFrom?(()=>{const[dt,tm]=state.zvityFilterFrom.split('T');const[y,m,d]=dt.split('-');return d+'.'+m+'.'+y+(tm?' '+tm:'');})():'— оберіть —')+'</button></div>'
                 +'<div><label class="label block mb-1" style="font-size:0.85em">ПО</label>'
-                +'<input type="datetime-local" class="field" style="min-width:160px" value="'+state.zvityFilterTo+'" onchange="state.zvityFilterTo=this.value;state.zvityFilterShown=false;render()"></div>'
+                +'<button onclick="_pckOpen(\'zvityFilterTo\',true,state.zvityFilterTo)" class="btn-stencil" style="min-width:155px;text-align:left;font-family:inherit;padding:7px 10px">'+(state.zvityFilterTo?(()=>{const[dt,tm]=state.zvityFilterTo.split('T');const[y,m,d]=dt.split('-');return d+'.'+m+'.'+y+(tm?' '+tm:'');})():'— оберіть —')+'</button></div>'
                 +'<button '+_zBtnDis+' onclick="state.zvityFilterShown=true;render()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-yellow-dim">ПОКАЗАТИ</button>'
                 +'</div></div>';
         }
