@@ -3,328 +3,321 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Читач документів</title>
+  <title>OM Читач</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" id="theme-meta" content="#1a1a2e">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="mobile-web-app-capable" content="yes">
   <style>
     :root {
-      --bg:           #1a1a2e;
-      --surface:      #1e2240;
-      --sec-bg:       #1c2035;
-      --sec-hover:    #232a48;
-      --border:       #2c3454;
-      --text:         #c8c8c8;
-      --text-dim:     #7a7a8a;
-      --accent:       #5b8dd9;
-      --font-size:    16px;
+      --bg:         #1a1a2e;
+      --surface:    #1e2240;
+      --sec-bg:     #1c2035;
+      --sec-hover:  #232a48;
+      --border:     #2c3454;
+      --text:       #c8c8c8;
+      --text-dim:   #7a7a8a;
+      --accent:     #5b8dd9;
+      --font-size:  16px;
     }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
+    html, body { height: 100%; overflow: hidden; }
 
     body {
-      background: var(--bg);
-      color: var(--text);
+      background: var(--bg); color: var(--text);
       font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
       font-size: var(--font-size);
-      min-height: 100vh;
-      transition: background .3s, color .3s;
+      display: flex; flex-direction: column;
     }
 
-    /* ── TOOLBAR ─────────────────────────── */
+    /* ── TOOLBAR ── */
     #toolbar {
-      position: fixed; top: 0; left: 0; right: 0; height: 52px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; padding: 0 12px; gap: 8px;
-      z-index: 200;
-      box-shadow: 0 2px 10px rgba(0,0,0,.35);
+      flex-shrink: 0; height: 52px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 10px; gap: 6px;
+      z-index: 200; box-shadow: 0 2px 8px rgba(0,0,0,.35);
     }
     #doc-title {
       flex: 1; font-size: 13px; font-weight: 500;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-      color: var(--text-dim);
+      color: var(--text-dim); min-width: 0;
     }
     .btn {
-      background: rgba(255,255,255,.06);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 7px 13px;
-      cursor: pointer; font-size: 13px;
+      background: rgba(255,255,255,.06); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 6px 12px; cursor: pointer; font-size: 13px;
       display: flex; align-items: center; gap: 5px;
-      white-space: nowrap;
-      transition: background .15s;
-      flex-shrink: 0;
+      white-space: nowrap; transition: background .15s; flex-shrink: 0;
     }
-    .btn:hover { background: rgba(255,255,255,.13); }
-    .btn.ico   { padding: 7px 10px; }
+    .btn:hover  { background: rgba(255,255,255,.13); }
+    .btn.ico    { padding: 6px 9px; }
+    .btn.accent { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn.accent:hover { background: #4a7bc8; }
+    .btn.danger { background: rgba(200,60,60,.25); border-color: rgba(200,60,60,.5); }
+    .btn.danger:hover { background: rgba(200,60,60,.4); }
+    #doc-controls { display: none; align-items: center; gap: 6px; }
+    #doc-controls.show { display: flex; }
 
-    /* ── MAIN ────────────────────────────── */
-    #main {
-      padding: 16px;
-      padding-top: calc(52px + 16px);
-      max-width: 880px;
-      margin: 0 auto;
+    /* ── MODE BAR ── */
+    #mode-bar {
+      flex-shrink: 0; display: none;
+      align-items: center; gap: 8px; padding: 8px 12px;
+      font-size: 13px; border-bottom: 1px solid var(--border);
     }
+    #mode-bar.need-title   { background: rgba(200,140,40,.18); display: flex; }
+    #mode-bar.need-content { background: rgba(40,120,200,.18); display: flex; }
+    #mode-msg { flex: 1; }
 
-    /* ── DROP ZONE ───────────────────────── */
+    /* ── SEARCH BAR ── */
+    #search-bar {
+      flex-shrink: 0; display: none;
+      align-items: center; gap: 6px; padding: 6px 12px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    #search-bar.show { display: flex; }
+    #search-input {
+      flex: 1; background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 6px 10px; font-size: 13px; outline: none;
+      min-width: 0;
+    }
+    #search-input:focus { border-color: var(--accent); }
+    #search-count { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+
+    /* ── DROP ZONE ── */
     #drop-zone {
-      border: 2px dashed var(--border);
-      border-radius: 16px;
-      padding: 64px 20px;
-      text-align: center; cursor: pointer;
-      transition: border-color .2s, background .2s;
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      border: 2px dashed var(--border); border-radius: 16px;
+      margin: 20px; cursor: pointer; transition: all .2s;
       background: var(--sec-bg);
-      margin: 20px 0;
     }
     #drop-zone:hover, #drop-zone.dragover {
-      border-color: var(--accent);
-      background: rgba(91,141,217,.07);
+      border-color: var(--accent); background: rgba(91,141,217,.07);
     }
-    .dz-icon  { font-size: 54px; margin-bottom: 14px; }
+    .dz-icon  { font-size: 52px; margin-bottom: 14px; }
     .dz-title { font-size: 16px; margin-bottom: 8px; }
     .dz-hint  { color: var(--text-dim); font-size: 13px; }
 
-    /* ── DOC INFO BAR ────────────────────── */
-    #sections-wrapper { display: none; }
-    .doc-bar {
-      display: flex; align-items: center; gap: 10px;
-      padding: 11px 16px; margin-bottom: 12px;
-      background: var(--sec-bg); border: 1px solid var(--border);
-      border-radius: 10px; font-size: 13px;
+    /* ── MAIN LAYOUT ── */
+    #doc-view {
+      flex: 1; display: none; overflow: hidden;
+      flex-direction: row;
     }
-    .doc-bar .name { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .doc-bar .meta { color: var(--text-dim); flex-shrink: 0; }
+    #doc-view.show { display: flex; }
 
-    /* ── ACCORDION ───────────────────────── */
-    .sec-list { display: flex; flex-direction: column; gap: 3px; }
-
-    .sec-item {
-      background: var(--sec-bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
+    /* ── SECTIONS PANEL ── */
+    #sec-panel {
+      width: 250px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      background: var(--surface); border-right: 1px solid var(--border);
       overflow: hidden;
-      transition: border-color .2s;
+    }
+    .sec-panel-hd {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-dim);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    #sec-count {
+      background: var(--accent); color: #fff;
+      border-radius: 10px; padding: 1px 7px; font-size: 11px;
+    }
+    #sec-list { flex: 1; overflow-y: auto; padding: 6px; }
+    #sec-empty {
+      padding: 20px 14px;
+      color: var(--text-dim); font-size: 13px; text-align: center;
+      line-height: 1.6;
+    }
+
+    /* Section items */
+    .sec-item {
+      background: var(--sec-bg); border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden; margin-bottom: 4px;
+      transition: border-color .15s;
     }
     .sec-item:hover { border-color: var(--accent); }
-    .sec-item[data-lv="2"] { margin-left: 20px; }
-    .sec-item[data-lv="3"] { margin-left: 40px; }
-    .sec-item[data-lv="4"] { margin-left: 56px; }
-
-    .sec-head {
-      padding: 13px 16px; cursor: pointer;
-      display: flex; align-items: center; gap: 10px;
+    .sec-hd {
+      padding: 9px 10px; cursor: pointer;
+      display: flex; align-items: flex-start; gap: 7px;
       transition: background .15s; user-select: none;
     }
-    .sec-head:hover { background: var(--sec-hover); }
-
-    .arrow {
-      color: var(--text-dim); font-size: 10px;
-      transition: transform .2s; width: 14px; flex-shrink: 0;
+    .sec-hd:hover { background: var(--sec-hover); }
+    .sec-arr  { font-size: 9px; color: var(--text-dim); flex-shrink: 0; margin-top: 3px; transition: transform .2s; }
+    .sec-item.open .sec-arr { transform: rotate(90deg); }
+    .sec-tit  { flex: 1; font-size: 12px; font-weight: 500; line-height: 1.4; word-break: break-word; }
+    .del-btn  {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-dim); font-size: 13px; padding: 1px 2px;
+      flex-shrink: 0; opacity: 0; transition: opacity .15s;
+      border-radius: 4px;
     }
-    .sec-item.open .arrow { transform: rotate(90deg); }
-
-    .sec-title {
-      flex: 1;
-      font-size: calc(var(--font-size) * 0.93);
-      line-height: 1.45;
-    }
-    .sec-item[data-lv="1"] .sec-title { font-weight: 600; }
-    .sec-item[data-lv="2"] .sec-title { font-weight: 500; }
-
-    .badge {
-      font-size: 11px; color: var(--text-dim);
-      background: rgba(255,255,255,.05);
-      padding: 2px 8px; border-radius: 10px; flex-shrink: 0;
-    }
-
-    .sec-body {
-      display: none;
-      padding: 16px 20px 20px;
+    .sec-hd:hover .del-btn { opacity: 1; }
+    .del-btn:hover { color: #e05050; background: rgba(200,60,60,.15); }
+    .sec-bd {
+      display: none; padding: 10px 12px 12px;
       border-top: 1px solid var(--border);
-      line-height: 1.78;
+      font-size: calc(var(--font-size) * 0.88);
+      line-height: 1.7; color: var(--text-dim);
+    }
+    .sec-item.open .sec-bd { display: block; }
+
+    /* ── DOCUMENT TEXT ── */
+    #doc-text {
+      flex: 1; overflow-y: auto;
+      padding: 20px 28px; line-height: 1.82;
       font-size: var(--font-size);
     }
-    .sec-item.open .sec-body { display: block; }
+    #doc-text p { margin-bottom: .8em; }
+    #doc-text strong, #doc-text b { color: var(--text); }
+    #doc-text a { color: var(--accent); }
+    #doc-text table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: .9em; }
+    #doc-text td, #doc-text th { border: 1px solid var(--border); padding: 5px 9px; }
+    #doc-text th { background: rgba(255,255,255,.05); }
 
-    /* DOCX typography */
-    .sec-body p  { margin-bottom: .75em; }
-    .sec-body ul, .sec-body ol { margin: .4em 0 .75em 1.6em; }
-    .sec-body li { margin-bottom: .3em; }
-    .sec-body strong, .sec-body b { color: var(--text); }
-    .sec-body em, .sec-body i { color: var(--text-dim); }
-    .sec-body table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: .9em; }
-    .sec-body td, .sec-body th { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
-    .sec-body th { background: rgba(255,255,255,.05); font-weight: 600; }
-    .sec-body a  { color: var(--accent); text-decoration: none; }
-    .sec-body a:hover { text-decoration: underline; }
-
-    /* PDF canvas */
-    .pdf-text           { font-size: calc(var(--font-size) * var(--pdf-zoom, 1)); line-height: 1.82; word-break: break-word; }
-    .pdf-text p         { margin-bottom: .8em; }
-    .pdf-text p:last-child { margin-bottom: 0; }
-
-    .placeholder {
-      padding: 24px; text-align: center;
-      color: var(--text-dim); font-size: 13px;
+    /* Page separator */
+    .pg-sep {
+      text-align: center; color: var(--text-dim); font-size: 11px;
+      margin: 20px 0 16px; display: flex; align-items: center; gap: 10px;
+    }
+    .pg-sep::before, .pg-sep::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
     }
 
-    /* ── SETTINGS PANEL ──────────────────── */
-    #s-back {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,.5); z-index: 299;
-    }
+    /* Search highlights */
+    mark.hi    { background: rgba(255,200,60,.3); color: inherit; border-radius: 2px; }
+    mark.hi.cur { background: rgba(255,160,40,.7); color: #000; border-radius: 2px; }
+
+    /* ── SETTINGS PANEL ── */
+    #s-back  { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 299; }
     #s-back.show { display: block; }
-
     #s-panel {
-      position: fixed; top: 0; right: 0; bottom: 0; width: 292px;
+      position: fixed; top: 0; right: 0; bottom: 0; width: 290px;
       background: var(--surface); border-left: 1px solid var(--border);
       z-index: 300; overflow-y: auto;
-      transform: translateX(100%);
-      transition: transform .25s ease;
-      display: flex; flex-direction: column;
+      transform: translateX(100%); transition: transform .25s ease;
     }
     #s-panel.open { transform: translateX(0); }
-
     .s-top {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
       font-weight: 600; font-size: 14px;
-      position: sticky; top: 0;
-      background: var(--surface); z-index: 1;
+      position: sticky; top: 0; background: var(--surface); z-index: 1;
     }
     .s-close {
       background: none; border: none; cursor: pointer;
       color: var(--text-dim); font-size: 18px; line-height: 1;
-      padding: 4px 6px; border-radius: 6px;
-      transition: background .15s;
+      padding: 4px 6px; border-radius: 6px; transition: background .15s;
     }
     .s-close:hover { background: rgba(255,255,255,.1); }
-
-    .s-body { padding: 16px; flex: 1; }
-
+    .s-body { padding: 16px; }
     .s-group { margin-bottom: 22px; }
-    .s-label {
-      font-size: 11px; text-transform: uppercase;
-      letter-spacing: .08em; color: var(--text-dim);
-      margin-bottom: 10px;
-    }
-
+    .s-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); margin-bottom: 10px; }
     .s-row { margin-bottom: 13px; }
-    .s-row > label {
-      display: flex; justify-content: space-between;
-      font-size: 13px; color: var(--text-dim); margin-bottom: 5px;
-    }
+    .s-row > label { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-dim); margin-bottom: 5px; }
     .s-row > label span { color: var(--accent); font-weight: 500; }
     .s-row input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
-
     .color-row { display: flex; align-items: center; gap: 10px; }
-    .cpick {
-      width: 42px; height: 34px;
-      border: 1px solid var(--border); border-radius: 8px;
-      background: none; cursor: pointer; padding: 2px; flex-shrink: 0;
-    }
+    .cpick { width: 42px; height: 34px; border: 1px solid var(--border); border-radius: 8px; background: none; cursor: pointer; padding: 2px; flex-shrink: 0; }
     .swatches { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
-    .sw {
-      width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
-      border: 2px solid transparent;
-      transition: border-color .15s, transform .15s;
-    }
+    .sw { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color .15s, transform .15s; }
     .sw:hover { transform: scale(1.2); border-color: var(--accent); }
-
     .theme-row { display: flex; gap: 6px; flex-wrap: wrap; }
-    .th-btn {
-      flex: 1 1 calc(50% - 3px);
-      padding: 9px 6px; text-align: center; font-size: 12px;
-      cursor: pointer; border-radius: 8px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,.04); color: var(--text);
-      transition: background .15s;
-    }
+    .th-btn { flex: 1 1 calc(50% - 3px); padding: 9px 6px; text-align: center; font-size: 12px; cursor: pointer; border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,.04); color: var(--text); transition: background .15s; }
     .th-btn:hover { background: rgba(255,255,255,.1); }
-
     .divider { height: 1px; background: var(--border); margin: 4px 0 18px; }
 
-    /* ── LOADING ─────────────────────────── */
-    #loading {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,.65); z-index: 400;
-      justify-content: center; align-items: center;
-      flex-direction: column; gap: 16px;
-    }
+    /* ── LOADING ── */
+    #loading { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 400; justify-content: center; align-items: center; flex-direction: column; gap: 16px; }
     #loading.show { display: flex; }
-    .spin {
-      width: 44px; height: 44px;
-      border: 3px solid rgba(255,255,255,.12);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-    }
+    .spin { width: 44px; height: 44px; border: 3px solid rgba(255,255,255,.12); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     #loading p { color: var(--text-dim); font-size: 14px; }
 
-    /* ── TOAST ───────────────────────────── */
-    #toast {
-      position: fixed; bottom: 20px; left: 50%;
-      transform: translateX(-50%) translateY(60px);
-      background: var(--surface); color: var(--text);
-      border: 1px solid var(--border); border-radius: 10px;
-      padding: 10px 20px; font-size: 13px; z-index: 500;
-      transition: transform .28s;
-      box-shadow: 0 4px 16px rgba(0,0,0,.4);
-      pointer-events: none;
-    }
+    /* ── TOAST ── */
+    #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 10px 20px; font-size: 13px; z-index: 500; transition: transform .28s; box-shadow: 0 4px 16px rgba(0,0,0,.4); pointer-events: none; }
     #toast.show { transform: translateX(-50%) translateY(0); }
 
-    /* ── SCROLLBAR ───────────────────────── */
+    /* ── CONFIRM DIALOG ── */
+    #confirm-back { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 450; align-items: center; justify-content: center; }
+    #confirm-back.show { display: flex; }
+    #confirm-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px 28px; max-width: 340px; width: 90%; }
+    #confirm-box h3 { font-size: 16px; margin-bottom: 10px; }
+    #confirm-box p  { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.5; }
+    .confirm-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ── SCROLLBAR ── */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-    /* ── MOBILE ──────────────────────────── */
-    @media (max-width: 600px) {
+    /* ── MOBILE ── */
+    @media (max-width: 700px) {
+      #sec-panel { width: 100%; height: auto; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
+      #doc-view.show { flex-direction: column; }
       #s-panel { width: 100%; }
-      #main    { padding: 10px; padding-top: calc(52px + 10px); }
-      .sec-item[data-lv="2"] { margin-left: 12px; }
-      .sec-item[data-lv="3"] { margin-left: 24px; }
+      #doc-text { padding: 14px 16px; }
     }
   </style>
 </head>
 <body>
 
-<!-- ── TOOLBAR ─────────────────────────────── -->
+<!-- TOOLBAR -->
 <div id="toolbar">
   <button class="btn" id="open-btn">📂 <span id="open-txt">Відкрити</span></button>
-  <span id="doc-title">Читач PDF і Word</span>
-  <button class="btn ico" id="s-btn" title="Налаштування">⚙️</button>
+
+  <div id="doc-controls">
+    <button class="btn accent" id="add-sec-btn">＋ Розділ</button>
+    <button class="btn ico"    id="search-btn"  title="Пошук">🔍</button>
+    <button class="btn ico"    id="save-btn"    title="Зберегти розділи (OM_*)">💾</button>
+    <button class="btn ico danger" id="close-doc-btn" title="Закрити документ">✕</button>
+  </div>
+
+  <span id="doc-title">OM Читач</span>
+  <button class="btn ico" id="s-btn">⚙️</button>
 </div>
 
 <input type="file" id="file-in" accept=".pdf,.docx" style="display:none">
 
-<!-- ── MAIN ────────────────────────────────── -->
-<div id="main">
-  <div id="drop-zone">
-    <div class="dz-icon">📄</div>
-    <div class="dz-title">Перетягніть PDF або Word сюди</div>
-    <div class="dz-hint">Підтримує .pdf та .docx &nbsp;•&nbsp; або натисніть «Відкрити»</div>
-  </div>
-
-  <div id="sections-wrapper">
-    <div class="doc-bar">
-      <span>📄</span>
-      <span id="info-name" class="name">—</span>
-      <span id="info-meta" class="meta">—</span>
-    </div>
-    <div id="sec-list" class="sec-list"></div>
-  </div>
+<!-- MODE BAR -->
+<div id="mode-bar">
+  <span id="mode-msg"></span>
+  <button class="btn accent" id="select-text-btn" style="display:none">ОБРАТИ ТЕКСТ</button>
+  <button class="btn"        id="cancel-mode-btn">Скасувати</button>
 </div>
 
-<!-- ── SETTINGS ─────────────────────────────── -->
+<!-- SEARCH BAR -->
+<div id="search-bar">
+  <input type="text" id="search-input" placeholder="Пошук в документі…" autocomplete="off">
+  <span id="search-count"></span>
+  <button class="btn ico" id="prev-match" title="Попереднє">‹</button>
+  <button class="btn ico" id="next-match" title="Наступне">›</button>
+  <button class="btn ico" id="close-search">✕</button>
+</div>
+
+<!-- DROP ZONE -->
+<div id="drop-zone">
+  <div class="dz-icon">📄</div>
+  <div class="dz-title">Перетягніть PDF або Word сюди</div>
+  <div class="dz-hint">Підтримує .pdf та .docx &nbsp;•&nbsp; або натисніть «Відкрити»</div>
+</div>
+
+<!-- DOCUMENT VIEW -->
+<div id="doc-view">
+  <div id="sec-panel">
+    <div class="sec-panel-hd">
+      <span>📑 Розділи</span>
+      <span id="sec-count">0</span>
+    </div>
+    <div id="sec-list"></div>
+    <div id="sec-empty">Немає розділів.<br>Натисніть «＋ Розділ» щоб додати.</div>
+  </div>
+  <div id="doc-text"></div>
+</div>
+
+<!-- SETTINGS -->
 <div id="s-back"></div>
 <div id="s-panel">
   <div class="s-top">
@@ -332,9 +325,8 @@
     <button class="s-close" id="s-close">✕</button>
   </div>
   <div class="s-body">
-
     <div class="s-group">
-      <div class="s-label">Швидкі теми</div>
+      <div class="s-label">Теми</div>
       <div class="theme-row">
         <div class="th-btn" data-theme="dark">🌙 Темний</div>
         <div class="th-btn" data-theme="dim">🌆 Сутінки</div>
@@ -342,92 +334,87 @@
         <div class="th-btn" data-theme="light">☀️ Світлий</div>
       </div>
     </div>
-
     <div class="divider"></div>
-
     <div class="s-group">
-      <div class="s-label">Колір фону</div>
+      <div class="s-label">Фон</div>
       <div class="color-row">
         <input type="color" class="cpick" id="bg-pick" value="#1a1a2e">
         <div class="swatches" id="bg-sw">
-          <div class="sw" style="background:#1a1a2e" data-c="#1a1a2e" title="Темно-синій"></div>
-          <div class="sw" style="background:#1e1e1e" data-c="#1e1e1e" title="Чорний"></div>
-          <div class="sw" style="background:#14201a" data-c="#14201a" title="Темно-зелений"></div>
-          <div class="sw" style="background:#1e1524" data-c="#1e1524" title="Фіолетовий"></div>
-          <div class="sw" style="background:#1a1c14" data-c="#1a1c14" title="Оливковий"></div>
-          <div class="sw" style="background:#f5f0e8" data-c="#f5f0e8" title="Сепія"></div>
-          <div class="sw" style="background:#f8f9fa" data-c="#f8f9fa" title="Білий"></div>
+          <div class="sw" style="background:#1a1a2e" data-c="#1a1a2e"></div>
+          <div class="sw" style="background:#1e1e1e" data-c="#1e1e1e"></div>
+          <div class="sw" style="background:#14201a" data-c="#14201a"></div>
+          <div class="sw" style="background:#1e1524" data-c="#1e1524"></div>
+          <div class="sw" style="background:#1a1c14" data-c="#1a1c14"></div>
+          <div class="sw" style="background:#f5f0e8" data-c="#f5f0e8"></div>
+          <div class="sw" style="background:#f8f9fa" data-c="#f8f9fa"></div>
         </div>
       </div>
     </div>
-
     <div class="s-group">
-      <div class="s-label">Колір тексту</div>
+      <div class="s-label">Текст</div>
       <div class="color-row">
         <input type="color" class="cpick" id="txt-pick" value="#c8c8c8">
         <div class="swatches" id="txt-sw">
-          <div class="sw" style="background:#c8c8c8" data-c="#c8c8c8" title="Нейтральний сірий"></div>
-          <div class="sw" style="background:#d4d0c8" data-c="#d4d0c8" title="Теплий білий"></div>
-          <div class="sw" style="background:#a8c4a2" data-c="#a8c4a2" title="М'який зелений"></div>
-          <div class="sw" style="background:#b0c8e0" data-c="#b0c8e0" title="Сталевий синій"></div>
-          <div class="sw" style="background:#ddc8a8" data-c="#ddc8a8" title="Пшеничний"></div>
-          <div class="sw" style="background:#303438" data-c="#303438" title="Темний (для світлого)"></div>
+          <div class="sw" style="background:#c8c8c8" data-c="#c8c8c8"></div>
+          <div class="sw" style="background:#d4d0c8" data-c="#d4d0c8"></div>
+          <div class="sw" style="background:#a8c4a2" data-c="#a8c4a2"></div>
+          <div class="sw" style="background:#b0c8e0" data-c="#b0c8e0"></div>
+          <div class="sw" style="background:#ddc8a8" data-c="#ddc8a8"></div>
+          <div class="sw" style="background:#303438" data-c="#303438"></div>
         </div>
       </div>
     </div>
-
     <div class="divider"></div>
-
     <div class="s-group">
-      <div class="s-label">Шрифт і масштаб</div>
+      <div class="s-label">Розмір тексту</div>
       <div class="s-row">
-        <label>Розмір шрифту <span id="fv">16px</span></label>
+        <label>Шрифт <span id="fv">16px</span></label>
         <input type="range" id="f-rng" min="12" max="28" value="16" step="1">
       </div>
-      <div class="s-row">
-        <label>Розмір тексту PDF <span id="zv">100%</span></label>
-        <input type="range" id="z-rng" min="40" max="250" value="100" step="10">
-      </div>
     </div>
-
   </div>
 </div>
 
-<!-- ── LOADING ──────────────────────────────── -->
-<div id="loading">
-  <div class="spin"></div>
-  <p id="load-txt">Завантаження…</p>
-</div>
+<!-- LOADING -->
+<div id="loading"><div class="spin"></div><p id="load-txt">Завантаження…</p></div>
 
-<!-- ── TOAST ────────────────────────────────── -->
+<!-- TOAST -->
 <div id="toast"></div>
 
-<!-- ── LIBS ─────────────────────────────────── -->
+<!-- CONFIRM DIALOG -->
+<div id="confirm-back">
+  <div id="confirm-box">
+    <h3 id="confirm-title">Зберегти зміни?</h3>
+    <p id="confirm-msg">Є незбережені розділи. Зберегти як OM_… перед закриттям?</p>
+    <div class="confirm-btns">
+      <button class="btn accent" id="cf-yes">💾 Зберегти</button>
+      <button class="btn"        id="cf-no">Не зберігати</button>
+      <button class="btn"        id="cf-cancel">Скасувати</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-
 <script>
 'use strict';
 
-/* ════════════════════════════════════════════
+/* ══════════════════════════════════════════════
    SETTINGS
-═════════════════════════════════════════════ */
-
+══════════════════════════════════════════════ */
 const THEMES = {
   dark:  { bg: '#1a1a2e', text: '#c8c8c8' },
   dim:   { bg: '#1e2228', text: '#c8ccd4' },
   sepia: { bg: '#f5f0e8', text: '#3a3328' },
   light: { bg: '#f8f9fa', text: '#202428' },
 };
-
-const DEF = { bg: '#1a1a2e', text: '#c8c8c8', fontSize: 16, zoom: 100 };
+const DEF_S = { bg: '#1a1a2e', text: '#c8c8c8', fontSize: 16 };
 
 let S = (() => {
-  try { return Object.assign({}, DEF, JSON.parse(localStorage.getItem('dr-s1') || '{}')); }
-  catch { return { ...DEF }; }
+  try { return Object.assign({}, DEF_S, JSON.parse(localStorage.getItem('dr-s2') || '{}')); }
+  catch { return { ...DEF_S }; }
 })();
-
-const save = () => localStorage.setItem('dr-s1', JSON.stringify(S));
+const saveS = () => localStorage.setItem('dr-s2', JSON.stringify(S));
 
 function hexRgb(h) {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);
@@ -439,8 +426,7 @@ function shift(h, d) {
 function luma(h) { const [r,g,b] = hexRgb(h); return (r*299+g*587+b*114)/1000; }
 
 function applyS() {
-  const dark = luma(S.bg) < 128;
-  const k = dark ? 1 : -1;
+  const dark = luma(S.bg) < 128, k = dark ? 1 : -1;
   const r = document.documentElement.style;
   r.setProperty('--bg',        S.bg);
   r.setProperty('--surface',   shift(S.bg, k*20));
@@ -451,739 +437,423 @@ function applyS() {
   r.setProperty('--text-dim',  shift(S.text, dark ? -42 : 42));
   r.setProperty('--accent',    dark ? '#5b8dd9' : '#1a5cbf');
   r.setProperty('--font-size', S.fontSize + 'px');
-  r.setProperty('--pdf-zoom',  S.zoom / 100);
-
-  document.getElementById('bg-pick').value  = S.bg;
-  document.getElementById('txt-pick').value = S.text;
-  document.getElementById('f-rng').value    = S.fontSize;
-  document.getElementById('z-rng').value    = S.zoom;
-  document.getElementById('fv').textContent = S.fontSize + 'px';
-  document.getElementById('zv').textContent = S.zoom + '%';
-  document.getElementById('theme-meta')?.setAttribute('content', S.bg);
+  $('bg-pick').value  = S.bg;
+  $('txt-pick').value = S.text;
+  $('f-rng').value    = S.fontSize;
+  $('fv').textContent = S.fontSize + 'px';
 }
 
-/* ════════════════════════════════════════════
-   UI HELPERS
-═════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════ */
+let DOC     = null;   // { filename, type }
+let SECS    = [];     // [{ id, title, content }]
+let MODE    = 'normal'; // 'normal' | 'need-title' | 'need-content'
+let PENDING = null;   // { title } during creation
+let DIRTY   = false;  // unsaved changes
+let _secId  = 0;
 
-const $  = id => document.getElementById(id);
-const ld = (t) => { $('loading').classList.add('show'); $('load-txt').textContent = t || 'Завантаження…'; };
-const ul = () => $('loading').classList.remove('show');
-let _ti;
+/* Search */
+let _origHTML   = '';
+let _matches    = [];
+let _matchIdx   = 0;
+
+/* ══════════════════════════════════════════════
+   UI HELPERS
+══════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+let _loadTi;
+const ld  = t  => { $('loading').classList.add('show'); $('load-txt').textContent = t||'…'; };
+const ul  = () => $('loading').classList.remove('show');
+let _toastTi;
 function toast(msg, ms=2800) {
   const el = $('toast'); el.textContent = msg; el.classList.add('show');
-  clearTimeout(_ti); _ti = setTimeout(() => el.classList.remove('show'), ms);
+  clearTimeout(_toastTi); _toastTi = setTimeout(() => el.classList.remove('show'), ms);
 }
 
-/* ════════════════════════════════════════════
-   ACCORDION
-═════════════════════════════════════════════ */
-
-let SECS = [];
-
-function buildAccordion(sections, fname) {
-  SECS = sections;
-  const list = $('sec-list');
-  list.innerHTML = '';
-
-  $('drop-zone').style.display = 'none';
-  $('sections-wrapper').style.display = 'block';
-  $('info-name').textContent = fname;
-  $('info-meta').textContent = sections.length + ' розділів';
-  $('doc-title').textContent = fname;
-
-  if (!sections.length) {
-    list.innerHTML = '<div class="placeholder">Структура не знайдена. Документ без заголовків.</div>';
-    return;
-  }
-
-  sections.forEach((sec, idx) => {
-    const item = document.createElement('div');
-    item.className = 'sec-item';
-    item.dataset.lv  = Math.min(sec.level || 1, 4);
-    item.dataset.idx = idx;
-
-    const head = document.createElement('div');
-    head.className = 'sec-head';
-
-    const arr = document.createElement('span');
-    arr.className = 'arrow'; arr.textContent = '▶';
-
-    const title = document.createElement('span');
-    title.className = 'sec-title';
-    title.textContent = sec.title;
-
-    head.appendChild(arr);
-    head.appendChild(title);
-
-    if (sec.badge) {
-      const b = document.createElement('span');
-      b.className = 'badge'; b.textContent = sec.badge;
-      head.appendChild(b);
-    }
-
-    const body = document.createElement('div');
-    body.className = 'sec-body';
-    body.innerHTML = '<div class="placeholder">Відкривається…</div>';
-
-    head.addEventListener('click', () => {
-      const was = item.classList.contains('open');
-      item.classList.toggle('open');
-      if (!was && !sec._done) { sec._done = true; fillBody(sec, body); }
-    });
-
-    item.appendChild(head);
-    item.appendChild(body);
-    list.appendChild(item);
+function confirm(title, msg) {
+  return new Promise(resolve => {
+    $('confirm-title').textContent = title;
+    $('confirm-msg').textContent   = msg;
+    $('confirm-back').classList.add('show');
+    const cleanup = r => { $('confirm-back').classList.remove('show'); resolve(r); };
+    $('cf-yes').onclick    = () => cleanup('yes');
+    $('cf-no').onclick     = () => cleanup('no');
+    $('cf-cancel').onclick = () => cleanup('cancel');
   });
 }
 
-async function fillBody(sec, el) {
-  if (sec.type === 'docx-html') {
-    el.innerHTML = sec.html || '<div class="placeholder">(порожній розділ)</div>';
-  } else if (sec.type === 'pdf-pages') {
-    el.innerHTML = '<div class="placeholder">Читаємо текст…</div>';
-    try {
-      const raw = await getSectionText(sec.pdf, sec.p0, sec.p1);
-      el.innerHTML = '';
-      const d = document.createElement('div');
-      d.className = 'pdf-text';
-      d.innerHTML = textToHtml(raw);
-      el.appendChild(d);
-    } catch(e) {
-      el.innerHTML = '<div class="placeholder">Помилка читання тексту</div>';
-      console.error('[reader] fillBody', e);
-    }
-  }
-}
-
-/* ── TEXT EXTRACTION ─────────────────────── */
+/* ══════════════════════════════════════════════
+   TEXT EXTRACTION HELPERS
+══════════════════════════════════════════════ */
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const PG_CACHE = new Map();
+
+async function extractPageText(pdf, pg) {
+  if (PG_CACHE.has(pg)) return PG_CACHE.get(pg);
+  const page = await pdf.getPage(pg);
+  const tc   = await page.getTextContent();
+  const its  = tc.items.filter(it => it.str)
+    .map(it => ({ s: it.str, x: it.transform[4], y: it.transform[5], h: Math.max(Math.abs(it.transform[0]), Math.abs(it.transform[3])) || 10 }));
+  if (!its.length) { PG_CACHE.set(pg, ''); return ''; }
+  its.sort((a, b) => b.y - a.y || a.x - b.x);
+  const lines = [];
+  for (const it of its) {
+    const prev = lines[lines.length - 1];
+    if (prev && Math.abs(prev.y - it.y) <= 3) { prev.parts.push(it); }
+    else lines.push({ y: it.y, h: it.h, parts: [it] });
+  }
+  const avgH = lines.reduce((s,l)=>s+l.h,0)/lines.length||12;
+  const parGap = avgH * 1.35;
+  let out = '';
+  for (let i = 0; i < lines.length; i++) {
+    lines[i].parts.sort((a,b)=>a.x-b.x);
+    const txt = lines[i].parts.map(p=>p.s).join('');
+    if (i > 0) {
+      const gap = lines[i-1].y - lines[i].y;
+      if (gap > parGap) out += '\n\n';
+      else { if (out.endsWith('-')) out = out.slice(0,-1); else out += ' '; }
+    }
+    out += txt;
+  }
+  const result = out.trim();
+  PG_CACHE.set(pg, result);
+  return result;
+}
 
 function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-
 function textToHtml(raw) {
-  if (!raw.trim()) return '<p style="color:var(--text-dim)">(порожній розділ)</p>';
-  return raw
-    .split(/\n{2,}/)
+  if (!raw.trim()) return '';
+  return raw.split(/\n{2,}/)
     .map(p => p.replace(/\n/g,' ').replace(/\s+/g,' ').trim())
     .filter(Boolean)
     .map(p => `<p>${escHtml(p)}</p>`)
     .join('');
 }
 
-async function extractPageText(pdf, pg) {
-  if (PG_CACHE.has(pg)) return PG_CACHE.get(pg);
-
-  const page = await pdf.getPage(pg);
-  const tc   = await page.getTextContent();
-
-  const its = tc.items
-    .filter(it => it.str)
-    .map(it => ({
-      s: it.str,
-      x: it.transform[4],
-      y: it.transform[5],
-      h: Math.max(Math.abs(it.transform[0]), Math.abs(it.transform[3])) || 10,
-    }));
-
-  if (!its.length) { PG_CACHE.set(pg, ''); return ''; }
-
-  // sort top-to-bottom, left-to-right
-  its.sort((a, b) => b.y - a.y || a.x - b.x);
-
-  // group by Y into visual lines
-  const lines = [];
-  for (const it of its) {
-    const last = lines[lines.length - 1];
-    if (last && Math.abs(last.y - it.y) <= 3) {
-      last.parts.push(it);
-    } else {
-      lines.push({ y: it.y, h: it.h, parts: [it] });
-    }
-  }
-
-  // determine paragraph gap threshold from avg line height
-  const avgH   = lines.reduce((s, l) => s + l.h, 0) / lines.length || 12;
-  const parGap = avgH * 1.35;
-
-  let out = '';
-  for (let i = 0; i < lines.length; i++) {
-    // sort parts left-to-right within a line
-    lines[i].parts.sort((a, b) => a.x - b.x);
-    const txt = lines[i].parts.map(p => p.s).join('');
-
-    if (i > 0) {
-      const gap = lines[i - 1].y - lines[i].y;
-      if (gap > parGap) {
-        out += '\n\n';
-      } else {
-        // remove soft hyphen at line break
-        if (out.endsWith('-')) { out = out.slice(0, -1); }
-        else { out += ' '; }
-      }
-    }
-    out += txt;
-  }
-
-  const result = out.trim();
-  PG_CACHE.set(pg, result);
-  return result;
-}
-
-async function getSectionText(pdf, p0, p1) {
-  if (p0 > p1) return '';
-  const parts = [];
-  for (let p = p0; p <= p1; p++) {
-    const t = await extractPageText(pdf, p);
-    if (t.trim()) parts.push(t);
-  }
-  return parts.join('\n\n');
-}
-
-/* ════════════════════════════════════════════
-   TOC PARSING  (повна переробка)
-
-   Стратегія визначення фізичних сторінок (3 рівні):
-   1. pdf.getPageLabels() — офіційні мітки сторінок у PDF
-   2. Зсув — знаходимо перший розділ поблизу заявленої сторінки
-   3. Повний пошук по тексту документа
-═════════════════════════════════════════════ */
-
-const TOC_HEADS = /^(ЗМІСТ|зміст|СОДЕРЖАНИЕ|содержание|Contents?|TABLE\s+OF\s+CONTENTS|Table\s+of\s+Contents)$/i;
-
-/* Мітки сторінок PDF: label → фізична сторінка (1-based) */
-async function getLabelMap(pdf) {
-  try {
-    const labels = await pdf.getPageLabels();
-    if (!labels) return null;
-    const map = new Map();
-    labels.forEach((lbl, i) => {
-      if (lbl != null) {
-        const k = String(lbl).trim();
-        if (!map.has(k)) map.set(k, i + 1);
-      }
-    });
-    return map.size ? map : null;
-  } catch { return null; }
-}
-
-/* Текстові елементи + ширина сторінки */
-async function getPageItems(pdf, pg) {
-  const page = await pdf.getPage(pg);
-  const tc   = await page.getTextContent();
-  const vp   = page.getViewport({ scale: 1 });
-  return {
-    items: tc.items
-      .filter(it => it.str?.trim())
-      .map(it => ({ s: it.str.trim(), x: it.transform[4], y: it.transform[5] })),
-    width: vp.width,
-  };
-}
-
-/* Групуємо елементи в рядки за позицією Y */
-function groupToLines(items) {
-  const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
-  const lines  = [];
-  for (const it of sorted) {
-    const prev = lines[lines.length - 1];
-    if (prev && Math.abs(prev.y - it.y) <= 4) {
-      prev.items.push(it);
-    } else {
-      lines.push({ y: it.y, items: [it] });
-    }
-  }
-  return lines;
-}
-
-/* Парсимо один рядок ЗМІСТУ → {title, pageLabel} або null.
-   pageLabel — перший номер з можливого діапазону "60–61". */
-function parseTOCLine(lineItems) {
-  const text = lineItems.map(x => x.s).join(' ').trim();
-  if (TOC_HEADS.test(text) || text.length < 2 || /^\d+$/.test(text)) return null;
-
-  // Варіант A: останній елемент — чисте число або "число-число"
-  const last = lineItems[lineItems.length - 1];
-  const mA = last.s.match(/^[.\s]*(\d+)(?:[–\-]\d+)?[.\s]*$/);
-  if (mA) {
-    const titleItems = lineItems.slice(0, -1);
-    if (!titleItems.length) return null;
-    const title = titleItems.map(x => x.s).join(' ').replace(/[\s.·•]+$/, '').trim();
-    if (title.length >= 2) return { title, pageLabel: mA[1] };
-  }
-
-  // Варіант B: останній елемент містить вбудоване число після крапок/пробілів
-  const mB = last.s.match(/^(.*?)[\s.·•]+(\d+)(?:[–\-]\d+)?[\s.·•]*$/);
-  if (mB && mB[2]) {
-    const before = lineItems.slice(0, -1).map(x => x.s).join(' ');
-    const title  = (before + (before ? ' ' : '') + mB[1]).replace(/[\s.·•]+$/, '').trim();
-    if (title.length >= 2) return { title, pageLabel: mB[2] };
-  }
-
-  // Варіант C: регекс по повному тексту рядка
-  const mC = text.match(/^(.+?)\s*\.{2,}\s*(\d+)(?:[–\-]\d+)?\s*$/) ||
-             text.match(/^(.+?)\s{3,}(\d+)(?:[–\-]\d+)?\s*$/);
-  if (mC) {
-    const title = mC[1].replace(/[\s.·•]+$/, '').trim();
-    if (title.length >= 2) return { title, pageLabel: mC[2] };
-  }
-
-  return null;
-}
-
-/* Знаходимо фізичні сторінки ЗМІСТУ */
-async function findTOCPages(pdf, total) {
-  for (let p = 1; p <= Math.min(20, total); p++) {
-    const { items } = await getPageItems(pdf, p);
-    const lines = groupToLines(items);
-    const isTOC = lines.some(l => TOC_HEADS.test(l.items.map(x => x.s).join(' ').trim()));
-    if (!isTOC) continue;
-
-    let tocEnd = p;
-    for (let pp = p + 1; pp <= Math.min(p + 6, total); pp++) {
-      const { items: it2 } = await getPageItems(pdf, pp);
-      const ls = groupToLines(it2);
-      const content = ls.filter(l => l.items.map(x => x.s).join('').trim().length > 3);
-      const numEnds = content.filter(l => /\d+\s*$/.test(l.items.map(x => x.s).join(' ')));
-      if (content.length && numEnds.length / content.length >= 0.35) tocEnd = pp;
-      else break;
-    }
-    return { tocStart: p, tocEnd };
-  }
-  return { tocStart: null, tocEnd: null };
-}
-
-/* Парсимо записи ЗМІСТУ, підтримуємо багаторядкові записи */
-async function parseTOCEntries(pdf, tocStart, tocEnd) {
-  const entries = [];
-  let pending   = '';                        // накопичений заголовок без номера
-
-  for (let p = tocStart; p <= tocEnd; p++) {
-    const { items, width } = await getPageItems(pdf, p);
-    const lines = groupToLines(items);
-
-    for (const line of lines) {
-      const text = line.items.map(x => x.s).join(' ').trim();
-
-      if (TOC_HEADS.test(text))          { pending = ''; continue; } // назва ЗМІСТ
-      if (!text || /^\d+$/.test(text))   { continue; }               // порожньо / один номер
-
-      const parsed = parseTOCLine(line.items);
-      if (parsed) {
-        const fullTitle = pending
-          ? (pending + ' ' + parsed.title).replace(/\s+/g, ' ').trim()
-          : parsed.title;
-        entries.push({ title: fullTitle, pageLabel: parsed.pageLabel });
-        pending = '';
-      } else {
-        // Рядок без номера — продовження попереднього заголовка
-        pending = pending ? (pending + ' ' + text).trim() : text;
-      }
-    }
-  }
-  return entries;
-}
-
-/* Перетворюємо мітки сторінок у фізичні номери:
-   Рівень 1 — page labels;  Рівень 2 — зсув;  Рівень 3 — пошук по тексту */
-async function resolvePhysicalPages(entries, labelMap, tocEnd, pdf, total) {
-
-  /* ── Рівень 1: getPageLabels ── */
-  if (labelMap) {
-    const r1 = [];
-    for (const e of entries) {
-      const pg = labelMap.get(e.pageLabel);
-      if (pg && pg > tocEnd && pg <= total) r1.push({ title: e.title, page: pg });
-    }
-    if (r1.length >= Math.floor(entries.length * 0.6)) {
-      return dedup(r1);
-    }
-  }
-
-  /* ── Рівень 2: виявляємо зсув за першим записом ── */
-  const numericEntries = entries.filter(e => /^\d+$/.test(e.pageLabel));
-  if (numericEntries.length) {
-    const first    = numericEntries[0];
-    const statedN  = parseInt(first.pageLabel);
-    const key      = first.title.toLowerCase()
-      .replace(/\s+/g, ' ').trim()
-      .split(' ').filter(w => w.length > 1).slice(0, 3).join(' ');
-
-    let offset = null;
-    if (key.length >= 4) {
-      const lo = Math.max(tocEnd + 1, statedN - 10);
-      const hi = Math.min(total, statedN + 40);
-      for (let p = lo; p <= hi; p++) {
-        const text = (await extractPageText(pdf, p)).toLowerCase();
-        if (text.includes(key)) { offset = p - statedN; break; }
-      }
-    }
-
-    if (offset !== null) {
-      const r2 = numericEntries
-        .map(e => ({ title: e.title, page: parseInt(e.pageLabel) + offset }))
-        .filter(e => e.page > tocEnd && e.page <= total);
-      if (r2.length) return dedup(r2);
-    }
-  }
-
-  /* ── Рівень 3: повний пошук по тексту (fallback) ── */
-  const r3 = [];
-  for (const e of entries) {
-    const key = e.title.toLowerCase()
-      .replace(/\s+/g, ' ').trim()
-      .split(' ').filter(w => w.length > 1).slice(0, 4).join(' ');
-    if (key.length < 4) continue;
-    for (let p = tocEnd + 1; p <= total; p++) {
-      const text = (await extractPageText(pdf, p)).toLowerCase();
-      if (text.includes(key)) { r3.push({ title: e.title, page: p }); break; }
-    }
-  }
-  return dedup(r3);
-}
-
-function dedup(arr) {
-  arr.sort((a, b) => a.page - b.page);
-  const seen = new Set();
-  return arr.filter(e => { if (seen.has(e.page)) return false; seen.add(e.page); return true; });
-}
-
-/* Головна функція */
-async function findAndParseTOC(pdf, total) {
-  const [labelMap, { tocStart, tocEnd }] = await Promise.all([
-    getLabelMap(pdf),
-    findTOCPages(pdf, total),
-  ]);
-  if (!tocStart) return null;
-
-  ld('Читаємо ЗМІСТ…');
-  const rawEntries = await parseTOCEntries(pdf, tocStart, tocEnd);
-  if (!rawEntries.length) return null;
-
-  ld('Визначаємо сторінки…');
-  return resolvePhysicalPages(rawEntries, labelMap, tocEnd, pdf, total);
-}
-
-/* ════════════════════════════════════════════
-   PDF PROCESSING
-═════════════════════════════════════════════ */
-
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-async function processPDF(buf, fname) {
-  if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js не завантажився. Перевірте інтернет-з\'єднання.');
-  ld('Читаємо PDF…');
-  const pdf   = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
-  const total = pdf.numPages;
-
-  let secs;
-
-  try {
-    /* ── 1. Спробуємо знайти ЗМІСТ ── */
-    ld('Шукаємо ЗМІСТ…');
-    const tocEntries = await findAndParseTOC(pdf, total);
-
-    if (tocEntries && tocEntries.length > 0) {
-      /* Кожна секція: від page_N до page_(N+1)-1 включно */
-      secs = tocEntries.map((e, i) => ({
-        title: e.title,
-        level: 1,
-        type:  'pdf-pages',
-        p0:    e.page,
-        p1:    i + 1 < tocEntries.length ? tocEntries[i + 1].page - 1 : total,
-        badge: `с. ${e.page}`,
-        pdf,
-      }));
-    } else {
-      /* ── 2. Fallback: outline або автопошук заголовків ── */
-      const outline = await pdf.getOutline();
-      if (outline && outline.length) {
-        ld('Будуємо структуру з bookmarks…');
-        secs = await secsFromOutline(pdf, outline, total);
-      } else {
-        ld('Шукаємо заголовки…');
-        secs = await secsFromText(pdf, total);
-      }
-    }
-  } catch(e) {
-    console.warn('[reader] section parse error:', e);
-    secs = pageSecs(pdf, total);
-  }
-
-  ul();
-  buildAccordion(secs, fname);
-}
-
-/* --- outline → sections --- */
-async function secsFromOutline(pdf, outline, total) {
-  const flat = [];
-
-  async function walk(items, lv) {
-    for (const item of items) {
-      if (!item.title) continue;
-      let pg = 1;
-      try {
-        let d = item.dest;
-        if (typeof d === 'string') d = await pdf.getDestination(d);
-        if (d && d[0]) pg = await pdf.getPageIndex(d[0]) + 1;
-      } catch {}
-      flat.push({ title: item.title.trim(), lv, pg });
-      if (item.items?.length) await walk(item.items, lv + 1);
-    }
-  }
-
-  await walk(outline, 1);
-  flat.sort((a, b) => a.pg - b.pg);
-
-  return flat.map((it, i) => ({
-    title: it.title,
-    level: it.lv,
-    type:  'pdf-pages',
-    p0:    it.pg,
-    p1:    i + 1 < flat.length ? Math.max(it.pg, flat[i+1].pg - 1) : total,
-    badge: `с. ${it.pg}`,
-    pdf,
-  }));
-}
-
-/* --- text scan → sections --- */
-async function secsFromText(pdf, total) {
-  const items = [];
-
-  for (let p = 1; p <= total; p++) {
-    const page = await pdf.getPage(p);
-    const tc   = await page.getTextContent();
-    for (const it of tc.items) {
-      if (!it.str?.trim()) continue;
-      const fs = Math.max(Math.abs(it.transform[0]), Math.abs(it.transform[3])) || 12;
-      items.push({ text: it.str.trim(), fs, pg: p });
-    }
-  }
-
-  if (!items.length) return pageSecs(pdf, total);
-
-  const sorted = items.map(i => i.fs).filter(v => v > 4 && v < 200).sort((a,b)=>a-b);
-  const med = sorted[Math.floor(sorted.length / 2)] || 12;
-  const thr = med * 1.22;
-
-  /* heading patterns (Ukrainian + English) */
-  const PAT = /^(\d{1,3}[\.\)]\s|\d{1,3}\.\d{1,3}[\. ]|РОЗДІЛ\b|Розділ\b|ГЛАВА\b|Глава\b|CHAPTER\b|Chapter\b|Section\b|SECTION\b|Part\b|PART\b|Частина\b|ЧАСТИНА\b)/;
-
-  const seen  = new Set();
-  const heads = [];
-
-  for (const it of items) {
-    const key = `${it.pg}::${it.text.slice(0,40)}`;
-    if (seen.has(key)) continue;
-
-    const isLarge   = it.fs >= thr && it.text.length < 130;
-    const isPat     = PAT.test(it.text) && it.text.length < 130;
-    const isAllCaps = /[А-ЯІЇЄA-Z]/.test(it.text)
-                   && it.text === it.text.toUpperCase()
-                   && it.text.length >= 4 && it.text.length < 90;
-
-    if (isLarge || isPat || isAllCaps) {
-      seen.add(key);
-      heads.push({ title: it.text, pg: it.pg, fs: it.fs });
-    }
-  }
-
-  /* merge consecutive same-page same-size lines (multi-word headings) */
-  const merged = [];
-  for (const h of heads) {
-    const prev = merged[merged.length - 1];
-    if (prev && prev.pg === h.pg && prev.fs === h.fs && prev.title.length + h.title.length < 140) {
-      prev.title += ' ' + h.title;
-    } else {
-      merged.push({ ...h });
-    }
-  }
-
-  if (merged.length < 2) return pageSecs(pdf, total);
-
-  return merged.map((h, i) => ({
-    title: h.title,
-    level: 1,
-    type:  'pdf-pages',
-    p0:    h.pg,
-    p1:    i + 1 < merged.length ? Math.max(h.pg, merged[i+1].pg - 1) : total,
-    badge: `с. ${h.pg}`,
-    pdf,
-  }));
-}
-
-function pageSecs(pdf, total) {
-  const step = Math.max(1, Math.min(5, Math.ceil(total / 20)));
-  const out  = [];
-  for (let p = 1; p <= total; p += step) {
-    const end = Math.min(p + step - 1, total);
-    out.push({
-      title: `Сторінки ${p}–${end}`,
-      level: 1, type: 'pdf-pages',
-      p0: p, p1: end,
-      badge: `${end - p + 1} стор.`,
-      pdf,
-    });
-  }
-  return out;
-}
-
-/* ════════════════════════════════════════════
-   DOCX PROCESSING
-═════════════════════════════════════════════ */
-
-async function processDocx(buf, fname) {
-  if (typeof mammoth === 'undefined') throw new Error('Mammoth.js не завантажився. Перевірте інтернет-з\'єднання.');
-  ld('Читаємо документ…');
-
-  const res = await mammoth.convertToHtml({ arrayBuffer: buf }, {
-    styleMap: [
-      "p[style-name='Heading 1']    => h1:fresh",
-      "p[style-name='Heading 2']    => h2:fresh",
-      "p[style-name='Heading 3']    => h3:fresh",
-      "p[style-name='Heading 4']    => h4:fresh",
-      "p[style-name='Заголовок 1']  => h1:fresh",
-      "p[style-name='Заголовок 2']  => h2:fresh",
-      "p[style-name='Заголовок 3']  => h3:fresh",
-      "p[style-name='Заголовок 4']  => h4:fresh",
-    ]
-  });
-
-  const secs = parseDocxHTML(res.value);
-  ul();
-  buildAccordion(secs, fname);
-}
-
-function parseDocxHTML(html) {
-  const doc  = new DOMParser().parseFromString('<div>' + html + '</div>', 'text/html');
-  const root = doc.querySelector('div');
-
-  const secs  = [];
-  let cur     = null;
-  let hasH    = false;
-  const PNUM  = /^(\d{1,3}[\.\)]\s{0,3}\S|\d{1,3}\.\d{1,3}[\. ])/;
-
-  const push = (node) => { if (cur) cur._chunks.push(node.outerHTML); };
-
-  for (const node of root.children) {
-    const tag = node.tagName.toLowerCase();
-    if (/^h[1-6]$/.test(tag)) {
-      hasH = true;
-      if (cur) secs.push(cur);
-      cur = { title: node.textContent.trim() || '—', level: +tag[1], type: 'docx-html', _chunks: [] };
-    } else {
-      /* try numbered headings if no H tags yet */
-      if (!hasH && PNUM.test(node.textContent.trim()) && node.textContent.trim().length < 140) {
-        if (cur) secs.push(cur);
-        cur = { title: node.textContent.trim(), level: 1, type: 'docx-html', _chunks: [] };
-      } else {
-        push(node);
-      }
-    }
-  }
-  if (cur) secs.push(cur);
-
-  secs.forEach(s => { s.html = s._chunks.join(''); delete s._chunks; });
-
-  if (!secs.length) {
-    return [{ title: 'Вміст документу', level: 1, type: 'docx-html', html: root.innerHTML }];
-  }
-  return secs;
-}
-
-/* ════════════════════════════════════════════
-   FILE OPEN
-═════════════════════════════════════════════ */
-
+/* ══════════════════════════════════════════════
+   FILE OPENING
+══════════════════════════════════════════════ */
 async function openFile(file) {
   if (!file) return;
+  if (DOC) {
+    const ans = await confirm('Відкрити новий документ?', `Поточний "${DOC.filename}" буде закрито.` + (DIRTY ? ' Є незбережені розділи.' : ''));
+    if (ans === 'cancel') return;
+    if (ans === 'yes' && DIRTY) saveSections();
+  }
   const ext = file.name.split('.').pop().toLowerCase();
   PG_CACHE.clear();
   try {
     const buf = await file.arrayBuffer();
-    if (ext === 'pdf')       await processPDF (buf, file.name);
-    else if (ext === 'docx') await processDocx(buf, file.name);
-    else { ul(); toast('Непідтримуваний формат. Потрібно .pdf або .docx'); }
+    if      (ext === 'pdf')  await loadPDF (buf, file.name);
+    else if (ext === 'docx') await loadDOCX(buf, file.name);
+    else { toast('Непідтримуваний формат. Потрібно .pdf або .docx'); }
   } catch(e) {
     ul();
-    const msg = e && e.message ? e.message : String(e);
-    toast('Помилка: ' + msg, 5000);
+    toast('Помилка: ' + (e.message || e), 5000);
     console.error('[reader]', e);
   }
 }
 
-/* ════════════════════════════════════════════
-   INIT
-═════════════════════════════════════════════ */
+async function loadPDF(buf, fname) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js не завантажився.');
+  ld('Читаємо PDF…');
+  const pdf   = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+  const total = pdf.numPages;
+  let html = '';
+  for (let p = 1; p <= total; p++) {
+    ld(`Сторінка ${p} / ${total}…`);
+    const text = await extractPageText(pdf, p);
+    html += `<div class="pg-sep">Стор. ${p}</div>${textToHtml(text)}`;
+  }
+  ul();
+  showDocument(html, fname, 'pdf');
+}
 
+async function loadDOCX(buf, fname) {
+  if (typeof mammoth === 'undefined') throw new Error('Mammoth.js не завантажився.');
+  ld('Читаємо документ…');
+  const res = await mammoth.convertToHtml({ arrayBuffer: buf });
+  ul();
+  showDocument(res.value, fname, 'docx');
+}
+
+function showDocument(html, fname, type) {
+  DOC = { filename: fname, type };
+
+  /* Load saved sections for this file */
+  const saved = localStorage.getItem('OM_' + fname);
+  SECS  = saved ? JSON.parse(saved) : [];
+  DIRTY = false;
+  _secId = SECS.length ? Math.max(...SECS.map(s=>s.id)) + 1 : 1;
+
+  $('doc-text').innerHTML = html;
+  $('doc-title').textContent = fname;
+  $('drop-zone').style.display = 'none';
+  $('doc-view').classList.add('show');
+  $('doc-controls').classList.add('show');
+
+  renderSections();
+  if (SECS.length) toast(`Завантажено ${SECS.length} збережених розділів`);
+}
+
+/* ══════════════════════════════════════════════
+   SECTIONS
+══════════════════════════════════════════════ */
+function renderSections() {
+  const list = $('sec-list');
+  list.innerHTML = '';
+  $('sec-count').textContent = SECS.length;
+  $('sec-empty').style.display = SECS.length ? 'none' : 'block';
+
+  SECS.forEach(sec => {
+    const item = document.createElement('div');
+    item.className = 'sec-item';
+    item.dataset.id = sec.id;
+
+    const hd  = document.createElement('div');
+    hd.className = 'sec-hd';
+    hd.innerHTML =
+      `<span class="sec-arr">▶</span>` +
+      `<span class="sec-tit">${escHtml(sec.title)}</span>` +
+      `<button class="del-btn" title="Видалити">✕</button>`;
+
+    const bd = document.createElement('div');
+    bd.className = 'sec-bd';
+    bd.textContent = sec.content || '(текст не обрано)';
+
+    hd.addEventListener('click', e => {
+      if (e.target.classList.contains('del-btn')) return;
+      item.classList.toggle('open');
+    });
+    hd.querySelector('.del-btn').addEventListener('click', () => deleteSection(sec.id));
+
+    item.appendChild(hd);
+    item.appendChild(bd);
+    list.appendChild(item);
+  });
+}
+
+function deleteSection(id) {
+  SECS = SECS.filter(s => s.id !== id);
+  DIRTY = true;
+  renderSections();
+  toast('Розділ видалено');
+}
+
+/* ══════════════════════════════════════════════
+   SECTION CREATION MODE
+══════════════════════════════════════════════ */
+function setMode(mode) {
+  MODE = mode;
+  const bar = $('mode-bar');
+  const msg = $('mode-msg');
+  const selBtn = $('select-text-btn');
+
+  if (mode === 'normal') {
+    bar.className = '';
+    bar.style.display = 'none';
+    selBtn.style.display = 'none';
+    PENDING = null;
+  } else if (mode === 'need-title') {
+    bar.className = 'need-title';
+    msg.textContent = '📌 Виділіть назву розділу в тексті документа';
+    selBtn.style.display = 'none';
+  } else if (mode === 'need-content') {
+    bar.className = 'need-content';
+    msg.textContent = `✅ Розділ: "${PENDING.title}" — виділіть текст розділу і натисніть ОБРАТИ ТЕКСТ`;
+    selBtn.style.display = '';
+  }
+}
+
+function onAddSectionClick() {
+  const sel = window.getSelection().toString().trim();
+  if (sel) {
+    PENDING = { title: sel };
+    setMode('need-content');
+  } else {
+    setMode('need-title');
+  }
+}
+
+function onSelectTextClick() {
+  const sel = window.getSelection().toString().trim();
+  if (!sel) { toast('Будь ласка, виділіть текст в документі'); return; }
+  SECS.push({ id: _secId++, title: PENDING.title, content: sel });
+  DIRTY = true;
+  renderSections();
+  setMode('normal');
+  toast('Розділ додано');
+}
+
+/* Listen for selection in doc-text while in need-title mode */
+$('doc-text-proxy') /* will attach in init */;
+
+/* ══════════════════════════════════════════════
+   SEARCH
+══════════════════════════════════════════════ */
+function openSearch() {
+  $('search-bar').classList.add('show');
+  $('search-input').focus();
+}
+function closeSearch() {
+  $('search-bar').classList.remove('show');
+  clearHighlights();
+  $('search-input').value = '';
+}
+
+function clearHighlights() {
+  if (_origHTML) { $('doc-text').innerHTML = _origHTML; _origHTML = ''; }
+  _matches = []; _matchIdx = 0;
+  $('search-count').textContent = '';
+}
+
+function doSearch() {
+  const q = $('search-input').value.trim();
+  if (!q) { clearHighlights(); return; }
+
+  if (!_origHTML) _origHTML = $('doc-text').innerHTML;
+  else $('doc-text').innerHTML = _origHTML;  // restore before re-highlight
+
+  const esc  = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re   = new RegExp(esc, 'gi');
+  let idx    = 0;
+
+  $('doc-text').innerHTML = $('doc-text').innerHTML.replace(
+    re,
+    m => `<mark class="hi" data-mi="${idx++}">${m}</mark>`
+  );
+
+  _matches  = Array.from($('doc-text').querySelectorAll('mark.hi'));
+  _matchIdx = 0;
+  goToMatch(0);
+}
+
+function goToMatch(i) {
+  if (!_matches.length) { $('search-count').textContent = 'Не знайдено'; return; }
+  _matches.forEach(m => m.classList.remove('cur'));
+  _matchIdx = ((i % _matches.length) + _matches.length) % _matches.length;
+  const cur = _matches[_matchIdx];
+  cur.classList.add('cur');
+  cur.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  $('search-count').textContent = `${_matchIdx+1} / ${_matches.length}`;
+}
+
+/* ══════════════════════════════════════════════
+   SAVE / CLOSE
+══════════════════════════════════════════════ */
+function saveSections() {
+  if (!DOC) return;
+  localStorage.setItem('OM_' + DOC.filename, JSON.stringify(SECS));
+  DIRTY = false;
+  /* Download JSON */
+  const data = JSON.stringify({ source: DOC.filename, sections: SECS }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'OM_' + DOC.filename.replace(/\.[^.]+$/, '') + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Збережено як OM_…');
+}
+
+async function closeDocument() {
+  if (!DOC) return;
+  if (DIRTY && SECS.length) {
+    const ans = await confirm('Зберегти розділи?', `Є незбережені розділи документа "${DOC.filename}". Зберегти як OM_…json?`);
+    if (ans === 'cancel') return;
+    if (ans === 'yes') saveSections();
+  }
+  DOC   = null;
+  SECS  = [];
+  DIRTY = false;
+  MODE  = 'normal';
+  clearHighlights();
+  setMode('normal');
+  $('doc-text').innerHTML     = '';
+  $('doc-title').textContent  = 'OM Читач';
+  $('doc-controls').classList.remove('show');
+  $('doc-view').classList.remove('show');
+  $('drop-zone').style.display = '';
+  $('search-bar').classList.remove('show');
+  PG_CACHE.clear();
+}
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
   applyS();
 
-  /* file open */
+  /* File open */
   const fi = $('file-in');
   $('open-btn').addEventListener('click', () => fi.click());
-  fi.addEventListener('change', e => { if (e.target.files[0]) openFile(e.target.files[0]); });
+  fi.addEventListener('change', e => { if (e.target.files[0]) openFile(e.target.files[0]); e.target.value=''; });
 
-  /* drop zone */
+  /* Drop zone */
   const dz = $('drop-zone');
   dz.addEventListener('click', () => fi.click());
   dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('dragover'); });
   dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-  dz.addEventListener('drop', e => {
-    e.preventDefault(); dz.classList.remove('dragover');
-    if (e.dataTransfer.files[0]) openFile(e.dataTransfer.files[0]);
-  });
-  /* body-level drop */
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); if (e.dataTransfer.files[0]) openFile(e.dataTransfer.files[0]); });
   document.body.addEventListener('dragover', e => e.preventDefault());
-  document.body.addEventListener('drop', e => {
-    e.preventDefault();
-    if (e.dataTransfer.files[0]) openFile(e.dataTransfer.files[0]);
+  document.body.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) openFile(e.dataTransfer.files[0]); });
+
+  /* Section mode */
+  $('add-sec-btn').addEventListener('click', onAddSectionClick);
+  $('select-text-btn').addEventListener('click', onSelectTextClick);
+  $('cancel-mode-btn').addEventListener('click', () => setMode('normal'));
+
+  /* Selection in doc-text for need-title mode */
+  $('doc-text').addEventListener('mouseup', () => {
+    if (MODE !== 'need-title') return;
+    const sel = window.getSelection().toString().trim();
+    if (sel.length >= 1) { PENDING = { title: sel }; setMode('need-content'); }
   });
 
-  /* settings open / close */
-  $('s-btn').addEventListener('click',   () => { $('s-panel').classList.add('open');    $('s-back').classList.add('show'); });
+  /* Doc controls */
+  $('search-btn').addEventListener('click', openSearch);
+  $('save-btn').addEventListener('click', saveSections);
+  $('close-doc-btn').addEventListener('click', closeDocument);
+
+  /* Search bar */
+  $('search-input').addEventListener('input', doSearch);
+  $('search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') goToMatch(_matchIdx + (e.shiftKey ? -1 : 1));
+    if (e.key === 'Escape') closeSearch();
+  });
+  $('prev-match').addEventListener('click', () => goToMatch(_matchIdx - 1));
+  $('next-match').addEventListener('click', () => goToMatch(_matchIdx + 1));
+  $('close-search').addEventListener('click', closeSearch);
+
+  /* Settings */
+  $('s-btn').addEventListener('click', () => { $('s-panel').classList.add('open'); $('s-back').classList.add('show'); });
   $('s-close').addEventListener('click', () => { $('s-panel').classList.remove('open'); $('s-back').classList.remove('show'); });
   $('s-back').addEventListener('click',  () => { $('s-panel').classList.remove('open'); $('s-back').classList.remove('show'); });
 
-  /* themes */
-  document.querySelectorAll('.th-btn').forEach(b => {
-    b.addEventListener('click', () => {
-      const t = THEMES[b.dataset.theme]; if (!t) return;
-      S.bg = t.bg; S.text = t.text; applyS(); save();
-    });
-  });
-
-  /* color pickers */
-  $('bg-pick').addEventListener('input',  e => { S.bg   = e.target.value; applyS(); save(); });
-  $('txt-pick').addEventListener('input', e => { S.text = e.target.value; applyS(); save(); });
-
-  /* bg swatches */
-  document.querySelectorAll('#bg-sw .sw').forEach(s => {
-    s.addEventListener('click', () => { S.bg = s.dataset.c; applyS(); save(); });
-  });
-  /* text swatches */
-  document.querySelectorAll('#txt-sw .sw').forEach(s => {
-    s.addEventListener('click', () => { S.text = s.dataset.c; applyS(); save(); });
-  });
-
-  /* font size */
+  document.querySelectorAll('.th-btn').forEach(b => b.addEventListener('click', () => {
+    const t = THEMES[b.dataset.theme]; if (!t) return;
+    S.bg = t.bg; S.text = t.text; applyS(); saveS();
+  }));
+  $('bg-pick').addEventListener('input',  e => { S.bg   = e.target.value; applyS(); saveS(); });
+  $('txt-pick').addEventListener('input', e => { S.text = e.target.value; applyS(); saveS(); });
+  document.querySelectorAll('#bg-sw .sw').forEach(s  => s.addEventListener('click',  () => { S.bg   = s.dataset.c; applyS(); saveS(); }));
+  document.querySelectorAll('#txt-sw .sw').forEach(s => s.addEventListener('click',  () => { S.text = s.dataset.c; applyS(); saveS(); }));
   $('f-rng').addEventListener('input', e => {
     S.fontSize = +e.target.value;
     $('fv').textContent = S.fontSize + 'px';
     document.documentElement.style.setProperty('--font-size', S.fontSize + 'px');
-    save();
+    saveS();
   });
 
-  /* pdf text zoom */
-  $('z-rng').addEventListener('input', e => {
-    S.zoom = +e.target.value;
-    $('zv').textContent = S.zoom + '%';
-    document.documentElement.style.setProperty('--pdf-zoom', S.zoom / 100);
-    save();
+  /* Prompt on page unload */
+  window.addEventListener('beforeunload', e => {
+    if (DIRTY && SECS.length) { e.preventDefault(); e.returnValue = ''; }
   });
 });
 </script>
