@@ -1612,12 +1612,16 @@ function render() {
                 const _fPts=Math.round(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                 const _fLines=generateArchiveReport(_fRecs,_fLabel);
                 _fLines.push('Загалом уражено, орієнтовно на '+_fPts+' балів');
+                const _fAmmoCnt={};_fRecs.forEach(r=>{if(r.ammo)_fAmmoCnt[r.ammo]=(_fAmmoCnt[r.ammo]||0)+1;});
+                const _fAmmoRows=Object.entries(_fAmmoCnt).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_row(esc(a),c,' шт')).join('');
+                const _fPvrRows=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_fAmmoCnt[am]||0)*cf,0);return tot?_row(esc(pvr.name),tot+' кг'):'';}).filter(Boolean).join('');
+                const _fStatsHtml=(_fAmmoRows||_fPvrRows)?'<div class="flex flex-wrap gap-4" style="padding:12px 4px 4px"><div class="space-y-3">'+_sec('БОЄПРИПАСИ',_fAmmoRows)+_sec('ПВР',_fPvrRows)+'</div></div>':'';
                 _periodResultHtml='<div class="crate p-4">'
                     +'<div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
                     +'<h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ПЕРІОД</h3>'
                     +'<button onclick="copyFilteredPeriodReport()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
                     +'</div>'
-                    +'<div class="report-box">'+_fLines.join('\n')+'</div></div>';
+                    +'<div class="report-box">'+_fLines.join('\n')+'</div>'+_fStatsHtml+'</div>';
             }
         }
         h+=`<div class="p-4 space-y-4 zvity-wrap">
