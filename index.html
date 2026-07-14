@@ -1535,7 +1535,7 @@ function render() {
             if(state.archiveLoading){
                 _arContent='<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Завантаження...</p></div>';
             } else {
-                const _arDates=[...new Set(state.archiveRecs.map(r=>getDateOnly(r.datetime)))].sort();
+                const _arDates=[...new Set(state.archiveRecs.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>{const f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};return f(a)<f(b)?-1:1;});
                 const _arTotal=Math.round(state.archiveRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                 const _sep='<span style="color:var(--yellow)">, </span>';
                 const _dash='<span style="color:var(--yellow)"> \u2014 </span>';
@@ -1643,7 +1643,7 @@ function render() {
 
     if(state.page==='vyloty') {
         const _vyRecs=state.records.filter(r=>r.reportNum===state.report);
-        const _vyDates=[...new Set(_vyRecs.map(r=>getDateOnly(r.datetime)))].sort();
+        const _vyDates=[...new Set(_vyRecs.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>{const f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};return f(a)<f(b)?-1:1;});
         const _vyTotal=Math.round(_vyRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
         let _vyNum=0;
         const _vyGroups=_vyDates.map(d=>{
@@ -1663,7 +1663,7 @@ function render() {
 
     if(state.page==='reports') {
         const reps = [...new Set(state.records.map(r=>r.reportNum))].sort((a,b)=>a-b);
-        const dates = state.selReport ? [...new Set(state.records.filter(r=>r.reportNum===state.selReport).map(r=>getDateOnly(r.datetime)))].sort() : [];
+        const dates = state.selReport ? [...new Set(state.records.filter(r=>r.reportNum===state.selReport).map(r=>getDateOnly(r.datetime)))].sort((a,b)=>{const f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};return f(a)<f(b)?-1:1;}) : [];
         const dayRecs = state.selReport && state.selDate ? state.records.filter(r=>r.reportNum===state.selReport && getDateOnly(r.datetime)===state.selDate) : [];
         const reportLines = dayRecs.length > 0 ? generateReport(dayRecs) : [];
         {
