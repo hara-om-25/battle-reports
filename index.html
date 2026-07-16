@@ -481,6 +481,7 @@ function logout() {
     state.scoreTable = {}; state.drones = []; state.ammo = []; state.results = [];  state.records = [];
     state.archiveSheets = []; state.selArchive = null; state.archiveRecs = []; state.archiveLoading = false; state.pvr = [];
     state.allArchiveRecs = []; state.allArchiveLoaded = false; state.allArchiveLoading = false;
+    state.reportTitle = ''; state.costPerPoint = 0; state.costPerFlight = 0;
     state.loaded = false; state.page = 'login';
     render();
     setTimeout(()=>window.close(),100);
@@ -579,8 +580,11 @@ function generateArchiveReport(recs, periodLabel) {
     if (hasOs && osSum300 > 0) _allItems.push({t:_osN+' 300',n:osSum300});
     Object.entries(otherGrouped).forEach(([k,v])=>_allItems.push({t:v.d+' '+v.r,n:v.n}));
     _allItems.sort((a,b)=>b.n-a.n);
+    const _totalPts = Math.round(recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     const lines = [periodLabel + ' ТГ "' + reportTitle + '" здійснено ' + recs.length + ' вильотів, уражено:'];
     _allItems.forEach((p,i)=>lines.push((i+1)+'. '+p.t+' - '+p.n+(i===_allItems.length-1?' шт.':' шт;')));
+    if(state.costPerPoint) lines.push('В грошовому еквіваленті це ' + Math.round(_totalPts * state.costPerPoint) + ' грн.');
+    if(state.costPerFlight) lines.push('Витрачено засобів орієнтовно на ' + Math.round(recs.length * state.costPerFlight) + ' грн.');
     return lines;
 }
 
@@ -755,8 +759,10 @@ async function loadDataFromAPI() {
             state.report = 1; state.counts = {};
         }
         
-        const reportTitleRow = await apiGet('звіт!B1:B1');
+        const reportTitleRow = await apiGet('звіт!B1:B3');
         state.reportTitle = (reportTitleRow[0] && reportTitleRow[0][0]) ? String(reportTitleRow[0][0]) : '';
+        state.costPerPoint = parseFloat((reportTitleRow[1] && reportTitleRow[1][0]) || 0) || 0;
+        state.costPerFlight = parseFloat((reportTitleRow[2] && reportTitleRow[2][0]) || 0) || 0;
         
         state.loaded = true; state.page = 'form';
         render();
