@@ -587,7 +587,7 @@ function generateArchiveReport(recs, periodLabel) {
 function _fmtNum(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
 function _pushCostLines(lines, totalPts, flightCount) {
     if(state.costPerPoint) lines.push('В грошовому еквіваленті приблизно на ' + _fmtNum(totalPts * state.costPerPoint) + ' грн.');
-    if(state.costPerFlight) lines.push('Витрачено засобів орієнтовно на ' + _fmtNum(flightCount * state.costPerFlight) + ' грн.');
+    if(state.costPerFlight) lines.push('Засобів витрачено на ' + _fmtNum(flightCount * state.costPerFlight) + ' грн.');
 }
 
 function copyArchiveSheetReport() {
