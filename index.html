@@ -825,11 +825,11 @@ function addTargetToForm() {
     const res = state.form.newResult;
     if(abbr === 'ОС') {
         if(res === 'знищено' && !(state.form.q200 > 0)) {
-            showAlert('додайте кількість ОС');
+            showAlert('Додайте кількість ОС');
             return;
         }
         if(res === 'пошкоджено' && !(state.form.q300 > 0)) {
-            showAlert('додайте кількість ОС');
+            showAlert('Додайте кількість ОС');
             return;
         }
     }
