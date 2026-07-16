@@ -581,7 +581,7 @@ function generateArchiveReport(recs, periodLabel) {
     Object.entries(otherGrouped).forEach(([k,v])=>_allItems.push({t:v.d+' '+v.r,n:v.n}));
     _allItems.sort((a,b)=>b.n-a.n);
     const lines = [periodLabel + ' ТГ "' + reportTitle + '" здійснено ' + recs.length + ' вильотів, уражено:'];
-    _allItems.forEach((p,i)=>lines.push((i+1)+'. '+p.t+' - '+p.n+(i===_allItems.length-1?' шт.':' шт;')));
+    _allItems.forEach((p,i)=>lines.push('  '+(i+1)+'. '+p.t+' - '+p.n+(i===_allItems.length-1?' шт.':' шт;')));
     return lines;
 }
 function _fmtNum(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
