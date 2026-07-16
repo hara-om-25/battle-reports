@@ -822,6 +822,17 @@ function addTargetToForm() {
         return;
     }
     const abbr = state.form.newTarget;
+    const res = state.form.newResult;
+    if(abbr === 'ОС') {
+        if(res === 'знищено' && !(state.form.q200 > 0)) {
+            showAlert('додайте кількість ОС');
+            return;
+        }
+        if(res === 'пошкоджено' && !(state.form.q300 > 0)) {
+            showAlert('додайте кількість ОС');
+            return;
+        }
+    }
     let fullName = '';
     if(abbr) {
         if(state.form.selTargetName){
