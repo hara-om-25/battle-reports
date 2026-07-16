@@ -584,9 +584,10 @@ function generateArchiveReport(recs, periodLabel) {
     _allItems.forEach((p,i)=>lines.push((i+1)+'. '+p.t+' - '+p.n+(i===_allItems.length-1?' шт.':' шт;')));
     return lines;
 }
+function _fmtNum(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
 function _pushCostLines(lines, totalPts, flightCount) {
-    if(state.costPerPoint) lines.push('В грошовому еквіваленті це ' + Math.round(totalPts * state.costPerPoint) + ' грн.');
-    if(state.costPerFlight) lines.push('Витрачено засобів орієнтовно на ' + Math.round(flightCount * state.costPerFlight) + ' грн.');
+    if(state.costPerPoint) lines.push('В грошовому еквіваленті це ' + _fmtNum(totalPts * state.costPerPoint) + ' грн.');
+    if(state.costPerFlight) lines.push('Витрачено засобів орієнтовно на ' + _fmtNum(flightCount * state.costPerFlight) + ' грн.');
 }
 
 function copyArchiveSheetReport() {
