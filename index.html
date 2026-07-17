@@ -589,9 +589,10 @@ function _calcDroneCost(recs) {
     const dc = state.droneCategories;
     if(!dc) return 0;
     const cnt = {};
-    recs.forEach(r => { if(r.drone) cnt[r.drone] = (cnt[r.drone]||0) + 1; });
+    let noDrone = 0;
+    recs.forEach(r => { if(r.drone) cnt[r.drone] = (cnt[r.drone]||0) + 1; else noDrone++; });
     const _has = (name, kw) => kw && name.toLowerCase().includes(kw.toLowerCase());
-    let total = 0;
+    let total = noDrone * (dc.costBase + dc.costPerDrone);
     Object.entries(cnt).forEach(([name, n]) => {
         let type;
         if(_has(name,dc.dualKw1)||_has(name,dc.dualKw2))       type = dc.costDual;
