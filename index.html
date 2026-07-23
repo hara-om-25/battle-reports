@@ -630,6 +630,38 @@ function copyAllArchiveReport() {
     navigator.clipboard.writeText(lines.join('\n')).catch(()=>{});
 }
 
+async function archiveMainSheet() {
+    if(!state.records.length){showAlert('Немає вильотів для архівування');return;}
+    const _f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};
+    const _sorted=[...new Set(state.records.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_f(a)<_f(b)?-1:1);
+    const _first=_sorted[0],_last=_sorted[_sorted.length-1];
+    const[_d1,_m1,_y1]=_first.split('.'),[_d2,_m2,_y2]=_last.split('.');
+    const _newName=(_first===_last)?_first:(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1:(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1:_first+' — '+_last;
+    if(!confirm('Архівувати ГОЛОВНА як "'+_newName+'"?\n\nДані перейдуть в новий аркуш, ГОЛОВНА очиститься.'))return;
+    try{
+        const _metaResp=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?fields=sheets.properties`,{headers:{Authorization:'Bearer '+state.token}});
+        const _meta=await _metaResp.json();
+        if(_meta.error)throw new Error(_meta.error.message);
+        const _sh=_meta.sheets.find(s=>s.properties.title==='ГОЛОВНА');
+        if(!_sh)throw new Error('Сторінку ГОЛОВНА не знайдено');
+        const _shId=_sh.properties.sheetId,_shIdx=_sh.properties.index;
+        const _dupResp=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`,{
+            method:'POST',
+            headers:{Authorization:'Bearer '+state.token,'Content-Type':'application/json'},
+            body:JSON.stringify({requests:[{duplicateSheet:{sourceSheetId:_shId,insertSheetIndex:_shIdx+1,newSheetName:_newName}}]})
+        });
+        const _dupRes=await _dupResp.json();
+        if(_dupRes.error)throw new Error(_dupRes.error.message);
+        await apiClear('ГОЛОВНА!A2:Z');
+        state.records=[];state.counts={};state.report=1;
+        state.form={targets:[],q200:0,q300:0,coord:'',drone:'',ammo:'',newTarget:'',newResult:'',selTargetName:''};
+        state.archiveSheets=[];state.selArchive=null;state.archiveRecs=[];
+        state.allArchiveRecs=[];state.allArchiveLoaded=false;
+        showAlert('✅ Архівовано як "'+_newName+'"');
+        render();
+    }catch(e){showAlert('Помилка: '+e.message);}
+}
+
 async function loadAllArchiveSheets() {
     if (state.allArchiveLoading || state.allArchiveLoaded) return;
     state.allArchiveLoading = true;
@@ -1687,7 +1719,7 @@ function render() {
             }
         }
         h+=`<div class="p-4 space-y-4 zvity-wrap">
-            <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em">за період</span></div>
+            <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><div style="display:flex;align-items:center;gap:12px"><button onclick="archiveMainSheet()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">ЗАКРИТИ ЗВІТ</button><span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em">за період</span></div></div>
             ${!state.filterPeriodOpen?`<div class="crate p-4"><div class="flex flex-wrap gap-2">${state.archiveLoading&&!state.selArchive?'<p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p>':_arBtns}</div></div>`:''}
             ${_periodPickerHtml}
             ${state.filterPeriodOpen?(state.filterPeriodShown?_periodResultHtml:''):(state.selArchive?_arContent:_allSection)}
