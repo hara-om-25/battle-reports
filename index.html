@@ -686,7 +686,7 @@ async function archiveMainSheet() {
         state.archiveSheets=[];state.selArchive=null;state.archiveRecs=[];
         state.allArchiveRecs=[];state.allArchiveLoaded=false;
         showAlert('✅ Архівовано як "'+_newName+'"');
-        render();
+        goToArchive();
     }catch(e){showAlert('Помилка: '+e.message);}});
 }
 
