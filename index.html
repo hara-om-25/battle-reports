@@ -442,6 +442,35 @@ function showAlert(msg) {
     _ok.addEventListener('touchstart', function() { this.style.background='#5ab558'; }, {passive:true});
     _ok.addEventListener('touchend', function() { this.style.background=''; });
 }
+function showConfirm(title, msg, onOk) {
+    var _ov=document.createElement('div');
+    _ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    var _bx=document.createElement('div');
+    _bx.style.cssText='background:var(--surface);border:1px solid var(--olive-dark);box-shadow:4px 4px 0 var(--olive-dark);padding:24px 28px 20px;max-width:420px;width:100%;font-family:Tektur,monospace;color:var(--text)';
+    var _ti=document.createElement('div');
+    _ti.style.cssText='color:var(--yellow);font-size:0.7em;letter-spacing:0.15em;margin-bottom:14px;font-weight:700';
+    _ti.textContent=title;
+    var _mg=document.createElement('div');
+    _mg.style.cssText='white-space:pre-wrap;font-size:0.92em;margin-bottom:22px;line-height:1.5';
+    _mg.textContent=msg;
+    var _row=document.createElement('div');
+    _row.style.cssText='display:flex;gap:10px;justify-content:flex-end';
+    var _cancel=document.createElement('button');
+    _cancel.className='btn-stencil';
+    _cancel.style.cssText='padding:4px 18px;font-size:0.85em';
+    _cancel.textContent='СКАСУВАТИ';
+    var _ok=document.createElement('button');
+    _ok.className='btn-stencil btn-danger';
+    _ok.style.cssText='padding:4px 18px;font-size:0.85em';
+    _ok.textContent='ПІДТВЕРДИТИ';
+    var _rm=function(){document.body.removeChild(_ov);};
+    _cancel.addEventListener('click',_rm);
+    _ok.addEventListener('click',function(){_rm();onOk();});
+    _row.appendChild(_cancel);_row.appendChild(_ok);
+    _bx.appendChild(_ti);_bx.appendChild(_mg);_bx.appendChild(_row);
+    _ov.appendChild(_bx);
+    document.body.appendChild(_ov);
+}
 function login() { const _h=localStorage.getItem('email')||''; tokenClient.requestAccessToken(_h?{hint:_h}:{}); }
 function parseSheetId(v) {
     v=(v||'').trim();
@@ -637,8 +666,7 @@ async function archiveMainSheet() {
     const _first=_sorted[0],_last=_sorted[_sorted.length-1];
     const[_d1,_m1,_y1]=_first.split('.'),[_d2,_m2,_y2]=_last.split('.');
     const _newName=(_first===_last)?_first:(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1:(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1:_first+' — '+_last;
-    if(!confirm('Архівувати ГОЛОВНА як "'+_newName+'"?\n\nДані перейдуть в новий аркуш, ГОЛОВНА очиститься.'))return;
-    try{
+    showConfirm('ЗАКРИТИ ЗВІТ','Архівувати ГОЛОВНА як "'+_newName+'"?\n\nДані перейдуть в новий аркуш, ГОЛОВНА очиститься.',async function(){try{
         const _metaResp=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?fields=sheets.properties`,{headers:{Authorization:'Bearer '+state.token}});
         const _meta=await _metaResp.json();
         if(_meta.error)throw new Error(_meta.error.message);
@@ -659,7 +687,7 @@ async function archiveMainSheet() {
         state.allArchiveRecs=[];state.allArchiveLoaded=false;
         showAlert('✅ Архівовано як "'+_newName+'"');
         render();
-    }catch(e){showAlert('Помилка: '+e.message);}
+    }catch(e){showAlert('Помилка: '+e.message);}});
 }
 
 async function loadAllArchiveSheets() {
