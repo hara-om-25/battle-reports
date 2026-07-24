@@ -670,9 +670,9 @@ async function archiveMainSheet() {
         const _metaResp=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?fields=sheets.properties`,{headers:{Authorization:'Bearer '+state.token}});
         const _meta=await _metaResp.json();
         if(_meta.error)throw new Error(_meta.error.message);
-        const _sh=_meta.sheets.find(s=>s.properties.title==='ГОЛОВНА');
+        const _sh=_meta.sheets.find(s=>s.properties.title.toLowerCase()==='головна');
         if(!_sh)throw new Error('Сторінку ГОЛОВНА не знайдено');
-        const _shId=_sh.properties.sheetId,_shIdx=_sh.properties.index;
+        const _shId=_sh.properties.sheetId,_shIdx=_sh.properties.index,_shTitle=_sh.properties.title;
         const _dupResp=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`,{
             method:'POST',
             headers:{Authorization:'Bearer '+state.token,'Content-Type':'application/json'},
@@ -680,7 +680,7 @@ async function archiveMainSheet() {
         });
         const _dupRes=await _dupResp.json();
         if(_dupRes.error)throw new Error(_dupRes.error.message);
-        await apiClear('ГОЛОВНА!A2:Z');
+        await apiClear(_shTitle+'!A2:Z');
         state.records=[];state.counts={};state.report=1;
         state.form={targets:[],q200:0,q300:0,coord:'',drone:'',ammo:'',newTarget:'',newResult:'',selTargetName:''};
         state.archiveSheets=[];state.selArchive=null;state.archiveRecs=[];
