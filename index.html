@@ -1550,7 +1550,7 @@ function render() {
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px">
                 <h2 class="stencil-shadow text-3xl" style="color: var(--yellow);flex:1">ЗВІТ №${state.report}</h2>
                 <span class="stencil" style="color:var(--khaki);font-size:0.9em;white-space:nowrap;flex:1;text-align:center">СЬОГОДНІ: <span style="color:#ffffff">${todayDate}</span></span>
-                <div style="flex:1;display:flex;justify-content:flex-end"><button onclick="newReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-danger">🚩 НОВИЙ ЗВІТ</button></div>
+                <div style="flex:1;display:flex;justify-content:flex-end"><button onclick="newReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">НОВИЙ ЗВІТ</button></div>
             </div>
             <div class="mb-4 stencil" style="font-size:calc(1.15em - 1px); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap">
                 <span style="color:var(--khaki)">ЗА ЗВІТНІЙ ПЕРІОД ЗДІЙСНЕНО <span style="color:var(--yellow)">${state.records.filter(r=>r.reportNum===state.report).length}</span> ВИЛЬОТІВ, ОРІЄНТОВНО НА <span style="color:var(--yellow)">${Math.round(state.records.filter(r=>r.reportNum===state.report).reduce((s,r)=>s+r.points,0))}</span> БАЛІВ</span>
