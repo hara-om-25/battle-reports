@@ -1,4 +1,4 @@
-const CACHE = 'battle-reports-v1';
+const CACHE = 'battle-reports-v2';
 const PRECACHE = ['/battle-reports/', '/battle-reports/index.html'];
 
 self.addEventListener('install', e => {
@@ -13,9 +13,24 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  // Pass through Google API and OAuth requests
-  if (url.hostname.includes('google') || url.hostname.includes('googleapis')) return;
+  // Sheets API and OAuth must always hit the network — never cache them
+  if (url.hostname.includes('googleapis.com') || url.hostname.includes('accounts.google.com')) return;
+  if (e.request.method !== 'GET') return;
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request).then(r => r || caches.match('/battle-reports/')))
+    fetch(e.request).then(resp => {
+      // cache successful GETs (app shell, tailwind, fonts) so they survive offline
+      if (resp && (resp.ok || resp.type === 'opaque')) {
+        const copy = resp.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+      }
+      return resp;
+    }).catch(() =>
+      caches.match(e.request).then(r => {
+        if (r) return r;
+        // запасний варіант — лише для переходів на сторінку, не для скриптів/стилів
+        if (e.request.mode === 'navigate') return caches.match('/battle-reports/');
+        return new Response('', { status: 504, statusText: 'offline' });
+      })
+    )
   );
 });
