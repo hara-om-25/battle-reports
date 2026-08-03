@@ -346,6 +346,7 @@ function _contentUid(r) {
 function saveLocal() {
     try {
         localStorage.setItem(LS_DATA, JSON.stringify({
+            owner: state.user || localStorage.getItem('email') || '',
             records: state.records, report: state.report, counts: state.counts,
             scoreTable: state.scoreTable, drones: state.drones, ammo: state.ammo,
             results: state.results, pvr: state.pvr, reportTitle: state.reportTitle,
@@ -410,20 +411,42 @@ async function pushChange(op, uid, rec) {
     }
 }
 
+// Накладає локальні незбережені зміни поверх набору записів.
+// Ключове: нові записи беруться З ЧЕРГИ, а не зі state.records —
+// тому вони не зникають, навіть якщо state.records перезаписали даними з таблиці.
+function _applyQueue(base) {
+    if (!state.queue.length) return base;
+    const delU = new Set(state.queue.filter(o => o.op === 'del').map(o => o.uid));
+    const editM = new Map(state.queue.filter(o => o.op === 'edit').map(o => [o.uid, o.rec]));
+    const out = [], seen = new Set();
+    base.forEach(r => {
+        if (!r.uid) r.uid = _contentUid(r);
+        if (delU.has(r.uid) || seen.has(r.uid)) return;
+        seen.add(r.uid);
+        out.push(editM.has(r.uid) ? Object.assign({}, editM.get(r.uid), { uid: r.uid }) : r);
+    });
+    state.queue.filter(o => o.op === 'add').forEach(o => {
+        if (delU.has(o.uid) || seen.has(o.uid) || !o.rec) return;
+        seen.add(o.uid);
+        out.push(Object.assign({}, o.rec, { uid: o.uid }));
+    });
+    editM.forEach((rec, uid) => {
+        if (seen.has(uid) || delU.has(uid) || !rec) return;
+        seen.add(uid);
+        out.push(Object.assign({}, rec, { uid: uid }));
+    });
+    return out;
+}
+
 // Повне звіряння в обидва боки: нічого не губиться
 async function reconcileSync() {
     const mainRows = await apiGet('ГОЛОВНА');
     const remote = _parseMainRows(mainRows);
     const delUids = new Set(state.queue.filter(o => o.op === 'del').map(o => o.uid));
-    const editMap = new Map(state.queue.filter(o => o.op === 'edit').map(o => [o.uid, o.rec]));
-    const merged = [], seen = new Set();
-    // 1) все що є в таблиці — мінус видалене офлайн, плюс правки зроблені офлайн
-    remote.forEach(r => {
-        if (delUids.has(r.uid) || seen.has(r.uid)) return;
-        seen.add(r.uid);
-        merged.push(editMap.has(r.uid) ? Object.assign({}, editMap.get(r.uid), { uid: r.uid }) : r);
-    });
-    // 2) все що є локально, але відсутнє в таблиці (офлайн-записи та втрачене)
+    // 1) те що в таблиці + усі локальні незбережені зміни (нові беруться з черги)
+    const merged = _applyQueue(remote);
+    const seen = new Set(merged.map(r => r.uid));
+    // 2) все що є в пам'яті, але відсутнє і там, і там
     state.records.forEach(r => {
         if (!r.uid) r.uid = _contentUid(r);
         if (delUids.has(r.uid) || seen.has(r.uid)) return;
@@ -523,20 +546,56 @@ async function manualPull() {
 
 /* ============ /ОФЛАЙН-ЯДРО ============ */
 
+// Немає інтернету і вийшли з акаунту, але на пристрої лишились дані —
+// даємо продовжити роботу офлайн, щоб людина не опинилась у глухому куті.
+function _offlineOwner() {
+    if (navigator.onLine) return '';
+    try {
+        const d = JSON.parse(localStorage.getItem(LS_DATA) || 'null');
+        if (d && d.owner && (d.records || []).length) return d.owner;
+    } catch (e) {}
+    return '';
+}
+function _offlineResumeBtn() {
+    const o = _offlineOwner();
+    if (!o) return '';
+    const n = state.queue.length;
+    return '<p class="stencil" style="color:#c05a3e;font-size:0.8em;margin-top:14px">Немає з\'єднання' + (n ? (' · ' + n + ' незбережених записів') : '') + '</p>'
+        + '<button onclick="resumeOffline()" class="btn-stencil w-full" style="margin-top:8px;font-size:0.85em">ПРОДОВЖИТИ ОФЛАЙН<br><span style="font-size:0.85em;opacity:0.75">' + esc(o) + '</span></button>';
+}
+function resumeOffline() {
+    const o = _offlineOwner();
+    if (!o) return;
+    state.user = o;
+    state.token = localStorage.getItem('token');
+    state.online = false;
+    state.loaded = true;
+    state.page = 'form';
+    localStorage.setItem('email', o);   // щоб наступний запуск одразу відкрив дані
+    render();
+}
+
 window.onload = () => {
     loadLocal();
     const savedToken = localStorage.getItem('token');
     const savedEmail = localStorage.getItem('email');
+    state.online = navigator.onLine;
 
-    // Старт без інтернету: показуємо збережені локально дані
-    if (!navigator.onLine && savedEmail) {
-        state.online = false;
+    // МАЛЮЄМО ОДРАЗУ — жодного порожнього екрана, ні онлайн, ні офлайн
+    if (savedEmail) {
         state.user = savedEmail;
         state.token = savedToken;
         state.loaded = true;
         state.page = 'form';
         render();
-        _offlineMsg();
+        if (!navigator.onLine) _offlineMsg();
+    } else {
+        state.page = 'login';
+        render();
+        // Вийшли з акаунту, але на пристрої лишились несинхронізовані записи
+        if (!navigator.onLine && state.queue.length) {
+            showAlert('НЕМАЄ ІНТЕРНЕТ-З\'ЄДНАННЯ\n\nНа пристрої збережено ' + state.queue.length + ' записів.\n\nВони не зникнуть. Увійдіть тим самим акаунтом, коли з\'явиться інтернет — записи автоматично потраплять у таблицю.');
+        }
     }
 
     let _waited = 0;
@@ -544,26 +603,13 @@ window.onload = () => {
         if (typeof google !== 'undefined' && google.accounts) {
             clearInterval(initInterval);
             initAuth();
-            if (savedToken && savedEmail) {
-                state.token = savedToken;
-                state.user = savedEmail;
-                if (navigator.onLine) verifyAndLoad(); else render();
-            } else if (navigator.onLine) {
-                render();
-            }
+            if (savedToken && savedEmail && navigator.onLine) verifyAndLoad();
             return;
         }
-        // бібліотека не вантажиться (немає мережі) — працюємо офлайн
-        if (++_waited > 80) {
+        // бібліотека Google не вантажиться (немає мережі) — залишаємось на локальних даних
+        if (++_waited > 60) {
             clearInterval(initInterval);
-            if (!state.loaded && savedEmail && !navigator.onLine) {
-                state.online = false;
-                state.user = savedEmail; state.token = savedToken;
-                state.loaded = true; state.page = 'form';
-                render(); _offlineMsg();
-            } else if (!state.loaded) {
-                render();
-            }
+            if (!navigator.onLine) { state.online = false; render(); }
         }
     }, 100);
 };
@@ -585,6 +631,15 @@ async function verifyAndLoad() {
             logout(); return;
         }
         
+        // Дані на пристрої належать іншому акаунту — не змішуємо
+        try {
+            const _d = JSON.parse(localStorage.getItem(LS_DATA) || 'null');
+            if (_d && _d.owner && _d.owner !== state.user) {
+                localStorage.removeItem(LS_DATA); localStorage.removeItem(LS_QUEUE);
+                state.queue = []; state.records = [];
+            }
+        } catch (e) {}
+
         const users = (usersResp.values || []).flat().map(x => (x||'').trim().toLowerCase()).filter(x => x);
         const userEmail = (state.user || '').trim().toLowerCase();
         if (!users.includes(userEmail)) {
@@ -753,21 +808,21 @@ function logout() {
     // Не даємо втратити несинхронізовані записи
     if (state.queue && state.queue.length) {
         showConfirm('УВАГА',
-            'Є ' + state.queue.length + ' незбережених у таблицю записів.\n\nЯкщо вийти зараз — вони залишаться на пристрої, але не потраплять у Google таблицю.\n\nВийти все одно?',
+            'Є ' + state.queue.length + ' незбережених у таблицю записів.\n\nВони залишаться на пристрої і потраплять у таблицю, коли ви знову увійдете цим же акаунтом за наявності інтернету.\n\nВийти?',
             _doLogout);
         return;
     }
     _doLogout();
 }
 function _doLogout() {
+    // Локальні записи та чергу НЕ чіпаємо — вони мають пережити вихід
+    // і синхронізуватись при наступному вході цим же користувачем.
     localStorage.removeItem('token');
     localStorage.removeItem('email');
-    localStorage.removeItem(LS_DATA);
-    localStorage.removeItem(LS_QUEUE);
-    state.queue = [];
     if(window._tokenTimer){clearInterval(window._tokenTimer);window._tokenTimer=null;}
     state.token = null; state.user = null;
-    state.scoreTable = {}; state.drones = []; state.ammo = []; state.results = [];  state.records = [];
+    state.scoreTable = {}; state.drones = []; state.ammo = []; state.results = [];
+    if (!state.queue.length) state.records = [];
     state.archiveSheets = []; state.selArchive = null; state.archiveRecs = []; state.archiveLoading = false; state.pvr = [];
     state.allArchiveRecs = []; state.allArchiveLoaded = false; state.allArchiveLoading = false;
     state.reportTitle = ''; state.costPerPoint = 0; state.droneCategories = null;
@@ -1090,7 +1145,7 @@ async function loadDataFromAPI() {
         }
         const _pvHdr=listRows[0]||[];state.pvr=[3,4,5,6].map(ci=>{const name=(_pvHdr[ci]||'').trim();if(!name)return null;const map={};for(let i=1;i<listRows.length;i++){const row=listRows[i]||[];const ammo=(row[2]||'').trim();const val=(row[ci]||'').toString().trim().replace(',','.');if(ammo&&val&&val!=='0'){const c=parseFloat(val);if(c)map[ammo]=c;}}return Object.keys(map).length?{name,map}:null;}).filter(Boolean);
         const mainRows = await apiGet('ГОЛОВНА');
-        state.records = _parseMainRows(mainRows);
+        state.records = _applyQueue(_parseMainRows(mainRows));
         state.records.forEach(r=>{if((r.qty200||r.qty300)&&!r.target.split(', ').some(t=>{const _p=t.trim().split(' '),_l=_p[_p.length-1],_a=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.trim();return _a==='ОС';})){r.qty200=0;r.qty300=0;}});
         
         if (state.records.length > 0) {
@@ -1810,7 +1865,7 @@ function render() {
     const app = document.getElementById('app');
     
     if (state.page === 'login' || !state.user) {
-        app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><div class="crate p-8 max-w-md w-full text-center"><h1 class="stencil-shadow text-3xl mb-4" style="color: var(--yellow)">ХАРА ОМ</h1><p class="stencil mb-2" style="color: var(--khaki)">GOOGLE ТАБЛИЦЯ</p><input id="_sheetUrlInp" class="field mb-4" style="text-align:left;font-size:0.8em" placeholder="https://docs.google.com/spreadsheets/d/..." value="${esc(localStorage.getItem('sheetId')||'')}"/><button onclick="applySheetAndLogin()" class="btn-stencil btn-yellow-dim w-full text-lg">🔐 УВІЙТИ ЧЕРЕЗ GOOGLE</button></div></div>`;
+        app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><div class="crate p-8 max-w-md w-full text-center"><h1 class="stencil-shadow text-3xl mb-4" style="color: var(--yellow)">ХАРА ОМ</h1><p class="stencil mb-2" style="color: var(--khaki)">GOOGLE ТАБЛИЦЯ</p><input id="_sheetUrlInp" class="field mb-4" style="text-align:left;font-size:0.8em" placeholder="https://docs.google.com/spreadsheets/d/..." value="${esc(localStorage.getItem('sheetId')||'')}"/><button onclick="applySheetAndLogin()" class="btn-stencil btn-yellow-dim w-full text-lg">🔐 УВІЙТИ ЧЕРЕЗ GOOGLE</button>${_offlineResumeBtn()}</div></div>`;
         return;
     }
     
