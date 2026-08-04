@@ -1,6 +1,6 @@
 {
-  "name": "Бойові Звіти",
-  "short_name": "ЗВІТИ",
+  "name": "ХАРА ОМ",
+  "short_name": "ХАРА ОМ",
   "description": "Система бойових звітів FPV-підрозділу",
   "start_url": "/battle-reports/",
   "scope": "/battle-reports/",
