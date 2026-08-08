@@ -1,4 +1,4 @@
-const CACHE = 'battle-reports-v2';
+const CACHE = 'battle-reports-v3';
 const PRECACHE = ['/battle-reports/', '/battle-reports/index.html'];
 
 self.addEventListener('install', e => {
@@ -15,6 +15,9 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   // Sheets API and OAuth must always hit the network — never cache them
   if (url.hostname.includes('googleapis.com') || url.hostname.includes('accounts.google.com')) return;
+  // The manifest decides orientation, name and icon at install time —
+  // a stale cached copy would keep resurrecting old settings.
+  if (url.pathname.endsWith('/manifest.json')) return;
   if (e.request.method !== 'GET') return;
   e.respondWith(
     fetch(e.request).then(resp => {
