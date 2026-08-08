@@ -1,11 +1,10 @@
 {
-  "name": "⠀",
+  "name": "ХАРА ОМ",
   "short_name": "ХАРА ОМ",
   "description": "Система бойових звітів FPV-підрозділу",
   "start_url": "/battle-reports/",
   "scope": "/battle-reports/",
   "display": "standalone",
-  "orientation": "any",
   "background_color": "#1a1a12",
   "theme_color": "#8a8060",
   "lang": "uk",
