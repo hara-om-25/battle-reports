@@ -438,14 +438,14 @@ function _listsDirty() {
     });
 }
 
-// Таблиця + локальні незбережені зміни: видалене офлайн не повертаємо,
-// додане офлайн не втрачаємо
+// Таблиця + локальні незбережені зміни. Правило просте й жорстке:
+// нічого з того, що є на пристрої, не зникає. З таблиці прибираємо лише те,
+// що користувач явно видалив офлайн (було в точці відліку, а локально вже немає).
 function _mergeList(remote, local, snap) {
     local = local || [];
-    if (!snap) return remote;
-    const gone = snap.filter(v => local.indexOf(v) === -1);
+    const gone = (snap || []).filter(v => local.indexOf(v) === -1);
     const out = remote.filter(v => gone.indexOf(v) === -1);
-    local.forEach(v => { if (snap.indexOf(v) === -1 && out.indexOf(v) === -1) out.push(v); });
+    local.forEach(v => { if (out.indexOf(v) === -1) out.push(v); });
     return out;
 }
 
