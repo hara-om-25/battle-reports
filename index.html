@@ -271,9 +271,9 @@
     }
     /* Додано офлайн і ще не потрапило в Google таблицю — сама лише рамка, без заливки */
     .record-card.pending-sync, .list-item.pending-sync { border-color: #e08a2e; }
-    /* Видалено офлайн — лишається на екрані перекресленим, доки таблиця не оновиться */
+    /* Видалено офлайн — лишається на екрані перекресленим, доки таблиця не оновиться.
+       Рамку не чіпаємо: позначкою тут є самі діагоналі */
     .record-card.deleted-sync, .list-item.deleted-sync {
-      border-color: #e08a2e;
       position: relative;
       opacity: 0.75;
     }
