@@ -1962,7 +1962,7 @@ function formatRecord(r, num) {
     const _mt = (f, txt) => txt ? `<span style="color:${_c(f,'inherit')}">${esc(txt)}</span>` : '';
     const meta = [_mt('time',_rTime),_mt('coordinates',r.coordinates),_mt('drone',r.drone),_mt('ammo',r.ammo)].filter(Boolean).join(ysep);
     return `<div class="record-card text-sm${_new?' pending-sync':''}"${_new?' title="Новий виліт — збережено локально, очікує вивантаження в Google таблицю"':''} style="position:relative;padding-left:62px;padding-right:46px;font-size:calc(0.875rem + 1px)">
-<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:transparent"><span class="stencil" style="color:${_new?PEND:'var(--yellow)'};font-size:1.6em;line-height:1">${num}</span></div>
+<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:transparent"><span class="stencil" style="color:${(_new||_chg.length)?PEND:'var(--yellow)'};font-size:1.6em;line-height:1">${num}</span></div>
 <p class="stencil" style="color:var(--text)">${tgtLine}</p>
 ${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}
 <p class="stencil" style="color:var(--yellow)">${r.points} балів</p>
