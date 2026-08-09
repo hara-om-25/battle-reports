@@ -459,6 +459,9 @@ function loadLocal() {
             state.droneCategories = d.droneCategories || null;
             state.archiveSheets = d.archiveSheets || [];
             state.listsSynced = d.listsSynced || null;
+            // Дані з попереднього сеансу вже були в таблиці — беремо їх за точку відліку,
+            // інакше перший офлайн-старт не мав би з чим порівнювати
+            if (!state.listsSynced) _markListsSynced();
         }
         state.queue = JSON.parse(localStorage.getItem(LS_QUEUE) || '[]');
     } catch (e) { state.queue = []; }
