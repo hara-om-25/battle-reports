@@ -428,6 +428,27 @@ function _markListsSynced() {
     };
 }
 
+// Списки змінювались після останнього успішного вивантаження
+function _listsDirty() {
+    const s = state.listsSynced;
+    if (!s) return false;
+    return ['drones', 'ammo', 'results'].some(k => {
+        const a = s[k] || [], b = state[k] || [];
+        return a.length !== b.length || a.some((v, i) => v !== b[i]);
+    });
+}
+
+// Таблиця + локальні незбережені зміни: видалене офлайн не повертаємо,
+// додане офлайн не втрачаємо
+function _mergeList(remote, local, snap) {
+    local = local || [];
+    if (!snap) return remote;
+    const gone = snap.filter(v => local.indexOf(v) === -1);
+    const out = remote.filter(v => gone.indexOf(v) === -1);
+    local.forEach(v => { if (snap.indexOf(v) === -1 && out.indexOf(v) === -1) out.push(v); });
+    return out;
+}
+
 function saveLocal() {
     try {
         localStorage.setItem(LS_DATA, JSON.stringify({
@@ -552,6 +573,8 @@ async function reconcileSync() {
     merged.sort((a, b) => _k(a.datetime) < _k(b.datetime) ? -1 : _k(a.datetime) > _k(b.datetime) ? 1 : 0);
     state.records = merged;
     await syncRecordsToAPI();
+    // Списки, змінені офлайн, теж мають поїхати в таблицю
+    if (_listsDirty()) await _uploadLists();
     state.queue = [];
     saveLocal();
 }
@@ -911,6 +934,7 @@ function applySheetAndLogin() {
     if(raw){
         const id=parseSheetId(raw);
         if(!id){showAlert('Невірне посилання на Google Таблицю!');return;}
+        if(id!==SHEET_ID){state.listsSynced=null;}   // інша таблиця — стара точка відліку не діє
         SHEET_ID=id;
         localStorage.setItem('sheetId',id);
     }
@@ -950,6 +974,9 @@ function _doLogout() {
     _tokenReqBusy = false; window._authRetries = 0; window._pendingSync = false;
     state.token = null; state.user = null;
     state.scoreTable = {}; state.drones = []; state.ammo = []; state.results = [];
+    // разом зі списками скидаємо і точку відліку — інакше при наступному вході
+    // порожній локальний список виглядав би як «усе видалено офлайн»
+    state.listsSynced = null;
     if (!state.queue.length) state.records = [];
     state.archiveSheets = []; state.selArchive = null; state.archiveRecs = []; state.archiveLoading = false; state.pvr = [];
     state.allArchiveRecs = []; state.allArchiveLoaded = false; state.allArchiveLoading = false;
@@ -1281,14 +1308,21 @@ async function loadDataFromAPI() {
         }
         
         const listRows = await apiGet('СПИСКИ');
-        state.drones = []; state.ammo = []; state.results = [];
+        const _rdr = [], _rrs = [], _ram = [];
         for (let i = 1; i < listRows.length; i++) {
             const row = listRows[i] || [];
-            if (row[0]) state.drones.push(row[0].trim());
-            if (row[1]) state.results.push(row[1].trim());
-            if (row[2]) state.ammo.push(row[2].trim());
+            if (row[0]) _rdr.push(row[0].trim());
+            if (row[1]) _rrs.push(row[1].trim());
+            if (row[2]) _ram.push(row[2].trim());
         }
-        _markListsSynced();
+        // Локальні зміни списків, які ще не потрапили в таблицю, не можна затирати
+        // даними з таблиці — інакше додане офлайн зникає без сліду
+        const _snap = state.listsSynced;
+        state.drones  = _mergeList(_rdr, state.drones,  _snap && _snap.drones);
+        state.results = _mergeList(_rrs, state.results, _snap && _snap.results);
+        state.ammo    = _mergeList(_ram, state.ammo,    _snap && _snap.ammo);
+        state.listsSynced = { drones: _rdr.slice(), ammo: _ram.slice(), results: _rrs.slice() };
+        if (_listsDirty()) { try { await _uploadLists(); } catch (e) { /* віддамо наступного разу */ } }
         const _pvHdr=listRows[0]||[];state.pvr=[3,4,5,6].map(ci=>{const name=(_pvHdr[ci]||'').trim();if(!name)return null;const map={};for(let i=1;i<listRows.length;i++){const row=listRows[i]||[];const ammo=(row[2]||'').trim();const val=(row[ci]||'').toString().trim().replace(',','.');if(ammo&&val&&val!=='0'){const c=parseFloat(val);if(c)map[ammo]=c;}}return Object.keys(map).length?{name,map}:null;}).filter(Boolean);
         const mainRows = await apiGet('ГОЛОВНА');
         state.records = _applyQueue(_parseMainRows(mainRows));
@@ -1344,20 +1378,26 @@ async function loadDataFromAPI() {
     }
 }
 
-async function syncListsToAPI() {
-    saveLocal();
-    if (!state.online || !navigator.onLine) { render(); showAlert('Список змінено локально.\nСинхронізується після появи інтернету.'); return; }
-    try {
-        await apiClear('СПИСКИ!A2:C');
-        const maxLen = Math.max(state.drones.length, state.ammo.length, state.results.length);
-        if (maxLen === 0) { _markListsSynced(); saveLocal(); return; }
+// Записати списки в таблицю. Кидає помилку — викликач вирішує, що з нею робити.
+async function _uploadLists() {
+    await apiClear('СПИСКИ!A2:C');
+    const maxLen = Math.max(state.drones.length, state.ammo.length, state.results.length);
+    if (maxLen > 0) {
         const rows = [];
         for (let i = 0; i < maxLen; i++) {
             rows.push([state.drones[i] || '', state.results[i] || '', state.ammo[i] || '']);
         }
         await apiUpdate(`СПИСКИ!A2:C${maxLen + 1}`, rows);
-        _markListsSynced();
-        saveLocal();
+    }
+    _markListsSynced();
+    saveLocal();
+}
+
+async function syncListsToAPI() {
+    saveLocal();
+    if (!state.online || !navigator.onLine) { render(); showAlert('Список змінено локально.\nСинхронізується після появи інтернету.'); return; }
+    try {
+        await _uploadLists();
         render();
     } catch(err) {
         if (_isNetErr(err)) { state.online = false; render(); _offlineMsg(); return; }
