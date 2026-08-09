@@ -460,12 +460,15 @@ function loadLocal() {
 function queueOp(op, uid, rec, chg) {
     const existing = state.queue.findIndex(o => o.uid === uid);
     if (op === 'edit' && existing >= 0 && state.queue[existing].op === 'add') {
-        state.queue[existing].rec = rec;   // виліт іще й не в таблиці — лишається новим цілком
+        // виліт іще не в таблиці — лишається новим цілком, але правлені поля теж позначаємо
+        const prevA = state.queue[existing].chg || [];
+        state.queue[existing].rec = rec;
+        state.queue[existing].chg = (chg || []).concat(prevA.filter(f => (chg || []).indexOf(f) === -1));
     } else if (op === 'del' && existing >= 0 && state.queue[existing].op === 'add') {
         state.queue.splice(existing, 1);
     } else if (existing >= 0 && state.queue[existing].op !== 'add') {
         // друга правка того самого вильоту — підсвічені поля додаються до вже змінених
-        const prev = (state.queue[existing].op === 'edit' && state.queue[existing].chg) || [];
+        const prev = state.queue[existing].chg || [];
         const merged = (chg || []).concat(prev.filter(f => (chg || []).indexOf(f) === -1));
         state.queue[existing] = { op, uid, rec, chg: merged };
     } else {
@@ -1933,9 +1936,9 @@ function formatRecord(r, num) {
     // Новий виліт підсвічуємо цілком, правку — лише в тих полях, що змінились
     const _q = _pendingOp(r);
     const _new = !!_q && _q.op === 'add';
-    const _chg = (_q && _q.op === 'edit' && _q.chg) ? _q.chg : [];
+    const _chg = (_q && _q.chg) ? _q.chg : [];
     const PEND = '#e08a2e';
-    const _c = (f, base) => (!_new && _chg.indexOf(f) >= 0) ? PEND : base;
+    const _c = (f, base) => _chg.indexOf(f) >= 0 ? PEND : base;
     const allParts = [
         ...Array.from({length:Math.max(tgts.length,ress.length)},(_,i)=>{ const name=esc(tgts[i]||''); const rtxt=esc(ress[i]||''); const nameHtml=`<span style="color:${_c('target','var(--text)')}">${name}</span>`; const resHtml=`<span style="color:${_c('result','var(--khaki)')}">${rtxt}</span>`; return name ? nameHtml+dash+resHtml : resHtml; }),
         r.qty200>0 ? `<span style="color:#e05050">200</span>${dash}<span style="color:${_c('qty200','#fff')}">${r.qty200}</span>` : '',
