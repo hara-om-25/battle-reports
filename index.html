@@ -269,19 +269,18 @@
     }
     .zvity-wrap { max-width: 80%; margin: 0 auto; }
     @media (max-width: 640px) { .zvity-wrap { max-width: 100%; } }
-    .modal-box.edit-wide { max-width: 780px; }
+    .modal-box.edit-wide { max-width: 660px; }
+    .qty-row { display: grid; gap: .5rem; grid-template-columns: 60px 60px; }
     .edit-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
     .edit-cols > * { min-width: 0; }
     @media (max-width: 760px) {
       .modal-box.edit-wide { max-width: 400px; }
       .edit-cols { grid-template-columns: 1fr; gap: 14px; }
     }
-    .mgrs-row { display: grid; gap: .5rem; grid-template-columns: 1fr 60px 60px; }
+    .mgrs-row { display: grid; gap: .5rem; grid-template-columns: 1fr auto; }
     .mgrs-row select.field { padding-left: 8px; text-align: center; }
     @media (max-width: 520px) {
-      .mgrs-row { grid-template-columns: 1fr 1fr; }
-      .mgrs-row > *:first-child { grid-column: 1 / -1; }
-      .mgrs-row select { max-width: 60px; }
+      .mgrs-row { grid-template-columns: 1fr; }
     }
     .modal-overlay {
       position: fixed; inset: 0;
@@ -1527,8 +1526,11 @@ function showEditRecordModal(idx) {
     // інакше такі рядки не потрапляють у форму й затираються при збереженні.
     const _pairs = Array.from({length: Math.max(tNames.length, tResults.length)},
         (_, i) => ({name: tNames[i] || '', result: tResults[i] || ''}));
+    const _tm = ((r.datetime || '').match(/(\d{1,2}):(\d{2})/) || []);
+    const _hh = (_tm[1] || '0').padStart(2, '0'), _mm = (_tm[2] || '00');
     state.editRecord = {
         idx,
+        hour: _hh, minute: _mm,
         targets: _pairs.map(t => ({name: t.name, result: t.result})),
         coordinates: r.coordinates || '',
         qty200: r.qty200 || 0,
@@ -1538,7 +1540,7 @@ function showEditRecordModal(idx) {
         newTarget: '',
         newResult: '',
         selTargetName: '',
-        _orig: JSON.stringify({targets:_pairs,coordinates:r.coordinates||'',qty200:r.qty200||0,qty300:r.qty300||0,drone:r.drone||'',ammo:r.ammo||''})
+        _orig: JSON.stringify({targets:_pairs,coordinates:r.coordinates||'',qty200:r.qty200||0,qty300:r.qty300||0,drone:r.drone||'',ammo:r.ammo||'',hour:_hh,minute:_mm})
     };
     renderEditRecordModal();
 }
@@ -1577,16 +1579,18 @@ const tgtList = er.targets.length > 0
     const _hasOs300 = er.targets.some(t=>{const _ab=Object.keys(state.scoreTable).find(k=>t.name.startsWith(k))||'';return _ab==='ОС'&&(t.result==='знищено'||t.result==='пошкоджено');})||(er.newTarget==='ОС'&&(er.newResult==='знищено'||er.newResult==='пошкоджено'));
     if (!_hasOs200) er.qty200=0;
     if (!_hasOs300) er.qty300=0;
+    const hhOpts = Array.from({length:24},(_,i)=>String(i).padStart(2,'0')).map(h=>`<option value="${h}" ${er.hour===h?'selected':''}>${h}</option>`).join('');
+    const mmOpts = Array.from({length:60},(_,i)=>String(i).padStart(2,'0')).map(m=>`<option value="${m}" ${er.minute===m?'selected':''}>${m}</option>`).join('');
     const q200opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty200===n?'selected':''}>${n}</option>`).join('');
     const q300opts = [0,1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${er.qty300===n?'selected':''}>${n}</option>`).join('');
-    document.getElementById('modal').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box edit-wide" style="max-height:90vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 class="stencil-shadow text-xl" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div style="display:flex;gap:6px"><button id="edit-save-top" onclick="saveEditRecord()" onmousedown="this.style.background='#5ab558'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#5ab558'" ontouchend="this.style.background=''" class="btn-stencil btn-green" style="padding:6px 14px;font-size:0.9em;${_dim}">&#10003;</button><button onclick="closeModal()" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil" style="padding:6px 14px;font-size:0.9em;opacity:0.6">&#10005;</button></div></div><div class="edit-cols"><div><label class="label block mb-1">ЦІЛІ</label><div class="space-y-1 mb-2">${tgtList}</div><select onchange="state.editRecord.newTarget=this.value;state.editRecord.selTargetName='';renderEditRecordModal(true)" class="field"><option value="">Ціль...</option>${scoreOpts}</select>${_erTgtList}<div class="grid gap-2" style="grid-template-columns:1fr auto"><select onchange="state.editRecord.newResult=this.value;renderEditRecordModal(true)" class="field"><option value="">Результат...</option>${resOpts}</select><button onclick="addEditTarget()" onmousedown="this.style.background='#5ab558'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#5ab558'" ontouchend="this.style.background=''" class="btn-stencil btn-green" style="padding:0;font-size:22px;height:42px;min-width:42px">+</button></div></div><div class="space-y-3"><div class="mgrs-row"><div style="min-width:0"><label class="label block mb-1">MGRS</label><div style="display:flex;align-items:center;border:2px solid var(--surface-light);border-radius:2px;background:rgba(0,0,0,0.3)"><input id="er_coord" type="text" oninput="saveEditModalState();checkEditDirty()" value="${esc(er.coordinates)}" placeholder="36U UA 24232 91610" style="flex:1;min-width:0;border:none;background:transparent;color:var(--text);padding:10px 12px;font-family:inherit;font-size:inherit;outline:none"/><button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();const el=document.getElementById('er_coord');if(el){el.value=v;el.dispatchEvent(new Event('input'));}}).catch(()=>{})" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil" style="flex:0 0 auto;margin:4px 4px 4px 0;padding:4px 6px;font-size:12px" title="Вставити з буфера">&#x2B06;</button></div></div><div style="min-width:0"><label class="label block mb-1">200</label><select${_hasOs200?'':' disabled'} onchange="state.editRecord.qty200=parseInt(this.value);checkEditDirty()" class="field" style="${_hasOs200?'':'opacity:0.35'}">${q200opts}</select></div><div style="min-width:0"><label class="label block mb-1">300</label><select${_hasOs300?'':' disabled'} onchange="state.editRecord.qty300=parseInt(this.value);checkEditDirty()" class="field" style="${_hasOs300?'':'opacity:0.35'}">${q300opts}</select></div></div><div><label class="label block mb-1">ДРОН</label><select onchange="state.editRecord.drone=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${droneOpts}</select></div><div><label class="label block mb-1">БОЄПРИПАС</label><select onchange="state.editRecord.ammo=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${ammoOpts}</select></div><div class="mt-4"><button id="edit-save-bottom" onclick="saveEditRecord()" onmousedown="this.style.background='#5ab558'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#5ab558'" ontouchend="this.style.background=''" class="btn-stencil btn-green w-full" style="${_dim}">ЗБЕРЕГТИ</button></div></div></div>`;
+    document.getElementById('modal').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box edit-wide" style="max-height:90vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 class="stencil-shadow text-xl" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div style="display:flex;gap:6px"><button id="edit-save-top" onclick="saveEditRecord()" onmousedown="this.style.background='#5ab558'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#5ab558'" ontouchend="this.style.background=''" class="btn-stencil btn-green" style="padding:6px 14px;font-size:0.9em;${_dim}">&#10003;</button><button onclick="closeModal()" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil" style="padding:6px 14px;font-size:0.9em;opacity:0.6">&#10005;</button></div></div><div class="edit-cols"><div><label class="label block mb-1">ЦІЛІ</label><div class="space-y-1 mb-2">${tgtList}</div><select onchange="state.editRecord.newTarget=this.value;state.editRecord.selTargetName='';renderEditRecordModal(true)" class="field"><option value="">Ціль...</option>${scoreOpts}</select>${_erTgtList}<div class="grid gap-2" style="grid-template-columns:1fr auto"><select onchange="state.editRecord.newResult=this.value;renderEditRecordModal(true)" class="field"><option value="">Результат...</option>${resOpts}</select><button onclick="addEditTarget()" onmousedown="this.style.background='#5ab558'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#5ab558'" ontouchend="this.style.background=''" class="btn-stencil btn-green" style="padding:0;font-size:22px;height:42px;min-width:42px">+</button></div></div><div class="space-y-3"><div class="mgrs-row"><div style="min-width:0"><label class="label block mb-1">MGRS</label><div style="display:flex;align-items:center;border:2px solid var(--surface-light);border-radius:2px;background:rgba(0,0,0,0.3)"><input id="er_coord" type="text" oninput="saveEditModalState();checkEditDirty()" value="${esc(er.coordinates)}" placeholder="36U UA 24232 91610" style="flex:1;min-width:0;border:none;background:transparent;color:var(--text);padding:10px 12px;font-family:inherit;font-size:inherit;outline:none"/><button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();const el=document.getElementById('er_coord');if(el){el.value=v;el.dispatchEvent(new Event('input'));}}).catch(()=>{})" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil" style="flex:0 0 auto;margin:4px 4px 4px 0;padding:4px 6px;font-size:12px" title="Вставити з буфера">&#x2B06;</button></div></div><div style="min-width:0"><label class="label block mb-1">ЧЧ:ММ</label><div style="display:flex;gap:4px"><select onchange="state.editRecord.hour=this.value;checkEditDirty()" class="field" style="width:58px;padding-left:8px;text-align:center">${hhOpts}</select><select onchange="state.editRecord.minute=this.value;checkEditDirty()" class="field" style="width:58px;padding-left:8px;text-align:center">${mmOpts}</select></div></div></div><div class="qty-row"><div style="min-width:0"><label class="label block mb-1">200</label><select${_hasOs200?'':' disabled'} onchange="state.editRecord.qty200=parseInt(this.value);checkEditDirty()" class="field" style="${_hasOs200?'':'opacity:0.35'}">${q200opts}</select></div><div style="min-width:0"><label class="label block mb-1">300</label><select${_hasOs300?'':' disabled'} onchange="state.editRecord.qty300=parseInt(this.value);checkEditDirty()" class="field" style="${_hasOs300?'':'opacity:0.35'}">${q300opts}</select></div></div><div><label class="label block mb-1">ДРОН</label><select onchange="state.editRecord.drone=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${droneOpts}</select></div><div><label class="label block mb-1">БОЄПРИПАС</label><select onchange="state.editRecord.ammo=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${ammoOpts}</select></div><div class="mt-4"><button id="edit-save-bottom" onclick="saveEditRecord()" onmousedown="this.style.background='#5ab558'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#5ab558'" ontouchend="this.style.background=''" class="btn-stencil btn-green w-full" style="${_dim}">ЗБЕРЕГТИ</button></div></div></div>`;
 }
 
 function checkEditDirty() {
     saveEditModalState();
     const er = state.editRecord;
     if (!er || !er._orig) return;
-    const dirty = JSON.stringify({targets:er.targets,coordinates:er.coordinates,qty200:er.qty200,qty300:er.qty300,drone:er.drone,ammo:er.ammo})!==er._orig;
+    const dirty = JSON.stringify({targets:er.targets,coordinates:er.coordinates,qty200:er.qty200,qty300:er.qty300,drone:er.drone,ammo:er.ammo,hour:er.hour,minute:er.minute})!==er._orig;
     const btn = document.getElementById('edit-save-top');
     if (btn) { btn.style.opacity = dirty ? ''  : '0.35'; btn.style.filter = dirty ? ''  : 'saturate(0.25)'; }
     const btn2 = document.getElementById('edit-save-bottom'); if (btn2) { btn2.style.opacity = dirty ? ''  : '0.35'; btn2.style.filter = dirty ? ''  : 'saturate(0.25)'; }
@@ -1667,6 +1671,13 @@ async function saveEditRecord() {
     let _ptsE=0;
     er.targets.forEach(t=>{const _p=t.name.trim().split(' '),_l=_p[_p.length-1],_r=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.name.trim(),_u=_r.toUpperCase();const _ab=Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})();if(_ab==='ОС'){if(t.result==='знищено')_ptsE+=_osE.znyshcheno*(parseInt(er.qty200)||0)+_osE.poshkodzheno*(parseInt(er.qty300)||0);else if(t.result==='пошкоджено')_ptsE+=_osE.poshkodzheno*(parseInt(er.qty300)||0);}else{const _sc=state.scoreTable[_ab];if(_sc)_ptsE+=t.result==='знищено'?_sc.znyshcheno:t.result==='пошкоджено'?_sc.poshkodzheno:0;}});
     r.points=Math.round(_ptsE*100)/100;
+    // Час вильоту: підставляємо обраний, дату й секунди лишаємо як були
+    if (er.hour != null && er.minute != null) {
+        const _p = (r.datetime || '').replace(',', '').trim().split(/\s+/);
+        const _date = _p[0] || '';
+        const _sec = ((_p[1] || '').split(':')[2]) || '00';
+        if (_date) r.datetime = _date + ', ' + er.hour + ':' + er.minute + ':' + _sec;
+    }
     if (!r.uid) r.uid = _contentUid(r);
     state.editRecord = null;
     closeModal(); render();
