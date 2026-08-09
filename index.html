@@ -893,6 +893,16 @@ async function apiClear(range) {
     return resp;
 }
 
+// Час вильоту в хвилинах від початку доби — для впорядкування списків
+function _recMinutes(r) {
+    const m = (r.datetime || '').match(/(\d{1,2}):(\d{2})/);
+    return m ? (+m[1]) * 60 + (+m[2]) : 0;
+}
+// Вильоти за зростанням часу; за однакового часу зберігається початковий порядок
+function _byTime(recs) {
+    return [...recs].sort((a, b) => _recMinutes(a) - _recMinutes(b));
+}
+
 function getDateOnly(datetime) {
     if (!datetime) return '';
     return datetime.split(' ')[0].replace(',', '').trim();
@@ -1479,17 +1489,32 @@ async function confirmDelete() {
 
 function closeModal() { document.getElementById('modal').innerHTML = ''; }
 
+// Повна дата+час вильоту як рядок yyyymmddHHMMSS — для хронологічного впорядкування рядків у таблиці
+function _fullDT(r) {
+    const p = (r.datetime || '').replace(',', '').trim().split(/\s+/);
+    const [d, m, y] = (p[0] || '').split('.');
+    const c = (p[1] || '').split(':');
+    const hh = (c[0] || '0').padStart(2, '0'), mm = (c[1] || '0').padStart(2, '0'), ss = (c[2] || '0').padStart(2, '0');
+    return (y || '0000').padStart(4, '0') + (m || '00').padStart(2, '0') + (d || '00').padStart(2, '0') + hh + mm + ss;
+}
+
 async function syncRecordsToAPI() {
     state.records.forEach(r => { if (!r.uid) r.uid = _contentUid(r); });
     await apiClear('ГОЛОВНА!A2:K');
     if (state.records.length > 0) {
-        const rows = state.records.map(r => [
+        // Рядки в таблиці завжди йдуть хронологічно за датою й часом вильоту — найновіші внизу.
+        // Це переставляє рядок і тоді, коли в РЕДАГУВАННІ змінили час: він переїде на своє місце.
+        const _sorted = [...state.records].sort((a, b) => {
+            const ka = _fullDT(a), kb = _fullDT(b);
+            return ka < kb ? -1 : ka > kb ? 1 : 0;
+        });
+        const rows = _sorted.map(r => [
             r.reportNum, r.datetime, r.target,
             r.qty200, r.qty300,
             r.coordinates, r.drone, r.ammo, r.result,
             r.points, r.uid
         ]);
-        await apiUpdate(`ГОЛОВНА!A2:K${state.records.length + 1}`, rows);
+        await apiUpdate(`ГОЛОВНА!A2:K${rows.length + 1}`, rows);
     }
 }
 
@@ -2078,7 +2103,7 @@ function render() {
                 const _ysep='<span style="color:var(--yellow)"> | </span>';
                 let _arNum=0;
                 const _arGroups=_arDates.map(d=>{
-                    const dayR=state.archiveRecs.filter(r=>getDateOnly(r.datetime)===d);
+                    const dayR=_byTime(state.archiveRecs.filter(r=>getDateOnly(r.datetime)===d));
                     const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                     const cards=dayR.map(r=>{
                         const n=++_arNum;
@@ -2185,7 +2210,7 @@ function render() {
         const _vyTotal=Math.round(_vyRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
         let _vyNum=0;
         const _vyGroups=_vyDates.map(d=>{
-            const dayR=_vyRecs.filter(r=>getDateOnly(r.datetime)===d);
+            const dayR=_byTime(_vyRecs.filter(r=>getDateOnly(r.datetime)===d));
             const cards=dayR.map(r=>formatRecord(r,++_vyNum)).join('');
             const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
             return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
@@ -2235,7 +2260,7 @@ function render() {
                 const _zDates=[...new Set(_zRecs.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>_zToYMD(a)>_zToYMD(b)?-1:1);
                 const _zTotal=_zRecs.length;let _zN=0;
                 const _zGroups=_zDates.map(d=>{
-                    const dayR=[..._zRecs.filter(r=>getDateOnly(r.datetime)===d)].reverse();
+                    const dayR=_byTime(_zRecs.filter(r=>getDateOnly(r.datetime)===d)).reverse();
                     const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                     const cards=[...dayR].map(r=>formatRecord(r,_zTotal-_zN++)).join('');
                     return '<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">'+d+'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--yellow)">'+dayR.length+'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--yellow)">'+dayPts+'</span></span></div><div class="space-y-2">'+cards+'</div></div>';
@@ -2275,7 +2300,7 @@ function render() {
   const _toYMD=s=>s.split('.').reverse().join('');
   const _dates=[...new Set(_recs.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>_toYMD(a)<_toYMD(b)?-1:1).reverse();
   const _groups=_dates.map(d=>{
-    const dayR=_recs.filter(r=>getDateOnly(r.datetime)===d);
+    const dayR=_byTime(_recs.filter(r=>getDateOnly(r.datetime)===d));
     const cards=[...dayR].reverse().map(r=>formatRecord(r,_n--)).join('');
     const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     return '<div class="crate p-4">'
