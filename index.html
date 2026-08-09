@@ -1590,7 +1590,7 @@ function selectEditTarget(n){
 function renderEditRecordModal() {
     const er = state.editRecord;
     if (!er) return;
-    const _dirty = !er._orig || JSON.stringify({targets:er.targets,coordinates:er.coordinates,qty200:er.qty200,qty300:er.qty300,drone:er.drone,ammo:er.ammo})!==er._orig;
+    const _dirty = !er._orig || JSON.stringify({targets:er.targets,coordinates:er.coordinates,qty200:er.qty200,qty300:er.qty300,drone:er.drone,ammo:er.ammo,hour:er.hour,minute:er.minute})!==er._orig;
     const _dim = _dirty ? ''  : 'opacity:0.35;filter:saturate(0.25)';
     const _getEA = (nm) => { const _p=nm.trim().split(' '),_l=_p[_p.length-1],_r=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):nm.trim(),_u=_r.toUpperCase(); return Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})(); };
 const tgtList = er.targets.length > 0
