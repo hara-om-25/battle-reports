@@ -269,17 +269,19 @@
       padding: 10px 12px;
       border-radius: 2px;
     }
-    /* Запис змінено/додано офлайн і він ще не потрапив у Google таблицю */
-    .record-card.pending-sync {
+    /* Додано офлайн і ще не потрапило в Google таблицю — сама лише рамка, без заливки */
+    .record-card.pending-sync, .list-item.pending-sync { border-color: #e08a2e; }
+    /* Видалено офлайн — лишається на екрані перекресленим, доки таблиця не оновиться */
+    .record-card.deleted-sync, .list-item.deleted-sync {
       border-color: #e08a2e;
-      background: rgba(224, 138, 46, 0.09);
-      box-shadow: inset 4px 0 0 #e08a2e;
+      position: relative;
+      opacity: 0.75;
     }
-    .list-item.pending-sync {
-      border-color: #e08a2e;
-      background: rgba(224, 138, 46, 0.09);
-      box-shadow: inset 4px 0 0 #e08a2e;
+    .cross-out {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      pointer-events: none; overflow: visible;
     }
+    .cross-out line { stroke: #e08a2e; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
     .report-box {
       background: rgba(0,0,0,0.4);
       border: 1px dashed var(--khaki);
@@ -390,6 +392,21 @@ function _pendingOp(r) {
 }
 
 function _recTime(r) { return ((r && r.datetime || '').match(/\d{1,2}:\d{2}/) || [''])[0]; }
+
+// Вильоти, видалені офлайн. Із state.records їх уже немає — щоб не потрапили
+// назад у таблицю й не бралися в підрахунки, — але знімок лежить у черзі,
+// і саме з нього ми малюємо перекреслену картку.
+function _ghostRecords() {
+    return (state.queue || []).filter(o => o.op === 'del' && o.rec)
+        .map(o => Object.assign({}, o.rec, { uid: o.uid, _ghost: true }));
+}
+
+// Дві діагоналі поверх елемента. SVG, а не CSS-градієнт: тільки так лінії
+// йдуть точно з кута в кут за будь-яких пропорцій картки.
+function _crossSvg() {
+    return '<svg class="cross-out" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">'
+        + '<line x1="0" y1="0" x2="100" y2="100"/><line x1="100" y1="0" x2="0" y2="100"/></svg>';
+}
 
 // Які саме поля змінились — щоб підсвічувати правку точково, а не весь виліт
 function _diffRecFields(a, b) {
@@ -1717,7 +1734,8 @@ async function confirmDeleteRecord() {
     state.records.splice(idx, 1);
     state.pendingRecordIdx = null;
     closeModal(); render();
-    await pushChange('del', uid, null);
+    // знімок потрібен, щоб офлайн показати виліт перекресленим, доки не синхронізовано
+    await pushChange('del', uid, gone ? Object.assign({}, gone) : null);
     render();
 }
 
@@ -2001,15 +2019,19 @@ function formatRecord(r, num) {
     const _rTime=(r.datetime||'').match(/\d{1,2}:\d{2}/)?.[0]||'';
     const _mt = (f, txt) => txt ? `<span style="color:${_c(f,'inherit')}">${esc(txt)}</span>` : '';
     const meta = [_mt('time',_rTime),_mt('coordinates',r.coordinates),_mt('drone',r.drone),_mt('ammo',r.ammo)].filter(Boolean).join(ysep);
-    return `<div class="record-card text-sm${_new?' pending-sync':''}"${_new?' title="Новий виліт — збережено локально, очікує вивантаження в Google таблицю"':''} style="position:relative;padding-left:62px;padding-right:46px;font-size:calc(0.875rem + 1px)">
-<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:transparent"><span class="stencil" style="color:${(_new||_chg.length)?PEND:'var(--yellow)'};font-size:1.6em;line-height:1">${num}</span></div>
+    const _gone = !!r._ghost;
+    const _cls = _gone ? ' deleted-sync' : (_new ? ' pending-sync' : '');
+    const _ttl = _gone ? ' title="Видалено локально — зникне після синхронізації з Google таблицею"'
+                       : (_new ? ' title="Новий виліт — збережено локально, очікує вивантаження в Google таблицю"' : '');
+    return `<div class="record-card text-sm${_cls}"${_ttl} style="position:relative;padding-left:62px;padding-right:${_gone?'12px':'46px'};font-size:calc(0.875rem + 1px)">
+<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:transparent"><span class="stencil" style="color:${(_new||_gone||_chg.length)?PEND:'var(--yellow)'};font-size:1.6em;line-height:1">${num}</span></div>
 <p class="stencil" style="color:var(--text)">${tgtLine}</p>
 ${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}
 <p class="stencil" style="color:var(--yellow)">${r.points} балів</p>
-<div style="position:absolute;top:6px;right:6px;display:flex;flex-direction:column;gap:4px">
+${_gone?'':`<div style="position:absolute;top:6px;right:6px;display:flex;flex-direction:column;gap:4px">
   <button onclick="showDeleteRecordModal(${idx})" class="btn-stencil btn-danger" style="padding:3px 7px;font-size:0.85em">&#10005;</button>
   <button onclick="showEditRecordModal(${idx})" class="btn-stencil" style="padding:3px 7px;font-size:0.85em">&#9998;</button>
-</div></div>`;
+</div>`}${_gone?_crossSvg():''}</div>`;
 }
 
 function copyReport() {
@@ -2078,7 +2100,12 @@ function copyFilteredPeriodReport() {
 function getAbbr() { const p = state.form.target.split(' '); return p.length>1?p.slice(0,-1).join(' '):''; }
 
 function renderListSection(list, title) {
-    return `<div class="crate p-4"><h2 class="stencil-shadow text-lg mb-3" style="color: var(--yellow)">${title} <span style="color: var(--khaki)">(${state[list].length})</span></h2><div class="space-y-2">${state[list].map((x,i)=>`<div class="list-item${_isPendingListVal(list,x)?' pending-sync':''}" onclick="selectItem('${list}',${i})">${esc(x)}</div>`).join('')}</div></div>`;
+    // Значення, видалені офлайн, лишаються на екрані перекресленими
+    const _snap = (state.listsSynced && state.listsSynced[list]) || [];
+    const _gone = _snap.filter(v => state[list].indexOf(v) === -1);
+    const _live = state[list].map((x,i)=>`<div class="list-item${_isPendingListVal(list,x)?' pending-sync':''}" onclick="selectItem('${list}',${i})">${esc(x)}</div>`).join('');
+    const _dead = _gone.map(x=>`<div class="list-item deleted-sync" title="Видалено локально — зникне після синхронізації з Google таблицею">${esc(x)}${_crossSvg()}</div>`).join('');
+    return `<div class="crate p-4"><h2 class="stencil-shadow text-lg mb-3" style="color: var(--yellow)">${title} <span style="color: var(--khaki)">(${state[list].length})</span></h2><div class="space-y-2">${_live}${_dead}</div></div>`;
 }
 
 const _MNAMES=['СІЧЕНЬ','ЛЮТИЙ','БЕРЕЗЕНЬ','КВІТЕНЬ','ТРАВЕНЬ','ЧЕРВЕНЬ','ЛИПЕНЬ','СЕРПЕНЬ','ВЕРЕСЕНЬ','ЖОВТЕНЬ','ЛИСТОПАД','ГРУДЕНЬ'];
@@ -2396,12 +2423,14 @@ function render() {
 
     if(state.page==='vyloty') {
         const _vyRecs=state.records.filter(r=>r.reportNum===state.report);
-        const _vyDates=[...new Set(_vyRecs.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>{const f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};return f(a)<f(b)?-1:1;});
+        const _vyGh=_ghostRecords().filter(r=>r.reportNum===state.report);
+        const _vyDates=[...new Set(_vyRecs.concat(_vyGh).map(r=>getDateOnly(r.datetime)))].sort((a,b)=>{const f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};return f(a)<f(b)?-1:1;});
         const _vyTotal=Math.round(_vyRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
         let _vyNum=0;
         const _vyGroups=_vyDates.map(d=>{
             const dayR=_byTime(_vyRecs.filter(r=>getDateOnly(r.datetime)===d));
-            const cards=dayR.map(r=>formatRecord(r,++_vyNum)).join('');
+            const dayAll=_byTime(dayR.concat(_vyGh.filter(r=>getDateOnly(r.datetime)===d)));
+            const cards=dayAll.map(r=>r._ghost?formatRecord(r,''):formatRecord(r,++_vyNum)).join('');
             const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
             return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
         }).join('');
@@ -2452,7 +2481,7 @@ function render() {
                 const _zGroups=_zDates.map(d=>{
                     const dayR=_byTimeDesc(_zRecs.filter(r=>getDateOnly(r.datetime)===d));
                     const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
-                    const cards=dayR.map(r=>formatRecord(r,_zTotal-_zN++)).join('');
+                    const cards=_byTimeDesc(dayR.concat(_ghostRecords().filter(g=>getDateOnly(g.datetime)===d))).map(r=>r._ghost?formatRecord(r,''):formatRecord(r,_zTotal-_zN++)).join('');
                     return '<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">'+d+'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--yellow)">'+dayR.length+'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--yellow)">'+dayPts+'</span></span></div><div class="space-y-2">'+cards+'</div></div>';
                 }).join('');
                 // доповідь combined for period
@@ -2488,10 +2517,12 @@ function render() {
   const _total=Math.round(_recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
   let _n=_recs.length;
   const _toYMD=s=>s.split('.').reverse().join('');
-  const _dates=[...new Set(_recs.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>_toYMD(a)<_toYMD(b)?-1:1).reverse();
+  const _zvGh=_ghostRecords().filter(g=>!state.selReport||g.reportNum===state.selReport);
+  const _dates=[...new Set(_recs.concat(_zvGh).map(r=>getDateOnly(r.datetime)))].sort((a,b)=>_toYMD(a)<_toYMD(b)?-1:1).reverse();
   const _groups=_dates.map(d=>{
     const dayR=_byTimeDesc(_recs.filter(r=>getDateOnly(r.datetime)===d));
-    const cards=dayR.map(r=>formatRecord(r,_n--)).join('');
+    const dayAll=_byTimeDesc(dayR.concat(_zvGh.filter(g=>getDateOnly(g.datetime)===d)));
+    const cards=dayAll.map(r=>r._ghost?formatRecord(r,''):formatRecord(r,_n--)).join('');
     const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     return '<div class="crate p-4">'
       +(state.selDate?'':'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">'+d+'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--yellow)">'+dayR.length+'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--yellow)">'+dayPts+'</span></span></div>')
