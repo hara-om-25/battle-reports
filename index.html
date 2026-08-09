@@ -381,11 +381,27 @@ function _contentUid(r) {
     return 'c' + (h >>> 0).toString(36);
 }
 
-// Запис ще не потрапив у таблицю, якщо він висить у черзі (додано або змінено офлайн)
-function _isPendingRec(r) {
-    if (!r || !state.queue || !state.queue.length) return false;
+// Запис ще не потрапив у таблицю, якщо він висить у черзі (додано або змінено офлайн).
+// Повертає сам запис черги — за ним видно, чи це новий виліт, чи правка кількох полів.
+function _pendingOp(r) {
+    if (!r || !state.queue || !state.queue.length) return null;
     const u = r.uid || _contentUid(r);
-    return state.queue.some(o => o.uid === u && o.op !== 'del');
+    return state.queue.find(o => o.uid === u && o.op !== 'del') || null;
+}
+
+function _recTime(r) { return ((r && r.datetime || '').match(/\d{1,2}:\d{2}/) || [''])[0]; }
+
+// Які саме поля змінились — щоб підсвічувати правку точково, а не весь виліт
+function _diffRecFields(a, b) {
+    const out = [];
+    ['target', 'result', 'coordinates', 'drone', 'ammo'].forEach(k => {
+        if ((a[k] || '') !== (b[k] || '')) out.push(k);
+    });
+    ['qty200', 'qty300'].forEach(k => {
+        if ((parseInt(a[k]) || 0) !== (parseInt(b[k]) || 0)) out.push(k);
+    });
+    if (_recTime(a) !== _recTime(b)) out.push('time');
+    return out;
 }
 
 // Значення списку ще не потрапило в таблицю, якщо його немає в останньому
@@ -441,16 +457,19 @@ function loadLocal() {
 }
 
 // Згортання черги: add+edit=add, add+del=нічого, edit+del=del
-function queueOp(op, uid, rec) {
+function queueOp(op, uid, rec, chg) {
     const existing = state.queue.findIndex(o => o.uid === uid);
     if (op === 'edit' && existing >= 0 && state.queue[existing].op === 'add') {
-        state.queue[existing].rec = rec;
+        state.queue[existing].rec = rec;   // виліт іще й не в таблиці — лишається новим цілком
     } else if (op === 'del' && existing >= 0 && state.queue[existing].op === 'add') {
         state.queue.splice(existing, 1);
     } else if (existing >= 0 && state.queue[existing].op !== 'add') {
-        state.queue[existing] = { op, uid, rec };
+        // друга правка того самого вильоту — підсвічені поля додаються до вже змінених
+        const prev = (state.queue[existing].op === 'edit' && state.queue[existing].chg) || [];
+        const merged = (chg || []).concat(prev.filter(f => (chg || []).indexOf(f) === -1));
+        state.queue[existing] = { op, uid, rec, chg: merged };
     } else {
-        state.queue.push({ op, uid, rec });
+        state.queue.push({ op, uid, rec, chg: chg || [] });
     }
     saveLocal();
 }
@@ -461,13 +480,13 @@ function _isNetErr(e) {
 }
 
 // Запис змінено локально: онлайн — одразу в таблицю, офлайн — у чергу
-async function pushChange(op, uid, rec) {
-    if (!state.online || !navigator.onLine) { queueOp(op, uid, rec); saveLocal(); return; }
+async function pushChange(op, uid, rec, chg) {
+    if (!state.online || !navigator.onLine) { queueOp(op, uid, rec, chg); saveLocal(); return; }
     try {
         await syncRecordsToAPI();
         saveLocal();
     } catch (e) {
-        if (_isNetErr(e)) { state.online = false; queueOp(op, uid, rec); }
+        if (_isNetErr(e)) { state.online = false; queueOp(op, uid, rec, chg); }
         else showAlert('Помилка: ' + e.message);
         saveLocal();
     }
@@ -1796,6 +1815,7 @@ async function saveEditRecord() {
     saveEditModalState();
     if (_osQtyMissing(er.targets, er.qty200, er.qty300)) { showAlert('Додайте кількість ОС'); return; }
     const r = state.records[er.idx];
+    const _before = Object.assign({}, r);   // щоб знати, які саме поля змінились
     r.target = er.targets.map(t => t.name).join(', ');
     r.result = er.targets.map(t => t.result).join(', ');
     r.coordinates = er.coordinates;
@@ -1819,7 +1839,7 @@ async function saveEditRecord() {
     if (!r.uid) r.uid = _contentUid(r);
     state.editRecord = null;
     closeModal(); render();
-    await pushChange('edit', r.uid, Object.assign({}, r));
+    await pushChange('edit', r.uid, Object.assign({}, r), _diffRecFields(_before, r));
     render();
 }
 
@@ -1910,18 +1930,24 @@ function formatRecord(r, num) {
     const ress = r.result ? r.result.split(', ') : [];
     const sep = '<span style="color:var(--yellow)">, </span>';
     const dash = '<span style="color:var(--yellow)"> \u2014 </span>';
+    // Новий виліт підсвічуємо цілком, правку — лише в тих полях, що змінились
+    const _q = _pendingOp(r);
+    const _new = !!_q && _q.op === 'add';
+    const _chg = (_q && _q.op === 'edit' && _q.chg) ? _q.chg : [];
+    const PEND = '#e08a2e';
+    const _c = (f, base) => (!_new && _chg.indexOf(f) >= 0) ? PEND : base;
     const allParts = [
-        ...Array.from({length:Math.max(tgts.length,ress.length)},(_,i)=>{ const name=esc(tgts[i]||''); const rtxt=esc(ress[i]||''); return name ? name+dash+`<span style="color:var(--khaki)">${rtxt}</span>` : rtxt; }),
-        r.qty200>0 ? `<span style="color:#e05050">200</span>${dash}<span style="color:#fff">${r.qty200}</span>` : '',
-        r.qty300>0 ? `<span style="color:#5599dd">300</span>${dash}<span style="color:#fff">${r.qty300}</span>` : ''
+        ...Array.from({length:Math.max(tgts.length,ress.length)},(_,i)=>{ const name=esc(tgts[i]||''); const rtxt=esc(ress[i]||''); const nameHtml=`<span style="color:${_c('target','var(--text)')}">${name}</span>`; const resHtml=`<span style="color:${_c('result','var(--khaki)')}">${rtxt}</span>`; return name ? nameHtml+dash+resHtml : resHtml; }),
+        r.qty200>0 ? `<span style="color:#e05050">200</span>${dash}<span style="color:${_c('qty200','#fff')}">${r.qty200}</span>` : '',
+        r.qty300>0 ? `<span style="color:#5599dd">300</span>${dash}<span style="color:${_c('qty300','#fff')}">${r.qty300}</span>` : ''
     ].filter(Boolean);
     const tgtLine = allParts.join(sep);
     const ysep = '<span style="color:var(--yellow)"> | </span>';
     const _rTime=(r.datetime||'').match(/\d{1,2}:\d{2}/)?.[0]||'';
-    const meta = [_rTime?esc(_rTime):'',esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(ysep);
-    const _pend = _isPendingRec(r);
-    return `<div class="record-card text-sm${_pend?' pending-sync':''}"${_pend?' title="Збережено локально — очікує вивантаження в Google таблицю"':''} style="position:relative;padding-left:62px;padding-right:46px;font-size:calc(0.875rem + 1px)">
-<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:transparent"><span class="stencil" style="color:${_pend?'#e08a2e':'var(--yellow)'};font-size:1.6em;line-height:1">${num}</span></div>
+    const _mt = (f, txt) => txt ? `<span style="color:${_c(f,'inherit')}">${esc(txt)}</span>` : '';
+    const meta = [_mt('time',_rTime),_mt('coordinates',r.coordinates),_mt('drone',r.drone),_mt('ammo',r.ammo)].filter(Boolean).join(ysep);
+    return `<div class="record-card text-sm${_new?' pending-sync':''}"${_new?' title="Новий виліт — збережено локально, очікує вивантаження в Google таблицю"':''} style="position:relative;padding-left:62px;padding-right:46px;font-size:calc(0.875rem + 1px)">
+<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:transparent"><span class="stencil" style="color:${_new?PEND:'var(--yellow)'};font-size:1.6em;line-height:1">${num}</span></div>
 <p class="stencil" style="color:var(--text)">${tgtLine}</p>
 ${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}
 <p class="stencil" style="color:var(--yellow)">${r.points} балів</p>
