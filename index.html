@@ -562,7 +562,7 @@ async function onBackOnline() {
         state.syncing = false;
         if (state.user && tokenClient) {
             window._pendingSync = true;
-            tokenClient.requestAccessToken({ prompt: '', hint: state.user });
+            if (!requestToken({ prompt: '', hint: state.user })) window._pendingSync = false;
         } else {
             showAlert('Не вдалося синхронізувати автоматично.\n\nДані збережені локально — натисніть кнопку завантаження щоб повторити.');
         }
@@ -689,7 +689,12 @@ async function verifyAndLoad() {
         if (usersResp.error) {
             if (usersResp.error.code === 401 || usersResp.error.status === 'UNAUTHENTICATED') {
                 state.token = null; state.loaded = false;
-                if (tokenClient) { tokenClient.requestAccessToken({ prompt: '', hint: state.user||'' }); return; }
+                // Дві спроби поновити токен — далі чесно виходимо, а не крутимо
+                // користувача по вікну вибору акаунта нескінченно
+                window._authRetries = (window._authRetries || 0) + 1;
+                if (window._authRetries <= 2 && requestToken({ prompt: '', hint: state.user||'' })) return;
+                window._authRetries = 0;
+                showAlert('Не вдалося поновити авторизацію Google.\n\nУвійдіть ще раз.');
                 logout(); return;
             }
             showAlert('Помилка доступу до файла: ' + usersResp.error.message);
@@ -711,7 +716,8 @@ async function verifyAndLoad() {
             showAlert('У вас немає доступу!\nВаш email: ' + state.user);
             logout(); return;
         }
-        
+        window._authRetries = 0;
+
         await loadDataFromAPI();
     } catch(err) {
         // Немає мережі — стартуємо в офлайн-режимі з локальними даними
@@ -727,17 +733,30 @@ async function verifyAndLoad() {
     }
 }
 
+// Єдина точка запиту токена. Поки вікно вибору акаунта відкрите, повторні
+// запити ігноруються — інакше вихід із того вікна сам піднімає visibilitychange,
+// той просить токен ще раз, і користувач кружляє по вибору акаунта без кінця.
+let _tokenReqBusy = false;
+function requestToken(opts) {
+    if (!tokenClient || _tokenReqBusy) return false;
+    _tokenReqBusy = true;
+    // якщо вікно вибору просто закрили — callback не прийде, знімаємо блок самі
+    setTimeout(() => { _tokenReqBusy = false; }, 90000);
+    try { tokenClient.requestAccessToken(opts); } catch (e) { _tokenReqBusy = false; return false; }
+    return true;
+}
+
 function _startTokenTimer() {
     if(window._tokenTimer)clearInterval(window._tokenTimer);
     window._tokenTimer=setInterval(()=>{
-        if(state.token&&state.user&&tokenClient)tokenClient.requestAccessToken({prompt:'',hint:state.user});
+        if(state.token&&state.user)requestToken({prompt:'',hint:state.user});
     },45*60*1000);
     localStorage.setItem('_lastRefresh',Date.now().toString());
 }
 document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden&&state.token&&state.user&&tokenClient){
+    if(!document.hidden&&state.token&&state.user){
         const _last=parseInt(localStorage.getItem('_lastRefresh')||'0');
-        if(Date.now()-_last>44*60*1000)tokenClient.requestAccessToken({prompt:'',hint:state.user});
+        if(Date.now()-_last>44*60*1000)requestToken({prompt:'',hint:state.user});
     }
 });
 function initAuth() {
@@ -745,6 +764,7 @@ function initAuth() {
         client_id: CLIENT_ID,
         scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email',
         callback: async (response) => {
+            _tokenReqBusy = false;
             if (response.error) {
                 showAlert('Помилка авторизації: ' + response.error);
                 return;
@@ -844,7 +864,8 @@ function login() {
         if (typeof google !== 'undefined' && google.accounts) initAuth();
         if (!tokenClient) { showAlert('Google-авторизація ще завантажується.\n\nЗачекайте секунду й спробуйте ще раз.'); return; }
     }
-    tokenClient.requestAccessToken(_h ? {hint:_h} : {});
+    window._authRetries = 0;
+    requestToken(_h ? {hint:_h} : {});
 }
 function parseSheetId(v) {
     v=(v||'').trim();
@@ -892,6 +913,8 @@ function _doLogout() {
     localStorage.removeItem('token');
     localStorage.removeItem('email');
     if(window._tokenTimer){clearInterval(window._tokenTimer);window._tokenTimer=null;}
+    localStorage.removeItem('_lastRefresh');
+    _tokenReqBusy = false; window._authRetries = 0; window._pendingSync = false;
     state.token = null; state.user = null;
     state.scoreTable = {}; state.drones = []; state.ammo = []; state.results = [];
     if (!state.queue.length) state.records = [];
@@ -1326,9 +1349,9 @@ function tiwazSvg(px) {
 // Кругова стрілка тієї ж товщини й стилю, що й Тейваз. viewBox навмисне
 // симетричний відносно (12,12) — тоді обертання йде рівно навколо центра кола.
 function spinnerSvg(px) {
-    return '<svg class="ico-spin" viewBox="0.01 0.01 23.97 23.97" width="' + px + '" height="' + px + '" fill="none" style="display:block" aria-hidden="true">'
-        + '<path d="M15.76 4.94A8 8 0 1 1 4.08 10.89" stroke="currentColor" stroke-width="4.4"/>'
-        + '<path d="M5.02 4.15L7.84 11.42L0.31 10.36Z" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="miter" stroke-miterlimit="10"/>'
+    return '<svg class="ico-spin" viewBox="0.3 0.3 23.41 23.41" width="' + px + '" height="' + px + '" fill="none" style="display:block" aria-hidden="true">'
+        + '<path d="M15.76 4.94A8 8 0 1 1 4.02 12.56" stroke="currentColor" stroke-width="4.4"/>'
+        + '<path d="M4.02 12.56L9 4.58L2.7 3.01" stroke="currentColor" stroke-width="4.4" stroke-linejoin="miter" stroke-miterlimit="10"/>'
         + '</svg>';
 }
 
