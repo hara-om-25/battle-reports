@@ -1489,9 +1489,13 @@ function showEditRecordModal(idx) {
     if (!r) return;
     const tNames = r.target ? r.target.split(', ') : [];
     const tResults = r.result ? r.result.split(', ') : [];
+    // Запис може мати результат без цілі (напр. "ждун"). Беремо довший список,
+    // інакше такі рядки не потрапляють у форму й затираються при збереженні.
+    const _pairs = Array.from({length: Math.max(tNames.length, tResults.length)},
+        (_, i) => ({name: tNames[i] || '', result: tResults[i] || ''}));
     state.editRecord = {
         idx,
-        targets: tNames.map((name, i) => ({name, result: tResults[i] || ''})),
+        targets: _pairs.map(t => ({name: t.name, result: t.result})),
         coordinates: r.coordinates || '',
         qty200: r.qty200 || 0,
         qty300: r.qty300 || 0,
@@ -1500,7 +1504,7 @@ function showEditRecordModal(idx) {
         newTarget: '',
         newResult: '',
         selTargetName: '',
-        _orig: JSON.stringify({targets:tNames.map((n,i)=>({name:n,result:tResults[i]||''})),coordinates:r.coordinates||'',qty200:r.qty200||0,qty300:r.qty300||0,drone:r.drone||'',ammo:r.ammo||''})
+        _orig: JSON.stringify({targets:_pairs,coordinates:r.coordinates||'',qty200:r.qty200||0,qty300:r.qty300||0,drone:r.drone||'',ammo:r.ammo||''})
     };
     renderEditRecordModal();
 }
