@@ -562,7 +562,7 @@ async function onBackOnline() {
             window._pendingSync = true;
             tokenClient.requestAccessToken({ prompt: '', hint: state.user });
         } else {
-            showAlert('Не вдалося синхронізувати автоматично.\n\nДані збережені локально — натисніть кнопку синхронізації щоб повторити.');
+            showAlert('Не вдалося синхронізувати автоматично.\n\nДані збережені локально — натисніть кнопку завантаження щоб повторити.');
         }
         render();
     }
@@ -754,7 +754,7 @@ function initAuth() {
                     state.online = true;
                     showAlert('✅ З\'ЄДНАННЯ ВІДНОВЛЕНО\n\nПеревірку пройдено.\nДані синхронізовані з Google таблицею.');
                 } catch (e) {
-                    showAlert('Не вдалося синхронізувати: ' + e.message + '\n\nДані збережені локально. Натисніть кнопку синхронізації щоб повторити.');
+                    showAlert('Не вдалося синхронізувати: ' + e.message + '\n\nДані збережені локально. Натисніть кнопку завантаження щоб повторити.');
                 }
                 render();
                 return;
@@ -868,7 +868,7 @@ function _saveSheetModal() {
     SHEET_ID=id;
     localStorage.setItem('sheetId',id);
     closeModal();
-    showAlert('✅ Таблицю збережено!\nНатисніть кнопку синхронізації для перезавантаження даних');
+    showAlert('✅ Таблицю збережено!\nНатисніть кнопку завантаження для перезавантаження даних');
 }
 
 function logout() {
