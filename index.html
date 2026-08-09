@@ -394,7 +394,15 @@ function _recTime(r) { return ((r && r.datetime || '').match(/\d{1,2}:\d{2}/) ||
 // Які саме поля змінились — щоб підсвічувати правку точково, а не весь виліт
 function _diffRecFields(a, b) {
     const out = [];
-    ['target', 'result', 'coordinates', 'drone', 'ammo'].forEach(k => {
+    // Цілі та результати звіряємо поштучно: змінили одну ціль з трьох —
+    // світиться саме вона, а не весь перелік
+    const _ta = (a.target || '').split(', '), _tb = (b.target || '').split(', ');
+    for (let i = 0; i < Math.max(_ta.length, _tb.length); i++)
+        if ((_ta[i] || '') !== (_tb[i] || '')) out.push('target:' + i);
+    const _ra = (a.result || '').split(', '), _rb = (b.result || '').split(', ');
+    for (let i = 0; i < Math.max(_ra.length, _rb.length); i++)
+        if ((_ra[i] || '') !== (_rb[i] || '')) out.push('result:' + i);
+    ['coordinates', 'drone', 'ammo'].forEach(k => {
         if ((a[k] || '') !== (b[k] || '')) out.push(k);
     });
     ['qty200', 'qty300'].forEach(k => {
@@ -1938,9 +1946,10 @@ function formatRecord(r, num) {
     const _new = !!_q && _q.op === 'add';
     const _chg = (_q && _q.chg) ? _q.chg : [];
     const PEND = '#e08a2e';
-    const _c = (f, base) => _chg.indexOf(f) >= 0 ? PEND : base;
+    // f вигляду 'target:1'; голе 'target' могло лишитись у чергах, збережених до поштучного звіряння
+    const _c = (f, base) => (_chg.indexOf(f) >= 0 || _chg.indexOf(f.split(':')[0]) >= 0) ? PEND : base;
     const allParts = [
-        ...Array.from({length:Math.max(tgts.length,ress.length)},(_,i)=>{ const name=esc(tgts[i]||''); const rtxt=esc(ress[i]||''); const nameHtml=`<span style="color:${_c('target','var(--text)')}">${name}</span>`; const resHtml=`<span style="color:${_c('result','var(--khaki)')}">${rtxt}</span>`; return name ? nameHtml+dash+resHtml : resHtml; }),
+        ...Array.from({length:Math.max(tgts.length,ress.length)},(_,i)=>{ const name=esc(tgts[i]||''); const rtxt=esc(ress[i]||''); const nameHtml=`<span style="color:${_c('target:'+i,'var(--text)')}">${name}</span>`; const resHtml=`<span style="color:${_c('result:'+i,'var(--khaki)')}">${rtxt}</span>`; return name ? nameHtml+dash+resHtml : resHtml; }),
         r.qty200>0 ? `<span style="color:#e05050">200</span>${dash}<span style="color:${_c('qty200','#fff')}">${r.qty200}</span>` : '',
         r.qty300>0 ? `<span style="color:#5599dd">300</span>${dash}<span style="color:${_c('qty300','#fff')}">${r.qty300}</span>` : ''
     ].filter(Boolean);
