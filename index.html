@@ -597,6 +597,9 @@ async function manualPull() {
         await loadDataFromAPI();
         state.online = true;
         state.syncing = false;
+        // loadDataFromAPI малює екран ще з syncing=true — без цього перемальовування
+        // стрілка лишалася б крутитися назавжди
+        render();
         showAlert('✅ Дані зчитані та синхронізовані з таблицею!');
     } catch (e) {
         state.syncing = false;
@@ -1323,9 +1326,9 @@ function tiwazSvg(px) {
 // Кругова стрілка тієї ж товщини й стилю, що й Тейваз. viewBox навмисне
 // симетричний відносно (12,12) — тоді обертання йде рівно навколо центра кола.
 function spinnerSvg(px) {
-    return '<svg class="ico-spin" viewBox="1.32 1.32 21.37 21.37" width="' + px + '" height="' + px + '" fill="none" style="display:block" aria-hidden="true">'
-        + '<path d="M15.76 4.94A8 8 0 1 1 9 4.58" stroke="currentColor" stroke-width="4.4"/>'
-        + '<path d="M14.38 2.41L10.2 7.55L7.8 1.62Z" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="miter" stroke-miterlimit="10"/>'
+    return '<svg class="ico-spin" viewBox="0.01 0.01 23.97 23.97" width="' + px + '" height="' + px + '" fill="none" style="display:block" aria-hidden="true">'
+        + '<path d="M15.76 4.94A8 8 0 1 1 4.08 10.89" stroke="currentColor" stroke-width="4.4"/>'
+        + '<path d="M5.02 4.15L7.84 11.42L0.31 10.36Z" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="miter" stroke-miterlimit="10"/>'
         + '</svg>';
 }
 
