@@ -642,8 +642,8 @@ async function verifyAndLoad() {
         if (usersResp.error) {
             if (usersResp.error.code === 401 || usersResp.error.status === 'UNAUTHENTICATED') {
                 state.token = null; state.loaded = false;
-                tokenClient.requestAccessToken({ prompt: '', hint: state.user||'' });
-                return;
+                if (tokenClient) { tokenClient.requestAccessToken({ prompt: '', hint: state.user||'' }); return; }
+                logout(); return;
             }
             showAlert('Помилка доступу до файла: ' + usersResp.error.message);
             logout(); return;
@@ -683,12 +683,12 @@ async function verifyAndLoad() {
 function _startTokenTimer() {
     if(window._tokenTimer)clearInterval(window._tokenTimer);
     window._tokenTimer=setInterval(()=>{
-        if(state.token&&state.user)tokenClient.requestAccessToken({prompt:'',hint:state.user});
+        if(state.token&&state.user&&tokenClient)tokenClient.requestAccessToken({prompt:'',hint:state.user});
     },45*60*1000);
     localStorage.setItem('_lastRefresh',Date.now().toString());
 }
 document.addEventListener('visibilitychange',()=>{
-    if(!document.hidden&&state.token&&state.user){
+    if(!document.hidden&&state.token&&state.user&&tokenClient){
         const _last=parseInt(localStorage.getItem('_lastRefresh')||'0');
         if(Date.now()-_last>44*60*1000)tokenClient.requestAccessToken({prompt:'',hint:state.user});
     }
@@ -791,7 +791,14 @@ function showConfirm(title, msg, onOk) {
     _ov.appendChild(_bx);
     document.body.appendChild(_ov);
 }
-function login() { const _h=localStorage.getItem('email')||''; tokenClient.requestAccessToken(_h?{hint:_h}:{}); }
+function login() {
+    const _h = localStorage.getItem('email') || '';
+    if (!tokenClient) {
+        if (typeof google !== 'undefined' && google.accounts) initAuth();
+        if (!tokenClient) { showAlert('Google-авторизація ще завантажується.\n\nЗачекайте секунду й спробуйте ще раз.'); return; }
+    }
+    tokenClient.requestAccessToken(_h ? {hint:_h} : {});
+}
 function parseSheetId(v) {
     v=(v||'').trim();
     const m=v.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
