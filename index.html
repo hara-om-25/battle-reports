@@ -281,8 +281,8 @@
       position: absolute; inset: 0; width: 100%; height: 100%;
       pointer-events: none; overflow: visible;
     }
-    /* Товщина й колір — точно як у рамки: рамка 1px, і лінії 1px завдяки non-scaling-stroke */
-    .cross-out line { stroke: #e08a2e; stroke-width: 1; vector-effect: non-scaling-stroke; }
+    /* Трохи товщі за рамку: діагональ згладжується й на око читається тоншою за ті самі 1px */
+    .cross-out line { stroke: #e08a2e; stroke-width: 1.4; vector-effect: non-scaling-stroke; }
     .report-box {
       background: rgba(0,0,0,0.4);
       border: 1px dashed var(--khaki);
