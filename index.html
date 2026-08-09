@@ -267,6 +267,17 @@
       padding: 10px 12px;
       border-radius: 2px;
     }
+    /* Запис змінено/додано офлайн і він ще не потрапив у Google таблицю */
+    .record-card.pending-sync {
+      border-color: #e08a2e;
+      background: rgba(224, 138, 46, 0.09);
+      box-shadow: inset 4px 0 0 #e08a2e;
+    }
+    .list-item.pending-sync {
+      border-color: #e08a2e;
+      background: rgba(224, 138, 46, 0.09);
+      box-shadow: inset 4px 0 0 #e08a2e;
+    }
     .report-box {
       background: rgba(0,0,0,0.4);
       border: 1px dashed var(--khaki);
@@ -368,6 +379,29 @@ function _contentUid(r) {
     return 'c' + (h >>> 0).toString(36);
 }
 
+// Запис ще не потрапив у таблицю, якщо він висить у черзі (додано або змінено офлайн)
+function _isPendingRec(r) {
+    if (!r || !state.queue || !state.queue.length) return false;
+    const u = r.uid || _contentUid(r);
+    return state.queue.some(o => o.uid === u && o.op !== 'del');
+}
+
+// Значення списку ще не потрапило в таблицю, якщо його немає в останньому
+// успішно синхронізованому знімку (додане або відредаговане офлайн)
+function _isPendingListVal(list, val) {
+    const snap = state.listsSynced;
+    if (!snap || !snap[list]) return false;
+    return snap[list].indexOf(val) === -1;
+}
+
+function _markListsSynced() {
+    state.listsSynced = {
+        drones: (state.drones || []).slice(),
+        ammo: (state.ammo || []).slice(),
+        results: (state.results || []).slice()
+    };
+}
+
 function saveLocal() {
     try {
         localStorage.setItem(LS_DATA, JSON.stringify({
@@ -376,7 +410,7 @@ function saveLocal() {
             scoreTable: state.scoreTable, drones: state.drones, ammo: state.ammo,
             results: state.results, pvr: state.pvr, reportTitle: state.reportTitle,
             costPerPoint: state.costPerPoint, droneCategories: state.droneCategories,
-            archiveSheets: state.archiveSheets
+            archiveSheets: state.archiveSheets, listsSynced: state.listsSynced
         }));
         localStorage.setItem(LS_QUEUE, JSON.stringify(state.queue));
     } catch (e) { /* сховище переповнене — ігноруємо */ }
@@ -398,6 +432,7 @@ function loadLocal() {
             state.costPerPoint = d.costPerPoint || 0;
             state.droneCategories = d.droneCategories || null;
             state.archiveSheets = d.archiveSheets || [];
+            state.listsSynced = d.listsSynced || null;
         }
         state.queue = JSON.parse(localStorage.getItem(LS_QUEUE) || '[]');
     } catch (e) { state.queue = []; }
@@ -1192,6 +1227,7 @@ async function loadDataFromAPI() {
             if (row[1]) state.results.push(row[1].trim());
             if (row[2]) state.ammo.push(row[2].trim());
         }
+        _markListsSynced();
         const _pvHdr=listRows[0]||[];state.pvr=[3,4,5,6].map(ci=>{const name=(_pvHdr[ci]||'').trim();if(!name)return null;const map={};for(let i=1;i<listRows.length;i++){const row=listRows[i]||[];const ammo=(row[2]||'').trim();const val=(row[ci]||'').toString().trim().replace(',','.');if(ammo&&val&&val!=='0'){const c=parseFloat(val);if(c)map[ammo]=c;}}return Object.keys(map).length?{name,map}:null;}).filter(Boolean);
         const mainRows = await apiGet('ГОЛОВНА');
         state.records = _applyQueue(_parseMainRows(mainRows));
@@ -1249,17 +1285,21 @@ async function loadDataFromAPI() {
 
 async function syncListsToAPI() {
     saveLocal();
-    if (!state.online || !navigator.onLine) { showAlert('Список змінено локально.\nСинхронізується після появи інтернету.'); return; }
+    if (!state.online || !navigator.onLine) { render(); showAlert('Список змінено локально.\nСинхронізується після появи інтернету.'); return; }
     try {
         await apiClear('СПИСКИ!A2:C');
         const maxLen = Math.max(state.drones.length, state.ammo.length, state.results.length);
-        if (maxLen === 0) return;
+        if (maxLen === 0) { _markListsSynced(); saveLocal(); return; }
         const rows = [];
         for (let i = 0; i < maxLen; i++) {
             rows.push([state.drones[i] || '', state.results[i] || '', state.ammo[i] || '']);
         }
         await apiUpdate(`СПИСКИ!A2:C${maxLen + 1}`, rows);
+        _markListsSynced();
+        saveLocal();
+        render();
     } catch(err) {
+        if (_isNetErr(err)) { state.online = false; render(); _offlineMsg(); return; }
         showAlert('Помилка синхронізації списків: ' + err.message);
     }
 }
@@ -1832,8 +1872,9 @@ function formatRecord(r, num) {
     const ysep = '<span style="color:var(--yellow)"> | </span>';
     const _rTime=(r.datetime||'').match(/\d{1,2}:\d{2}/)?.[0]||'';
     const meta = [_rTime?esc(_rTime):'',esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(ysep);
-    return `<div class="record-card text-sm" style="position:relative;padding-left:62px;padding-right:46px;font-size:calc(0.875rem + 1px)">
-<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:transparent"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${num}</span></div>
+    const _pend = _isPendingRec(r);
+    return `<div class="record-card text-sm${_pend?' pending-sync':''}"${_pend?' title="Збережено локально — очікує вивантаження в Google таблицю"':''} style="position:relative;padding-left:62px;padding-right:46px;font-size:calc(0.875rem + 1px)">
+<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:transparent"><span class="stencil" style="color:${_pend?'#e08a2e':'var(--yellow)'};font-size:1.6em;line-height:1">${num}</span></div>
 <p class="stencil" style="color:var(--text)">${tgtLine}</p>
 ${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}
 <p class="stencil" style="color:var(--yellow)">${r.points} балів</p>
@@ -1909,7 +1950,7 @@ function copyFilteredPeriodReport() {
 function getAbbr() { const p = state.form.target.split(' '); return p.length>1?p.slice(0,-1).join(' '):''; }
 
 function renderListSection(list, title) {
-    return `<div class="crate p-4"><h2 class="stencil-shadow text-lg mb-3" style="color: var(--yellow)">${title} <span style="color: var(--khaki)">(${state[list].length})</span></h2><div class="space-y-2">${state[list].map((x,i)=>`<div class="list-item" onclick="selectItem('${list}',${i})">${esc(x)}</div>`).join('')}</div></div>`;
+    return `<div class="crate p-4"><h2 class="stencil-shadow text-lg mb-3" style="color: var(--yellow)">${title} <span style="color: var(--khaki)">(${state[list].length})</span></h2><div class="space-y-2">${state[list].map((x,i)=>`<div class="list-item${_isPendingListVal(list,x)?' pending-sync':''}" onclick="selectItem('${list}',${i})">${esc(x)}</div>`).join('')}</div></div>`;
 }
 
 const _MNAMES=['СІЧЕНЬ','ЛЮТИЙ','БЕРЕЗЕНЬ','КВІТЕНЬ','ТРАВЕНЬ','ЧЕРВЕНЬ','ЛИПЕНЬ','СЕРПЕНЬ','ВЕРЕСЕНЬ','ЖОВТЕНЬ','ЛИСТОПАД','ГРУДЕНЬ'];
