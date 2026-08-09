@@ -902,6 +902,13 @@ function _recMinutes(r) {
 function _byTime(recs) {
     return [...recs].sort((a, b) => _recMinutes(a) - _recMinutes(b));
 }
+// Найновіші згори — з точністю до секунд (для вкладки ЗВІТИ, на відміну від таблиці, де найновіші знизу)
+function _byTimeDesc(recs) {
+    return [...recs].sort((a, b) => {
+        const ka = _fullDT(a), kb = _fullDT(b);
+        return ka < kb ? 1 : ka > kb ? -1 : 0;
+    });
+}
 
 function getDateOnly(datetime) {
     if (!datetime) return '';
@@ -2260,9 +2267,9 @@ function render() {
                 const _zDates=[...new Set(_zRecs.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>_zToYMD(a)>_zToYMD(b)?-1:1);
                 const _zTotal=_zRecs.length;let _zN=0;
                 const _zGroups=_zDates.map(d=>{
-                    const dayR=_byTime(_zRecs.filter(r=>getDateOnly(r.datetime)===d)).reverse();
+                    const dayR=_byTimeDesc(_zRecs.filter(r=>getDateOnly(r.datetime)===d));
                     const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
-                    const cards=[...dayR].map(r=>formatRecord(r,_zTotal-_zN++)).join('');
+                    const cards=dayR.map(r=>formatRecord(r,_zTotal-_zN++)).join('');
                     return '<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">'+d+'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--yellow)">'+dayR.length+'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--yellow)">'+dayPts+'</span></span></div><div class="space-y-2">'+cards+'</div></div>';
                 }).join('');
                 // доповідь combined for period
@@ -2300,8 +2307,8 @@ function render() {
   const _toYMD=s=>s.split('.').reverse().join('');
   const _dates=[...new Set(_recs.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>_toYMD(a)<_toYMD(b)?-1:1).reverse();
   const _groups=_dates.map(d=>{
-    const dayR=_byTime(_recs.filter(r=>getDateOnly(r.datetime)===d));
-    const cards=[...dayR].reverse().map(r=>formatRecord(r,_n--)).join('');
+    const dayR=_byTimeDesc(_recs.filter(r=>getDateOnly(r.datetime)===d));
+    const cards=dayR.map(r=>formatRecord(r,_n--)).join('');
     const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     return '<div class="crate p-4">'
       +(state.selDate?'':'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">'+d+'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--yellow)">'+dayR.length+'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--yellow)">'+dayPts+'</span></span></div>')
