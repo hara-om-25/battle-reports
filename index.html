@@ -2151,8 +2151,8 @@ function formatRecord(r, num) {
 <div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:transparent"><span class="stencil" style="color:${(_new||_gone||_chg.length)?PEND:'var(--yellow)'};font-size:1.6em;line-height:1">${num}</span></div>
 <p class="stencil" style="color:var(--text)">${tgtLine}</p>
 ${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}
-<p class="stencil" style="color:var(--yellow)">${r.points} балів</p>
 ${_nt.memo?`<p class="stencil" style="color:#2d5a30;font-size:0.88em;margin-top:4px;white-space:pre-wrap">${esc(_nt.memo)}</p>`:''}
+<p class="stencil" style="color:var(--yellow)">${r.points} балів</p>
 <div style="position:absolute;top:50%;right:6px;transform:translateY(-50%);display:flex;flex-direction:column;gap:4px;z-index:1">${_gone?`
   <button onclick="restoreRecord('${esc(r.uid||'')}')" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-orange" style="padding:5px 7px;display:flex;align-items:center;justify-content:center" title="Скасувати видалення">${spinnerSvg(17,true)}</button>`:`
   <button onclick="showDeleteRecordModal(${idx})" class="btn-stencil btn-danger" style="padding:3px 7px;font-size:0.85em">&#10005;</button>
