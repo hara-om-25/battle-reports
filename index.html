@@ -321,8 +321,9 @@
     .edit-cols { display: grid; grid-template-columns: 1fr 225px; gap: 20px; align-items: stretch; }
     /* MEMO притискається до низу лівої колонки, врівень із рядком ЗБЕРЕГТИ */
     .edit-col-left { display: flex; flex-direction: column; }
-    .edit-memo { margin-top: .75rem; display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
-    .edit-memo textarea { display: block; flex: 1 1 auto; }
+    /* MEMO — вдвічі вужче за колонку й притиснуте до низу */
+    .edit-memo { margin-top: auto; padding-top: .75rem; width: 50%; }
+    .edit-memo textarea { display: block; width: 100%; }
     .edit-cols > * { min-width: 0; }
     @media (max-width: 760px) {
       .modal-box.edit-wide { max-width: 400px; }
