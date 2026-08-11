@@ -1994,7 +1994,7 @@ function _syncListsBarTop() {
 }
 window.addEventListener('resize', _syncListsBarTop);
 
-// Ширина кожної з трьох колонок СПИСКІВ — по найдовшому напису в ній +5px.
+// Ширина кожної з трьох колонок СПИСКІВ — по найдовшому напису в ній +1px.
 // Викликається з render(), тож після кожного додавання чи видалення елемента
 // ширина перераховується заново, а вся група знову стає по центру.
 function _sizeListCols() {
@@ -2010,7 +2010,7 @@ function _sizeListCols() {
     cols.forEach(col => {
         col.style.width = 'max-content';
         const w = col.getBoundingClientRect().width;
-        col.style.width = Math.min(Math.ceil(w) + 5, max) + 'px';
+        col.style.width = Math.min(Math.ceil(w) + 1, max) + 'px';
     });
 }
 window.addEventListener('resize', _sizeListCols);
