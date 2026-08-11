@@ -325,6 +325,9 @@
       gap: 15px;
     }
     .lists-cols > * { flex: 0 0 auto; }
+    /* Заголовок колонки більше не диктує її ширину: тримаємо в один рядок,
+       а розмір шрифта підганяє JS, щоб не було переносу посеред слова */
+    .lists-cols > .crate > h2 { white-space: nowrap; }
     @media (max-width: 640px) {
       .lists-cols > * { width: 100% !important; }
     }
@@ -1995,6 +1998,9 @@ function _syncListsBarTop() {
 window.addEventListener('resize', _syncListsBarTop);
 
 // Ширина кожної з трьох колонок СПИСКІВ — по найдовшому напису в ній +1px.
+// Міряємо самі рядки списку, а не колонку цілком: інакше ширину задавав би
+// заголовок (БОЄПРИПАС, РЕЗУЛЬТАТИ), і справа від найдовшого напису лишалася б
+// зайва порожнеча. Так відступ зліва й справа від напису однаковий.
 // Викликається з render(), тож після кожного додавання чи видалення елемента
 // ширина перераховується заново, а вся група знову стає по центру.
 function _sizeListCols() {
@@ -2008,9 +2014,35 @@ function _sizeListCols() {
     }
     const max = wrap.clientWidth;
     cols.forEach(col => {
-        col.style.width = 'max-content';
-        const w = col.getBoundingClientRect().width;
-        col.style.width = Math.min(Math.ceil(w) + 1, max) + 'px';
+        const cs = getComputedStyle(col);
+        const side = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)
+                   + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+        let widest = 0;
+        col.querySelectorAll('.list-item').forEach(it => {
+            const prev = it.style.width;
+            it.style.width = 'max-content';
+            widest = Math.max(widest, it.getBoundingClientRect().width);
+            it.style.width = prev;
+        });
+        if (!widest) { col.style.width = ''; return; }
+        col.style.width = Math.min(Math.ceil(widest + side) + 1, max) + 'px';
+        // Заголовок ужимаємо під готову ширину — інакше довгий (БОЄПРИПАС,
+        // РЕЗУЛЬТАТИ) або розсунув би колонку, або переносився б посеред слова
+        const h2 = col.querySelector('h2');
+        if (h2) {
+            h2.style.fontSize = '';
+            // clientWidth включає padding, а текст живе всередині нього
+            const avail = col.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+            // scrollWidth у блока з overflow:visible не бачить переповнення,
+            // тому міряємо сам текст
+            const rng = document.createRange();
+            rng.selectNodeContents(h2);
+            let fs = parseFloat(getComputedStyle(h2).fontSize);
+            while (fs > 9 && rng.getBoundingClientRect().width > avail) {
+                fs -= 0.5;
+                h2.style.fontSize = fs + 'px';
+            }
+        }
     });
 }
 window.addEventListener('resize', _sizeListCols);
