@@ -283,8 +283,9 @@
     }
     /* Додано офлайн і ще не потрапило в Google таблицю — сама лише рамка, без заливки */
     .record-card.pending-sync, .list-item.pending-sync { border-color: #e08a2e; }
-    /* обраний елемент списку — жовта рамка, доки не оберуть інший */
-    .list-item.picked { border-color: var(--yellow); }
+    /* обраний елемент списку — той самий вигляд, що й під курсором,
+       і тримається, доки не оберуть інший */
+    .list-item.picked { border-color: var(--olive-bright); background: rgba(122, 149, 64, 0.1); }
     /* Видалено офлайн — лишається на екрані перекресленим, доки таблиця не оновиться.
        Рамку не чіпаємо: позначкою тут є самі діагоналі */
     .record-card.deleted-sync, .list-item.deleted-sync {
