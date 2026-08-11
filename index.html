@@ -1977,6 +1977,16 @@ function _syncListsBarTop() {
     const nav = document.querySelector('nav.crate');
     const h = nav ? nav.getBoundingClientRect().height : 0;
     bar.style.top = (h + 16 + 8) + 'px';
+    // Ширина панелі — посередині між шириною списків і шириною основного меню.
+    // Меню ширше за списки, тож від'ємні поля розсувають панель за межі колонки.
+    const wrap = bar.parentElement;
+    if (nav && wrap) {
+        const navL = nav.getBoundingClientRect().left;
+        const innerL = wrap.getBoundingClientRect().left + parseFloat(getComputedStyle(wrap).paddingLeft || 0);
+        const m = (navL - innerL) / 2;
+        bar.style.marginLeft = m + 'px';
+        bar.style.marginRight = m + 'px';
+    }
 }
 window.addEventListener('resize', _syncListsBarTop);
 
