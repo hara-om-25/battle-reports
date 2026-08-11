@@ -312,6 +312,14 @@
     /* Панель керування списками прилипає під основне меню, а списки їдуть під неї */
     .lists-bar { position: sticky; z-index: 30; top: 0; width: 50vw; margin-left: auto; margin-right: auto; }
     @media (max-width: 640px) { .lists-bar { width: 100%; } }
+    /* Ширину поля редагування рахує recalcListFieldWidth() — при синхронізації
+       з таблицею і при змінах у списках. Панель обхоплює поле й кнопки */
+    .lists-bar.fit { width: fit-content; max-width: 100%; }
+    .lists-bar .lists-edit { flex: 0 0 auto; max-width: 100%; }
+    @media (max-width: 640px) {
+      .lists-bar.fit { width: 100%; }
+      .lists-bar .lists-edit { width: auto !important; flex: 1 1 auto; min-width: 120px; }
+    }
     .zvity-wrap { max-width: 80%; margin: 0 auto; }
     @media (max-width: 640px) { .zvity-wrap { max-width: 100%; } }
     /* На СПИСКАХ бічний відступ рівно вдвічі менший, ніж на ЗВІТАХ:
@@ -1436,6 +1444,7 @@ async function loadDataFromAPI() {
             costDual:      parseFloat(_r(6)[0])||0, dualKw1: String(_r(6)[1]||''), dualKw2: String(_r(6)[2]||''),
         };
         
+        recalcListFieldWidth();
         state.loaded = true; state.page = 'form';
         state.online = true;
         saveLocal();
@@ -1763,6 +1772,7 @@ async function saveEdit() {
     if(val.trim() && state.inputList !== null && state.inputIdx !== null) {
         state[state.inputList][state.inputIdx] = val.trim();
         state.inputVal = val.trim();
+        recalcListFieldWidth();
         await syncListsToAPI();
         closeModal(); render();
     }
@@ -1771,6 +1781,7 @@ async function saveEdit() {
 async function confirmDelete() {
     if(state.inputList !== null && state.inputIdx !== null) {
         state[state.inputList].splice(state.inputIdx, 1);
+        recalcListFieldWidth();
         await syncListsToAPI();
         clearInput(); closeModal(); render();
     }
@@ -2029,6 +2040,35 @@ function _sizeListCols() {
     });
 }
 window.addEventListener('resize', _sizeListCols);
+
+// Ширина поля редагування на СПИСКАХ. Рахується НЕ на кожному рендері, а лише
+// коли змінився вміст списків: після зчитування з Google таблиці та після
+// додавання, видалення чи збереженого редагування. Результат живе в
+// state.listFieldW і далі просто застосовується при рендері.
+function recalcListFieldWidth() {
+    // Поля може зараз не бути на екрані (СПИСКИ не відкриті), тому міряємо
+    // на невидимому зразку з тим самим класом
+    const probe = document.createElement('input');
+    probe.type = 'text';
+    probe.className = 'field';
+    probe.style.cssText = 'position:absolute;visibility:hidden;left:-9999px;top:0';
+    document.body.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    const cv = recalcListFieldWidth._cv
+            || (recalcListFieldWidth._cv = document.createElement('canvas').getContext('2d'));
+    cv.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+    let longest = 0;
+    ['drones', 'ammo', 'results'].forEach(list => {
+        (state[list] || []).forEach(v => {
+            longest = Math.max(longest, cv.measureText(String(v)).width);
+        });
+    });
+    const side = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)
+               + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+    document.body.removeChild(probe);
+    state.listFieldW = longest ? Math.ceil(longest + side) + 1 : null;
+}
+
 // Поки не підвантажився Tektur, ширина напису інша — після завантаження міряємо ще раз
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(_sizeListCols);
 
@@ -2183,6 +2223,7 @@ async function addToList(list) {
     if(state.inputVal.trim()) {
         if(!state[list].includes(state.inputVal.trim())) {
             state[list].push(state.inputVal.trim());
+            recalcListFieldWidth();
             await syncListsToAPI();
         }
         clearInput(); render();
@@ -2568,7 +2609,7 @@ function render() {
     }
     
     if(state.page==='lists') {
-        h += `<div class="p-4 space-y-4 lists-wrap" style="padding-left:8px;padding-right:8px"><h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">СПИСКИ</h1><div class="crate p-4 lists-bar"><div class="flex gap-2 mb-2 flex-wrap"><button onclick="clearInput()" class="btn-stencil btn-danger" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoCross(28)}</button><input type="text" value="${esc(state.inputVal)}" onchange="state.inputVal=this.value" placeholder="Редагування..." class="field flex-1" style="min-width: 120px" /><button onclick="addItem()" class="btn-stencil btn-green" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoPlus(33)}</button><button onclick="editItem()" class="btn-stencil btn-blue" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoPencil(28)}</button><button onclick="deleteItem()" class="btn-stencil btn-black" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoTrash(28)}</button></div></div><div id="lists-cols" class="lists-cols">${renderListSection('drones','ДРОНИ')}${renderListSection('ammo','БОЄПРИПАС')}${renderListSection('results','РЕЗУЛЬТАТИ')}</div></div>`;
+        h += `<div class="p-4 space-y-4 lists-wrap" style="padding-left:8px;padding-right:8px"><h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">СПИСКИ</h1><div class="crate p-4 lists-bar${state.listFieldW?' fit':''}"><div class="flex gap-2 mb-2 flex-wrap"><button onclick="clearInput()" class="btn-stencil btn-danger" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoCross(28)}</button><input type="text" value="${esc(state.inputVal)}" onchange="state.inputVal=this.value" placeholder="Редагування..." class="field ${state.listFieldW?'lists-edit':'flex-1'}" style="${state.listFieldW?`width:${state.listFieldW}px`:'min-width: 120px'}" /><button onclick="addItem()" class="btn-stencil btn-green" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoPlus(33)}</button><button onclick="editItem()" class="btn-stencil btn-blue" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoPencil(28)}</button><button onclick="deleteItem()" class="btn-stencil btn-black" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoTrash(28)}</button></div></div><div id="lists-cols" class="lists-cols">${renderListSection('drones','ДРОНИ')}${renderListSection('ammo','БОЄПРИПАС')}${renderListSection('results','РЕЗУЛЬТАТИ')}</div></div>`;
     }
     
     if(state.page==='archive') {
