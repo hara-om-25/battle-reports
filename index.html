@@ -1561,7 +1561,7 @@ function _fmTgtList(){
     const nm=Object.keys(s).sort((a,b)=>parseInt(b.split(' ').pop())-parseInt(a.split(' ').pop()));
     if(!nm.length)return'';
     const hl=state.form.selTargetName;
-    return'<div style="margin:4px 0 2px">'+nm.map(n=>'<button onclick="selectFormTarget(this.dataset.n)" data-n="'+esc(n)+'" class="btn-stencil" style="margin:2px;padding:2px 10px;font-size:0.82em'+(hl===n?';background:var(--green);box-shadow:0 0 0 1px var(--khaki)':'')+'">'+ esc(n)+'</button>').join('')+'</div>';
+    return'<div style="margin:4px 0 2px">'+nm.map(n=>'<button onclick="selectFormTarget(this.dataset.n)" data-n="'+esc(n)+'" class="btn-stencil" style="margin:2px;padding:2px 10px;font-size:0.82em'+(hl===n?';background:var(--olive-bright);box-shadow:0 0 0 1px var(--khaki)':'')+'">'+ esc(n)+'</button>').join('')+'</div>';
 }
 // Абревіатура цілі з її назви ("ОС 5" -> "ОС", "Особовий склад 5" -> "ОС")
 function _abbrOfName(n) {
@@ -1944,7 +1944,7 @@ const tgtList = er.targets.length > 0
         const nm=Object.keys(s).sort((a,b)=>parseInt(b.split(' ').pop())-parseInt(a.split(' ').pop()));
         if(!nm.length)return'';
         const hl=er.selTargetName||'';
-        return'<div style="margin:4px 0 2px">'+nm.map(n=>'<button onclick="selectEditTarget(this.dataset.n)" data-sq="0" data-n="'+esc(n)+'" class="btn-stencil" style="margin:2px;padding:2px 10px;font-size:0.82em'+(hl===n?';background:var(--green);box-shadow:0 0 0 1px var(--khaki)':'')+'">'+esc(n)+'</button>').join('')+'</div>';
+        return'<div style="margin:4px 0 2px">'+nm.map(n=>'<button onclick="selectEditTarget(this.dataset.n)" data-sq="0" data-n="'+esc(n)+'" class="btn-stencil" style="margin:2px;padding:2px 10px;font-size:0.82em'+(hl===n?';background:var(--olive-bright);box-shadow:0 0 0 1px var(--khaki)':'')+'">'+esc(n)+'</button>').join('')+'</div>';
     })();
     const _droneInList=state.drones.some(d=>d===er.drone);
     const droneOpts=(er.drone&&!_droneInList?[`<option value="${esc(er.drone)}" selected>${esc(er.drone)}</option>`]:[]).concat(_freqSort(state.drones,'drone').map(d=>`<option value="${esc(d)}" ${er.drone===d?'selected':''}>${esc(d)}</option>`)).join('');
