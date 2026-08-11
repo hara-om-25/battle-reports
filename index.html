@@ -304,6 +304,8 @@
       white-space: pre-wrap;
       font-size: calc(0.9em + 1px);
     }
+    /* Панель керування списками прилипає під основне меню, а списки їдуть під неї */
+    .lists-bar { position: sticky; z-index: 30; top: 0; }
     .zvity-wrap { max-width: 80%; margin: 0 auto; }
     @media (max-width: 640px) { .zvity-wrap { max-width: 100%; } }
     .modal-box.edit-wide { max-width: 562px; }
@@ -1487,6 +1489,8 @@ function icoCheck(px) { return _ico(px, _icoPath('M4.5 12.5L10 20L19.5 4')); }
 function icoCross(px) { return _ico(px, _icoPath('M5 4L19 20') + _icoPath('M19 4L5 20')); }
 function icoPlus(px)  { return _ico(px, _icoPath('M12 4L12 20') + _icoPath('M4 12L20 12')); }
 function icoUp(px)    { return _ico(px, _icoPath('M12 21L12 4.5') + _icoPath('M5 11.5L12 4.5L19 11.5')); }
+function icoPencil(px){ return _ico(px, _icoPath('M4.5 19.5L4.5 15.5L15.5 4.5L19.5 8.5L8.5 19.5Z') + _icoPath('M12.5 7.5L16.5 11.5')); }
+function icoTrash(px) { return _ico(px, _icoPath('M4 7.5L20 7.5') + _icoPath('M9.5 7.5L9.5 4.5L14.5 4.5L14.5 7.5') + _icoPath('M6.5 7.5L7.5 20L16.5 20L17.5 7.5')); }
 
 // Кругова стрілка тієї ж товщини й стилю, що й Тейваз. viewBox навмисне
 // симетричний відносно (12,12) — тоді обертання йде рівно навколо центра кола.
@@ -1946,6 +1950,17 @@ function _syncEditRowHeights() {
         if (r.width > 4 && r.height > 4) { undo.style.width = r.width + 'px'; undo.style.height = r.height + 'px'; }
     }
 }
+
+// Основне меню прилипає за 16px від верху (sticky top-4). Панель списків
+// має ставати одразу під ним, тож її відступ рахуємо з фактичної висоти меню.
+function _syncListsBarTop() {
+    const bar = document.querySelector('.lists-bar');
+    if (!bar) return;
+    const nav = document.querySelector('nav.crate');
+    const h = nav ? nav.getBoundingClientRect().height : 0;
+    bar.style.top = (h + 16 + 8) + 'px';
+}
+window.addEventListener('resize', _syncListsBarTop);
 
 // Кнопки вікна РЕДАГУВАННЯ робимо квадратними. Тінь під кнопкою не рахується —
 // вона малюється поза межами самої кнопки. Виняток — «+» та ЗБЕРЕГТИ (data-sq="0").
@@ -2483,7 +2498,7 @@ function render() {
     }
     
     if(state.page==='lists') {
-        h += `<div class="p-4 space-y-4"><h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">СПИСКИ</h1><div class="crate p-4"><div class="flex gap-2 mb-2 flex-wrap"><button onclick="addItem()" class="btn-stencil btn-green" style="display:inline-flex;align-items:center;justify-content:center">${icoPlus(18)}</button><input type="text" value="${esc(state.inputVal)}" onchange="state.inputVal=this.value" placeholder="Редагування..." class="field flex-1" style="min-width: 120px" /><button onclick="clearInput()" class="btn-stencil btn-danger">✕</button><button onclick="editItem()" class="btn-stencil btn-blue">✏</button><button onclick="deleteItem()" class="btn-stencil btn-black">🗑</button></div></div><div class="grid grid-cols-1 md:grid-cols-3 gap-4">${renderListSection('drones','ДРОНИ')}${renderListSection('ammo','БОЄПРИПАС')}${renderListSection('results','РЕЗУЛЬТАТИ')}</div></div>`;
+        h += `<div class="p-4 space-y-4"><h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">СПИСКИ</h1><div class="crate p-4 lists-bar"><div class="flex gap-2 mb-2 flex-wrap"><button onclick="addItem()" class="btn-stencil btn-green" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoPlus(28)}</button><input type="text" value="${esc(state.inputVal)}" onchange="state.inputVal=this.value" placeholder="Редагування..." class="field flex-1" style="min-width: 120px" /><button onclick="clearInput()" class="btn-stencil btn-danger" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoCross(28)}</button><button onclick="editItem()" class="btn-stencil btn-blue" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoPencil(28)}</button><button onclick="deleteItem()" class="btn-stencil btn-black" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoTrash(28)}</button></div></div><div class="grid grid-cols-1 md:grid-cols-3 gap-4">${renderListSection('drones','ДРОНИ')}${renderListSection('ammo','БОЄПРИПАС')}${renderListSection('results','РЕЗУЛЬТАТИ')}</div></div>`;
     }
     
     if(state.page==='archive') {
@@ -2768,6 +2783,7 @@ function render() {
     }
     
     app.innerHTML = h;
+    _syncListsBarTop();
 }
     </script>
 <script>
