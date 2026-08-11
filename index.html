@@ -1759,7 +1759,21 @@ function showEditModal() {
     const modal = document.getElementById('modal');
     state.editVal = state.inputVal;
     modal.innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div class="mb-4"><input type="text" id="editInput" value="${esc(state.editVal)}" class="field" /></div><div class="space-y-2"><button onclick="saveEdit()" onmousedown="this.style.background='#5ab558'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#5ab558'" ontouchend="this.style.background=''" class="btn-stencil btn-green w-full">ЗБЕРЕГТИ</button><button onclick="closeModal()" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
+    _fitEditModal();
     setTimeout(() => { document.getElementById('editInput').focus(); }, 100);
+}
+
+// Вікно РЕДАГУВАННЯ розширюємо під ту саму ширину, що й поле на СПИСКАХ,
+// щоб найдовший напис не обрізався й тут. Запас (padding і рамку вікна)
+// міряємо, а не вписуємо числом
+function _fitEditModal() {
+    const box = document.querySelector('#modal .modal-box');
+    const inp = document.getElementById('editInput');
+    if (!box || !inp || !state.listFieldW) return;
+    const extra = box.getBoundingClientRect().width - inp.getBoundingClientRect().width;
+    // тільки розширюємо: за коротких списків вікно лишається звичного розміру
+    const cur = parseFloat(getComputedStyle(box).maxWidth) || 0;
+    box.style.maxWidth = Math.max(cur, Math.ceil(state.listFieldW + extra)) + 'px';
 }
 
 function showDeleteModal() {
