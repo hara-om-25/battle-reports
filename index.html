@@ -1965,10 +1965,10 @@ const tgtList = er.targets.length > 0
     _syncEditPlusSize();
 }
 
-// «+» біля РЕЗУЛЬТАТУ малюється на 4px більшою за кнопку вставки з буфера
+// «+» біля РЕЗУЛЬТАТУ малюється на 6px більшою за кнопку вставки з буфера
 // біля MGRS. Розмір знімаємо з неї самої — вона проходить через
 // _squareEditButtons(), тож вписане число з нею б розійшлося
-const _EDIT_PLUS_GROW = 4;
+const _EDIT_PLUS_GROW = 6;
 function _syncEditPlusSize() {
     const box = document.querySelector('.modal-box.edit-wide');
     if (!box) return;
