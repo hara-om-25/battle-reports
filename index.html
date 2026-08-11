@@ -2029,14 +2029,26 @@ function _sizeListCols() {
         if (!widest) { col.style.width = ''; return; }
         col.style.width = Math.min(Math.ceil(widest + side) + 1, max) + 'px';
     });
-    // Поле редагування — такої ж ширини, як найширша колонка, щоб довгий напис
-    // було видно повністю. Кнопки й відступи панелі до цієї ширини додаються
+    // Поле редагування має вміщати найдовший напис з усіх трьох списків
+    // необрізаним — не більше й не менше. Міряємо сам текст шрифтом поля,
+    // а не ширину колонки: у колонки є власні padding і рамка, яких тут нема
     const inp = bar && bar.querySelector('input.field');
     if (inp) {
-        bar.style.width = '';
+        const ics = getComputedStyle(inp);
+        const cv = _sizeListCols._cv || (_sizeListCols._cv = document.createElement('canvas').getContext('2d'));
+        cv.font = ics.fontStyle + ' ' + ics.fontWeight + ' ' + ics.fontSize + ' ' + ics.fontFamily;
+        let longest = 0;
+        wrap.querySelectorAll('.list-item').forEach(it => {
+            longest = Math.max(longest, cv.measureText(it.textContent.trim()).width);
+        });
+        const inpSide = parseFloat(ics.paddingLeft) + parseFloat(ics.paddingRight)
+                      + parseFloat(ics.borderLeftWidth) + parseFloat(ics.borderRightWidth);
+        // Міряємо кнопки й відступи панелі на завідомо широкій панелі, інакше
+        // flex-wrap перенесе їх на другий рядок і додасть зайвого
+        bar.style.width = max + 'px';
         const extra = bar.getBoundingClientRect().width - inp.getBoundingClientRect().width;
-        const widestCol = Math.max.apply(null, cols.map(c => c.getBoundingClientRect().width));
-        bar.style.width = Math.min(Math.ceil(widestCol + extra), max) + 'px';
+        const inpW = Math.ceil(longest + inpSide) + 1;
+        bar.style.width = Math.min(inpW + extra, max) + 'px';
     }
 }
 window.addEventListener('resize', _sizeListCols);
