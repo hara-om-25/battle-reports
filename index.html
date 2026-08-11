@@ -315,6 +315,19 @@
        10% + 16px там проти 5% + 8px тут */
     .lists-wrap { max-width: 90%; margin: 0 auto; }
     @media (max-width: 640px) { .lists-wrap { max-width: 100%; } }
+    /* Три колонки списків: ширина кожної рахується в JS (найдовший напис +10px),
+       відступ між ними 15px, уся група — по центру сторінки */
+    .lists-cols {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 15px;
+    }
+    .lists-cols > * { flex: 0 0 auto; }
+    @media (max-width: 640px) {
+      .lists-cols > * { width: 100% !important; }
+    }
     .modal-box.edit-wide { max-width: 562px; }
     .qty-row { display: grid; gap: .5rem; grid-template-columns: 1fr 1fr; }
     .save-row { display: grid; gap: .5rem; grid-template-columns: auto 1fr; align-items: end; }
@@ -1981,6 +1994,29 @@ function _syncListsBarTop() {
 }
 window.addEventListener('resize', _syncListsBarTop);
 
+// Ширина кожної з трьох колонок СПИСКІВ — по найдовшому напису в ній +10px.
+// Викликається з render(), тож після кожного додавання чи видалення елемента
+// ширина перераховується заново, а вся група знову стає по центру.
+function _sizeListCols() {
+    const wrap = document.getElementById('lists-cols');
+    if (!wrap) return;
+    const cols = Array.from(wrap.children);
+    // На вузькому екрані колонки йдуть одна під одною на всю ширину
+    if (window.matchMedia('(max-width: 640px)').matches) {
+        cols.forEach(c => { c.style.width = ''; });
+        return;
+    }
+    const max = wrap.clientWidth;
+    cols.forEach(col => {
+        col.style.width = 'max-content';
+        const w = col.getBoundingClientRect().width;
+        col.style.width = Math.min(Math.ceil(w) + 10, max) + 'px';
+    });
+}
+window.addEventListener('resize', _sizeListCols);
+// Поки не підвантажився Tektur, ширина напису інша — після завантаження міряємо ще раз
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(_sizeListCols);
+
 // Кнопки вікна РЕДАГУВАННЯ робимо квадратними. Тінь під кнопкою не рахується —
 // вона малюється поза межами самої кнопки. Виняток — «+» та ЗБЕРЕГТИ (data-sq="0").
 function _squareEditButtons() {
@@ -2517,7 +2553,7 @@ function render() {
     }
     
     if(state.page==='lists') {
-        h += `<div class="p-4 space-y-4 lists-wrap" style="padding-left:8px;padding-right:8px"><h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">СПИСКИ</h1><div class="crate p-4 lists-bar"><div class="flex gap-2 mb-2 flex-wrap"><button onclick="clearInput()" class="btn-stencil btn-danger" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoCross(28)}</button><input type="text" value="${esc(state.inputVal)}" onchange="state.inputVal=this.value" placeholder="Редагування..." class="field flex-1" style="min-width: 120px" /><button onclick="addItem()" class="btn-stencil btn-green" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoPlus(33)}</button><button onclick="editItem()" class="btn-stencil btn-blue" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoPencil(28)}</button><button onclick="deleteItem()" class="btn-stencil btn-black" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoTrash(28)}</button></div></div><div class="grid grid-cols-1 md:grid-cols-3 gap-4">${renderListSection('drones','ДРОНИ')}${renderListSection('ammo','БОЄПРИПАС')}${renderListSection('results','РЕЗУЛЬТАТИ')}</div></div>`;
+        h += `<div class="p-4 space-y-4 lists-wrap" style="padding-left:8px;padding-right:8px"><h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">СПИСКИ</h1><div class="crate p-4 lists-bar"><div class="flex gap-2 mb-2 flex-wrap"><button onclick="clearInput()" class="btn-stencil btn-danger" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoCross(28)}</button><input type="text" value="${esc(state.inputVal)}" onchange="state.inputVal=this.value" placeholder="Редагування..." class="field flex-1" style="min-width: 120px" /><button onclick="addItem()" class="btn-stencil btn-green" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoPlus(33)}</button><button onclick="editItem()" class="btn-stencil btn-blue" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoPencil(28)}</button><button onclick="deleteItem()" class="btn-stencil btn-black" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoTrash(28)}</button></div></div><div id="lists-cols" class="lists-cols">${renderListSection('drones','ДРОНИ')}${renderListSection('ammo','БОЄПРИПАС')}${renderListSection('results','РЕЗУЛЬТАТИ')}</div></div>`;
     }
     
     if(state.page==='archive') {
@@ -2803,6 +2839,7 @@ function render() {
     
     app.innerHTML = h;
     _syncListsBarTop();
+    _sizeListCols();
 }
     </script>
 <script>
