@@ -283,6 +283,8 @@
     }
     /* Додано офлайн і ще не потрапило в Google таблицю — сама лише рамка, без заливки */
     .record-card.pending-sync, .list-item.pending-sync { border-color: #e08a2e; }
+    /* обраний елемент списку — жовта рамка, доки не оберуть інший */
+    .list-item.picked { border-color: var(--yellow); }
     /* Видалено офлайн — лишається на екрані перекресленим, доки таблиця не оновиться.
        Рамку не чіпаємо: позначкою тут є самі діагоналі */
     .record-card.deleted-sync, .list-item.deleted-sync {
@@ -1710,6 +1712,18 @@ function newReport() {
 function selectItem(list, idx) { state.inputVal = state[list][idx]; state.inputList = list; state.inputIdx = idx; render(); }
 function clearInput() { state.inputVal = ''; state.inputList = null; state.inputIdx = null; render(); }
 
+// Виділення тримається, доки не оберуть інший елемент або не торкнуться екрана
+// поза списками. Панель керування й відкриті вікна не рахуються — вони
+// працюють саме з обраним елементом.
+document.addEventListener('click', e => {
+    if (state.page !== 'lists' || state.inputList === null || state.inputList === undefined) return;
+    const modal = document.getElementById('modal');
+    if (modal && modal.innerHTML) return;
+    if (e.target.closest('.list-item') || e.target.closest('.lists-bar')) return;
+    state.inputList = null; state.inputIdx = null;
+    render();
+});
+
 function showModal() {
     const modal = document.getElementById('modal');
     modal.innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box"><h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">В ЯКИЙ СПИСОК ДОДАТИ?</h2><div class="space-y-2"><button onclick="addToList('drones');closeModal()" onmousedown="this.style.background='#4d7a9a'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#4d7a9a'" ontouchend="this.style.background=''" class="btn-stencil btn-blue w-full">ДРОНИ</button><button onclick="addToList('ammo');closeModal()" onmousedown="this.style.background='#4d7a9a'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#4d7a9a'" ontouchend="this.style.background=''" class="btn-stencil btn-blue w-full">БОЄПРИПАС</button><button onclick="addToList('results');closeModal()" onmousedown="this.style.background='#4d7a9a'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#4d7a9a'" ontouchend="this.style.background=''" class="btn-stencil btn-blue w-full">РЕЗУЛЬТАТИ</button><button onclick="closeModal()" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil w-full">СКАСУВАТИ</button></div></div></div>`;
@@ -2304,7 +2318,7 @@ function renderListSection(list, title) {
     // Значення, видалені офлайн, лишаються на екрані перекресленими
     const _snap = (state.listsSynced && state.listsSynced[list]) || [];
     const _gone = _snap.filter(v => state[list].indexOf(v) === -1);
-    const _live = state[list].map((x,i)=>`<div class="list-item${_isPendingListVal(list,x)?' pending-sync':''}" onclick="selectItem('${list}',${i})">${esc(x)}</div>`).join('');
+    const _live = state[list].map((x,i)=>`<div class="list-item${_isPendingListVal(list,x)?' pending-sync':''}${(state.inputList===list&&state.inputIdx===i)?' picked':''}" onclick="selectItem('${list}',${i})">${esc(x)}</div>`).join('');
     const _dead = _gone.map(x=>`<div class="list-item deleted-sync" style="display:flex;align-items:center;gap:8px;padding-right:6px" title="Видалено локально — зникне після синхронізації з Google таблицею"><span style="flex:1;min-width:0">${esc(x)}</span><button onclick="event.stopPropagation();restoreListVal('${list}',this.dataset.v)" data-v="${esc(x)}" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-orange" style="flex:0 0 auto;padding:4px 6px;display:flex;align-items:center;justify-content:center;position:relative;z-index:1" title="Скасувати видалення">${spinnerSvg(16,true)}</button>${_crossSvg()}</div>`).join('');
     return `<div class="crate p-4"><h2 class="stencil-shadow text-lg mb-3" style="color: var(--yellow)">${title} <span style="color: var(--khaki)">(${state[list].length})</span></h2><div class="space-y-2">${_live}${_dead}</div></div>`;
 }
