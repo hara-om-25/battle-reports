@@ -907,11 +907,13 @@ function initAuth() {
         callback: async (response) => {
             _tokenReqBusy = false;
             if (response.error) {
+                _tokenArrived(null);
                 showAlert('Помилка авторизації: ' + response.error);
                 return;
             }
             state.token = response.access_token;
             localStorage.setItem('token', state.token);
+            _tokenArrived(state.token);
             if (window._pendingSync) {
                 window._pendingSync = false;
                 _startTokenTimer();
@@ -1071,48 +1073,92 @@ function _doLogout() {
     setTimeout(()=>window.close(),100);
 }
 
+// Токен Google живе близько години. Якщо він протух посеред роботи, Sheets API
+// відповідає 401, і раніше це вилітало користувачеві вікном з англійським
+// текстом. Тепер мовчки замовляємо новий токен і повторюємо запит один раз.
+// Черги й даних це не торкається: не вийшло — поводимось як раніше.
+let _tokenWaiters = [];
+function _tokenArrived(tok) {
+    const w = _tokenWaiters;
+    _tokenWaiters = [];
+    w.forEach(fn => fn(tok));
+}
+function _refreshToken() {
+    return new Promise(resolve => {
+        _tokenWaiters.push(resolve);
+        if (_tokenWaiters.length > 1) return;         // запит уже в дорозі
+        if (!requestToken({ prompt: '', hint: state.user })) { _tokenArrived(null); return; }
+        setTimeout(() => { if (_tokenWaiters.length) _tokenArrived(null); }, 20000);
+    });
+}
+function _isAuthErr(e) {
+    const m = (e && e.message || '').toLowerCase();
+    return m.includes('invalid authentication credentials')
+        || m.includes('unauthenticated')
+        || m.includes('invalid credentials');
+}
+// Один повтор після оновлення токена. fn щоразу читає state.token наново
+async function _retryOnAuth(fn) {
+    try {
+        return await fn();
+    } catch (e) {
+        if (!_isAuthErr(e) || !state.user) throw e;
+        const tok = await _refreshToken();
+        if (!tok) throw e;
+        return await fn();
+    }
+}
+
 async function apiGet(range) {
-    const resp = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}`,
-        { headers: { 'Authorization': `Bearer ${state.token}` } }
-    ).then(r => r.json());
-    if (resp.error) throw new Error(resp.error.message);
-    return resp.values || [];
+    return _retryOnAuth(async () => {
+        const resp = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}`,
+            { headers: { 'Authorization': `Bearer ${state.token}` } }
+        ).then(r => r.json());
+        if (resp.error) throw new Error(resp.error.message);
+        return resp.values || [];
+    });
 }
 
 async function apiAppend(range, values) {
-    const resp = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`,
-        {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${state.token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ values: values })
-        }
-    ).then(r => r.json());
-    if (resp.error) throw new Error(resp.error.message);
-    return resp;
+    return _retryOnAuth(async () => {
+        const resp = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`,
+            {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${state.token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ values: values })
+            }
+        ).then(r => r.json());
+        if (resp.error) throw new Error(resp.error.message);
+        return resp;
+    });
 }
 
 async function apiUpdate(range, values) {
-    const resp = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
-        {
-            method: 'PUT',
-            headers: { 'Authorization': `Bearer ${state.token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ values: values })
-        }
-    ).then(r => r.json());
-    if (resp.error) throw new Error(resp.error.message);
-    return resp;
+    return _retryOnAuth(async () => {
+        const resp = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
+            {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${state.token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ values: values })
+            }
+        ).then(r => r.json());
+        if (resp.error) throw new Error(resp.error.message);
+        return resp;
+    });
 }
 
 async function apiClear(range) {
-    const resp = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}:clear`,
-        { method: 'POST', headers: { 'Authorization': `Bearer ${state.token}` } }
-    ).then(r => r.json());
-    if (resp.error) throw new Error(resp.error.message);
-    return resp;
+    return _retryOnAuth(async () => {
+        const resp = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}:clear`,
+            { method: 'POST', headers: { 'Authorization': `Bearer ${state.token}` } }
+        ).then(r => r.json());
+        if (resp.error) throw new Error(resp.error.message);
+        return resp;
+    });
 }
 
 // Час вильоту в хвилинах від початку доби — для впорядкування списків
