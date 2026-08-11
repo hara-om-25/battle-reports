@@ -307,7 +307,8 @@
       font-size: calc(0.9em + 1px);
     }
     /* Панель керування списками прилипає під основне меню, а списки їдуть під неї */
-    .lists-bar { position: sticky; z-index: 30; top: 0; }
+    .lists-bar { position: sticky; z-index: 30; top: 0; width: 50vw; margin-left: auto; margin-right: auto; }
+    @media (max-width: 640px) { .lists-bar { width: 100%; } }
     .zvity-wrap { max-width: 80%; margin: 0 auto; }
     @media (max-width: 640px) { .zvity-wrap { max-width: 100%; } }
     /* На СПИСКАХ бічний відступ рівно вдвічі менший, ніж на ЗВІТАХ:
@@ -1977,16 +1978,6 @@ function _syncListsBarTop() {
     const nav = document.querySelector('nav.crate');
     const h = nav ? nav.getBoundingClientRect().height : 0;
     bar.style.top = (h + 16 + 8) + 'px';
-    // Ширина панелі — посередині між шириною списків і шириною основного меню.
-    // Меню ширше за списки, тож від'ємні поля розсувають панель за межі колонки.
-    const wrap = bar.parentElement;
-    if (nav && wrap) {
-        const navL = nav.getBoundingClientRect().left;
-        const innerL = wrap.getBoundingClientRect().left + parseFloat(getComputedStyle(wrap).paddingLeft || 0);
-        const m = (navL - innerL) / 2;
-        bar.style.marginLeft = m + 'px';
-        bar.style.marginRight = m + 'px';
-    }
 }
 window.addEventListener('resize', _syncListsBarTop);
 
