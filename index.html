@@ -2369,7 +2369,7 @@ function renderListSection(list, title) {
     const _gone = _snap.filter(v => state[list].indexOf(v) === -1);
     const _live = state[list].map((x,i)=>`<div class="list-item${_isPendingListVal(list,x)?' pending-sync':''}${(state.inputList===list&&state.inputIdx===i)?' picked':''}" onclick="selectItem('${list}',${i})">${esc(x)}</div>`).join('');
     const _dead = _gone.map(x=>`<div class="list-item deleted-sync" style="display:flex;align-items:center;gap:8px;padding-right:6px" title="Видалено локально — зникне після синхронізації з Google таблицею"><span style="flex:1;min-width:0">${esc(x)}</span><button onclick="event.stopPropagation();restoreListVal('${list}',this.dataset.v)" data-v="${esc(x)}" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-orange" style="flex:0 0 auto;padding:4px 6px;display:flex;align-items:center;justify-content:center;position:relative;z-index:1" title="Скасувати видалення">${spinnerSvg(16,true)}</button>${_crossSvg()}</div>`).join('');
-    return `<div class="crate p-4"><h2 class="stencil-shadow text-lg mb-3" style="color: var(--yellow)">${title} <span style="color: var(--khaki)">(${state[list].length})</span></h2><div class="space-y-2">${_live}${_dead}</div></div>`;
+    return `<div class="crate p-4"><h2 class="stencil-shadow text-lg mb-3" style="color: var(--yellow)">${title}</h2><div class="space-y-2">${_live}${_dead}</div></div>`;
 }
 
 const _MNAMES=['СІЧЕНЬ','ЛЮТИЙ','БЕРЕЗЕНЬ','КВІТЕНЬ','ТРАВЕНЬ','ЧЕРВЕНЬ','ЛИПЕНЬ','СЕРПЕНЬ','ВЕРЕСЕНЬ','ЖОВТЕНЬ','ЛИСТОПАД','ГРУДЕНЬ'];
