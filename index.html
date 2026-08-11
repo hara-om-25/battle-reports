@@ -1919,6 +1919,14 @@ function _syncEditRowHeights() {
     const h = ref.parentElement.getBoundingClientRect().height;
     if (h < 10) return;
     document.querySelectorAll('.save-row select, .save-row button').forEach(el => { el.style.height = h + 'px'; });
+    // кнопка в MEMO має бути один в один із кнопкою вставки в MGRS —
+    // самі лише однакові відступи цього не дають, бо вміст у них різний
+    const paste = ref.parentElement.querySelector('button');
+    const undo = document.getElementById('er_memo_undo');
+    if (paste && undo) {
+        const r = paste.getBoundingClientRect();
+        if (r.width > 4 && r.height > 4) { undo.style.width = r.width + 'px'; undo.style.height = r.height + 'px'; }
+    }
 }
 
 // Поле MEMO росте під текст: один рядок — висота як у ЧЧ:ММ, далі по вмісту.
