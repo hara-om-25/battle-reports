@@ -274,11 +274,9 @@
     }
     .list-item::before, .list-item::marker { content: none; }
     ul, ol { list-style: none; padding: 0; margin: 0; }
-    /* Лише для миші. На сенсорному екрані :hover залипає на останньому, чого
-       торкнулися, і його не відрізнити від справді обраного елемента */
-    @media (hover: hover) {
-      .list-item:hover { border-color: var(--olive-bright); background: rgba(122, 149, 64, 0.1); }
-    }
+    /* Підсвітки під курсором навмисне немає: вона залипає на останньому, чого
+       торкнулися (планшет із стилусом теж рапортує hover), і тоді підсвіченими
+       виглядають два рядки — торкнутий і справді обраний. Лишаємо саме обраний */
     .record-card {
       background: rgba(0,0,0,0.3);
       border: 1px solid var(--surface-light);
