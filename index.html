@@ -2892,7 +2892,7 @@ function render() {
             <div class="grid grid-cols-2 gap-4">
                 <div class="crate p-4">
                     <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ЗВІТИ В TRINITY</h3>
-                    <div class="flex flex-col gap-2">${reps.map((r,i)=>{const names=['ПЕРШИЙ','ДРУГИЙ','ТРЕТІЙ','ЧЕТВЕРТИЙ','П\'ЯТИЙ'];return `<button onclick="state.selReport=${r};state.selDate=null;render()" class="btn-stencil ${state.selReport===r?'btn-yellow':'btn-yellow-dim'}">${names[i]||'ЗВІТ '+r}</button>`}).join('') || '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає звітів</p>'}</div>
+                    <div class="flex flex-col gap-2">${reps.map((r,i)=>{const names=['ПЕРШИЙ','ДРУГИЙ','ТРЕТІЙ','ЧЕТВЕРТИЙ','П\'ЯТИЙ','ШОСТИЙ','СЬОМИЙ','ВОСЬМИЙ','ДЕВ\'ЯТИЙ','ДЕСЯТИЙ'];return `<button onclick="state.selReport=${r};state.selDate=null;render()" class="btn-stencil ${state.selReport===r?'btn-yellow':'btn-yellow-dim'}">${names[i]||'ЗВІТ '+r}</button>`}).join('') || '<p class="stencil text-center py-2" style="color: var(--text-dim)">Немає звітів</p>'}</div>
                 </div>
                 <div class="crate p-4">
                     <h3 class="stencil-shadow mb-3" style="color: var(--yellow)">ДНІ</h3>
