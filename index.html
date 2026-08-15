@@ -184,6 +184,8 @@
       box-shadow: 0 4px 0 #1a3318, 0 6px 12px rgba(0,0,0,0.4);
     }
     .record-card.flagged { border-color: var(--yellow); }
+    /* напис ВЕРИФІКОВАНО на картці вильоту — найсвітліший синій застосунку */
+    :root { --blue-label: #5a7a9c; }
     /* Скасувати видалення — той самий крій, що й у зеленої «+», лише помаранчева */
     .btn-orange {
       background: #8a4a15;
@@ -1343,7 +1345,8 @@ async function loadAllArchiveSheets() {
                         drone: (row[6]||'').trim(),
                         ammo: (row[7]||'').trim(),
                         result: row[8]||'',
-                        points: parseFloat(row[9])||0
+                        points: parseFloat(row[9])||0,
+                        verify: _verdictOf(row[11], row[12])
                     });
                 }
             }
@@ -1419,6 +1422,156 @@ async function goToArchive() {
     if (!state.allArchiveLoaded && !state.allArchiveLoading) { loadAllArchiveSheets(); }
 }
 
+
+/* ============ ВЕРИФІКАЦІЯ ============
+   Звіряємо архівні аркуші з окремим файлом .xlsx. Збіг шукається по трьох
+   ознаках: координати (обраний E — основний F), дата (обраний A — основний B,
+   лише дата) і ціль (обраний C — основний C, достатньо спільного слова).
+   Знайшли — дописуємо в рядок колонки L і M значеннями з G та H обраного файлу.
+   Вердикт беремо з того з двох значень, яке дорівнює одному з двох слів,
+   тож порядок колонок у файлі значення не має.                              */
+
+function _vNorm(x) { return String(x === null || x === undefined ? '' : x).trim(); }
+
+function _vCoord(x) { return _vNorm(x).toUpperCase().replace(/[^0-9A-ZА-ЯІЇЄҐ]/g, ''); }
+
+function _vDate(x) {
+    if (x instanceof Date && !isNaN(x)) {
+        return String(x.getFullYear())
+             + String(x.getMonth() + 1).padStart(2, '0')
+             + String(x.getDate()).padStart(2, '0');
+    }
+    const m = _vNorm(x).match(/(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})/);
+    if (!m) return '';
+    const y = m[3].length === 2 ? '20' + m[3] : m[3];
+    return y + m[2].padStart(2, '0') + m[1].padStart(2, '0');
+}
+
+// Беремо слова від двох літер: назви цілей у таблиці саме такі — «ос», «ФС»,
+// «ЛАТ». Відкидаємо лише чисті числа, бо номер цілі («1» у «ос 1») сам собою
+// збігом не є. Хибних спрацювань це не додає: збіг усе одно вимагає ще й
+// однакових координат і дати
+function _vWords(x) {
+    return _vNorm(x).toLowerCase().split(/[^0-9a-zа-яіїєґ']+/)
+        .filter(w => w.length >= 2 && !/^\d+$/.test(w));
+}
+
+function _vTargetMatch(a, b) {
+    const wa = _vWords(a), wb = _vWords(b);
+    if (!wa.length || !wb.length) return false;
+    return wa.some(w => wb.indexOf(w) >= 0);
+}
+
+function _verdictOf(a, b) {
+    for (const v of [a, b]) {
+        const t = _vNorm(v).toLowerCase();
+        if (t === 'підтверджено') return 'ok';
+        if (t === 'відхилено') return 'no';
+    }
+    return '';
+}
+
+function showVerifyModal() {
+    document.getElementById('modal').innerHTML =
+        '<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box">'
+      + '<h2 class="stencil-shadow text-xl mb-4" style="color: var(--yellow)">ВЕРИФІКАЦІЯ</h2>'
+      + '<p class="stencil mb-4" style="color:var(--text-dim);font-size:0.9em;line-height:1.4">'
+      + 'Файл .xlsx. Кожен його рядок звіряється з архівними аркушами за координатами, датою і ціллю.</p>'
+      + '<input id="verifyFile" type="file" accept=".xlsx" style="display:none" onchange="runVerification(this.files[0])"/>'
+      + '<div class="space-y-2">'
+      + '<button onclick="document.getElementById(\'verifyFile\').click()" onmousedown="this.style.background=\'#4d7a9a\'" onmouseup="this.style.background=\'\'" ontouchstart="this.style.background=\'#4d7a9a\'" ontouchend="this.style.background=\'\'" class="btn-stencil btn-blue w-full">ОБРАТИ ФАЙЛ ВЕРИФІКАЦІЇ</button>'
+      + '<button onclick="closeModal()" onmousedown="this.style.background=\'#9a9070\'" onmouseup="this.style.background=\'\'" ontouchstart="this.style.background=\'#9a9070\'" ontouchend="this.style.background=\'\'" class="btn-stencil w-full">СКАСУВАТИ</button>'
+      + '</div></div></div>';
+}
+
+async function runVerification(file) {
+    if (!file) return;
+    closeModal();
+    if (!state.online || !navigator.onLine) { state.online = false; render(); _offlineMsg(); return; }
+    if (!state.archiveSheets.length) { showAlert('Немає архівних аркушів для звіряння.'); return; }
+
+    let items;
+    try {
+        const wb = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: true });
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
+        items = [];
+        rows.forEach(r => {
+            const coord = _vCoord(r[4]), date = _vDate(r[0]);
+            // рядок шапки сюди не потрапить: у нього немає ні координат, ні дати
+            if (!coord || !date) return;
+            items.push({ coord: coord, date: date, tgt: _vNorm(r[2]), g: _vNorm(r[6]), h: _vNorm(r[7]) });
+        });
+    } catch (e) {
+        showAlert('Не вдалося прочитати файл: ' + e.message);
+        return;
+    }
+    if (!items.length) { showAlert('У файлі не знайдено жодного рядка з координатами й датою.'); return; }
+
+    state.archiveLoading = true; render();
+    const matched = new Set(), ambiguous = new Set();
+    let sheetsTouched = 0;
+    try {
+        for (const name of state.archiveSheets) {
+            const rows = await apiGet(name);
+            if (rows.length < 2) continue;
+            const col = [];
+            for (let i = 1; i < rows.length; i++) col.push(null);
+            let touched = false;
+            items.forEach((it, idx) => {
+                const hits = [];
+                for (let i = 1; i < rows.length; i++) {
+                    const row = rows[i] || [];
+                    if (_vCoord(row[5]) !== it.coord) continue;
+                    if (_vDate(row[1]) !== it.date) continue;
+                    if (!_vTargetMatch(row[2], it.tgt)) continue;
+                    hits.push(i);
+                }
+                if (hits.length === 1) { col[hits[0] - 1] = [it.g, it.h]; touched = true; matched.add(idx); }
+                else if (hits.length > 1) { ambiguous.add(idx); }
+            });
+            if (!touched) continue;
+            // там, де збігу не було, лишаємо те, що вже стоїть у таблиці
+            for (let i = 1; i < rows.length; i++) {
+                if (col[i - 1]) continue;
+                const row = rows[i] || [];
+                col[i - 1] = [row[11] || '', row[12] || ''];
+            }
+            await apiUpdate(name + '!L2:M' + rows.length, col);
+            sheetsTouched++;
+        }
+    } catch (e) {
+        state.archiveLoading = false; render();
+        if (_isNetErr(e)) { state.online = false; _offlineMsg(); return; }
+        showAlert('Помилка звіряння: ' + e.message);
+        return;
+    }
+
+    // перечитуємо те, що показано на екрані
+    state.allArchiveLoaded = false;
+    state.allArchiveRecs = [];
+    state.archiveLoading = false;
+    if (state.selArchive) await loadArchiveSheet(state.selArchive); else render();
+
+    const notFound = items.length - matched.size - ambiguous.size;
+    showAlert('✅ ЗВІРЯННЯ ЗАВЕРШЕНО\n\n'
+        + 'Рядків у файлі: ' + items.length + '\n'
+        + 'Записано: ' + matched.size + '\n'
+        + 'Не знайдено: ' + notFound + '\n'
+        + 'Неоднозначних (кілька збігів): ' + ambiguous.size + '\n'
+        + 'Аркушів оновлено: ' + sheetsTouched);
+}
+
+// Рядки про верифікацію в доповідь. Додаються лише коли вердикти взагалі є
+function _pushVerifyLines(lines, recs) {
+    const ok = recs.filter(r => r.verify === 'ok');
+    const no = recs.filter(r => r.verify === 'no');
+    if (!ok.length && !no.length) return;
+    const pts = Math.round(ok.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));
+    lines.push('Веріфіковано ' + pts + ' балів.');
+    lines.push('Підтверджено ' + ok.length + ', відхилено ' + no.length + '.');
+}
+/* ============ /ВЕРИФІКАЦІЯ ============ */
+
 async function loadArchiveSheet(name) {
     state.selArchive = name;
     state.archiveLoading = true;
@@ -1439,7 +1592,8 @@ async function loadArchiveSheet(name) {
                     drone: (row[6]||''  ).trim(),
                     ammo: (row[7]||''  ).trim(),
                     result: row[8]||''  ,
-                    points: parseFloat(row[9])||0
+                    points: parseFloat(row[9])||0,
+                    verify: _verdictOf(row[11], row[12])
                 });
             }
         }
@@ -2747,7 +2901,7 @@ function render() {
                         const ress=r.result?r.result.split(', '):[];
                         const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');return tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;}),r.qty200>0?`<span style="color:#e05050">200</span>${_dash}<span style="color:#fff">${r.qty200}</span>`:'',r.qty300>0?`<span style="color:#5599dd">300</span>${_dash}<span style="color:#fff">${r.qty300}</span>`:''].filter(Boolean);
                         const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
-                        return `<div class="record-card text-sm" style="position:relative;padding-left:62px;font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}<p class="stencil" style="color:var(--yellow)">${r.points} балів</p></div>`;
+                        return `<div class="record-card text-sm" style="position:relative;padding-left:62px;${r.verify?'padding-right:150px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}<p class="stencil" style="color:var(--yellow)">${r.verify==='no'?`<span style="text-decoration:line-through">${r.points} балів</span>`:`${r.points} балів`}</p>${r.verify?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;color:${r.verify==='ok'?'var(--blue-label)':'var(--danger-bright)'}">${r.verify==='ok'?'ВЕРИФІКОВАНО':'ВІДХИЛЕНО'}</span>`:''}</div>`;
                     }).join('');
                     return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
                 }).join('');
@@ -2760,7 +2914,7 @@ function render() {
                 const _pvrRows=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_ammoCnt[am]||0)*cf,0);return tot?_row(esc(pvr.name),tot+' кг'):'';}).filter(Boolean).join('');
                 const _resRows=Object.entries(_resCnt).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,' разів')).join('');
                 const _statsBlock=state.archiveRecs.length>0?`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}</div><div style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_resRows)}</div></div>`:'';
-                const _shRptLines=(()=>{if(!state.archiveRecs.length)return[];const _l=generateArchiveReport(state.archiveRecs,state.selArchive+'р.');_l.push('Загалом уражено, орієнтовно на '+_arTotal+' балів.');_pushCostLines(_l,_arTotal,state.archiveRecs);return _l;})();
+                const _shRptLines=(()=>{if(!state.archiveRecs.length)return[];const _l=generateArchiveReport(state.archiveRecs,state.selArchive+'р.');_l.push('Загалом уражено, орієнтовно на '+_arTotal+' балів.');_pushCostLines(_l,_arTotal,state.archiveRecs);_pushVerifyLines(_l,state.archiveRecs);return _l;})();
                 const _shRptBlock=state.archiveRecs.length>0?`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ${esc(state.selArchive)}</h3><span class="stencil" style="color:var(--khaki)">Уражено орієнтовно на <span style="color:var(--text)">${_arTotal}</span> балів</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyArchiveSheetReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_shRptLines.join('\n')}</div></div>`:'';
                 _arContent=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px"><h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">${esc(state.selArchive)}</h1>${_arHeader}</div>${_shRptBlock}<h2 class="stencil-shadow text-xl px-2" style="color:var(--yellow)">СТАТИСТИКА</h2>${_statsBlock}<h2 class="stencil-shadow text-xl px-2" style="color:var(--yellow)">ВИЛЬОТИ</h2>${_arGroups||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає записів</p></div>'}`;
             }
@@ -2774,7 +2928,7 @@ function render() {
                 const _allBD=state.archiveSheets.map(s=>{let m=s.match(/^(\d{1,2})-(\d{1,2})\.(\d{1,2})\.(\d{4})/);if(m)return{k:m[4]+m[3].padStart(2,'0')+m[1].padStart(2,'0'),d:m[1].padStart(2,'0')+'.'+m[3].padStart(2,'0')+'.'+m[4]};m=s.match(/^(\d{1,2})\.(\d{1,2})-(\d{1,2})\.(\d{1,2})\.(\d{4})/);if(m)return{k:m[5]+m[2].padStart(2,'0')+m[1].padStart(2,'0'),d:m[1].padStart(2,'0')+'.'+m[2].padStart(2,'0')+'.'+m[5]};return null;}).filter(Boolean);
                 const _allEarliest=_allBD.length?_allBD.reduce((a,b)=>a.k<b.k?a:b).d:(_allRecs.map(r=>getDateOnly(r.datetime)).filter(Boolean).sort()[0]||'');
                 const _allTotal=Math.round(_allRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
-                const _allRptLines=(()=>{const _l=generateArchiveReport(_allRecs,'Від '+_allEarliest+' дотепер');_l.push('Загалом уражено, орієнтовно на '+_allTotal+' балів.');_pushCostLines(_l,_allTotal,_allRecs);return _l;})();
+                const _allRptLines=(()=>{const _l=generateArchiveReport(_allRecs,'Від '+_allEarliest+' дотепер');_l.push('Загалом уражено, орієнтовно на '+_allTotal+' балів.');_pushCostLines(_l,_allTotal,_allRecs);_pushVerifyLines(_l,_allRecs);return _l;})();
                 const _allRptBlock=`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ВСІ ВИЇЗДИ З ${_allEarliest} ДОТЕПЕР</h3><span class="stencil" style="color:var(--khaki)">Уражено орієнтовно на <span style="color:var(--text)">${_allTotal}</span> балів</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyAllArchiveReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_allRptLines.join('\n')}</div></div>`;
                 const _allDrnCnt={};_allRecs.forEach(r=>{if(r.drone)_allDrnCnt[r.drone]=(_allDrnCnt[r.drone]||0)+1;});
                 const _allAmmoCnt={};_allRecs.forEach(r=>{if(r.ammo)_allAmmoCnt[r.ammo]=(_allAmmoCnt[r.ammo]||0)+1;});
@@ -2831,7 +2985,7 @@ function render() {
             }
         }
         h+=`<div class="p-4 space-y-4 zvity-wrap">
-            <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><div style="display:flex;align-items:center;gap:12px">${(()=>{if(!state.records.length||!state.online)return'';const _f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};const _sd=[...new Set(state.records.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_f(a)<_f(b)?-1:1);const[_d1,_m1,_y1]=_sd[0].split('.'),[_d2,_m2,_y2]=_sd[_sd.length-1].split('.');const _n=(_sd[0]===_sd[_sd.length-1])?_sd[0]:(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1:(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1:_sd[0]+' — '+_sd[_sd.length-1];return'<button onclick="archiveMainSheet()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">АРХІВУВАТИ '+_n+'</button>';})()}<span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em;${state.online?'':'display:none'}">за період</span></div></div>
+            <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><div style="display:flex;align-items:center;gap:12px">${state.online?'<button onclick="showVerifyModal()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-blue" style="font-size:0.78em;padding:5px 10px">ВЕРИФІКАЦІЯ</button>':''}${(()=>{if(!state.records.length||!state.online)return'';const _f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};const _sd=[...new Set(state.records.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_f(a)<_f(b)?-1:1);const[_d1,_m1,_y1]=_sd[0].split('.'),[_d2,_m2,_y2]=_sd[_sd.length-1].split('.');const _n=(_sd[0]===_sd[_sd.length-1])?_sd[0]:(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1:(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1:_sd[0]+' — '+_sd[_sd.length-1];return'<button onclick="archiveMainSheet()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">АРХІВУВАТИ '+_n+'</button>';})()}<span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em;${state.online?'':'display:none'}">за період</span></div></div>
             ${!state.filterPeriodOpen?`<div class="crate p-4"><div class="flex flex-wrap gap-2">${state.archiveLoading&&!state.selArchive?'<p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p>':_arBtns}</div></div>`:''}
             ${!state.online?'<div class="crate p-4"><p class="stencil text-center py-3" style="color:#c05a3e">Відображення архівних даних не можливе, за відсутності з\'єднання</p></div>':''}
             ${state.online?_periodPickerHtml:''}
