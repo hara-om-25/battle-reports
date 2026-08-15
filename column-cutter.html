@@ -359,8 +359,8 @@ tbody tr:hover td { background:var(--pick); }
     <button class="btn-plus" id="badd" onclick="addSlot()" title="Додати ще одне поле">+</button>
     <hr class="divider">
     <div class="hint">
-      Обрані колонки <b>копіюються</b> в новий файл, решта — ні. Літери такі, як у Google Таблиці
-      (A, B, C … AA, AB …).<br>
+      У новий файл <b>копіюються тільки обрані колонки</b> — решта не копіюється, не показується
+      і в новий файл не потрапляє нічим. Літери такі, як у Google Таблиці (A, B, C … AA, AB …).<br>
       Порядок списків = порядок колонок у новому файлі: №1 стане колонкою A, №2 — колонкою B і так далі.
       Порожні поля ігноруються, повтори враховуються один раз.
     </div>
@@ -500,14 +500,21 @@ function handleFile(file) {
   rd.onerror = function () { setStatus('Не вдалося прочитати файл.', 'er'); };
   rd.onload = function (ev) {
     try {
-      // cellStyles — щоб разом із даними прочитались ширини колонок
-      const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array', cellDates: true, cellStyles: true });
-      if (!wb.SheetNames.length) throw new Error('у файлі немає жодного аркуша');
+      // cellStyles — щоб прочитались ширини колонок; формули, HTML і макроси не розбираємо взагалі
+      const src = XLSX.read(new Uint8Array(ev.target.result), {
+        type: 'array', cellDates: true, cellStyles: true,
+        cellFormula: false, cellHTML: false, bookVBA: false, bookDeps: false
+      });
+      if (!src.SheetNames.length) throw new Error('у файлі немає жодного аркуша');
 
+      // Нову книгу збираємо з нуля: у неї потрапляють лише обрані колонки.
+      // Ніщо інше з оригіналу — ні інші колонки, ні властивості книги,
+      // ні іменовані діапазони, ні макроси — сюди не переноситься.
+      const wb = XLSX.utils.book_new();
       let present = 0;
-      wb.SheetNames.forEach(function (name) {
-        const r = keepSheet(wb.Sheets[name], keep);
-        wb.Sheets[name] = r.ws;
+      src.SheetNames.forEach(function (name) {
+        const r = keepSheet(src.Sheets[name], keep);
+        XLSX.utils.book_append_sheet(wb, r.ws, name);
         present = Math.max(present, r.present);
       });
 
@@ -529,9 +536,12 @@ function handleFile(file) {
 /* ── КОПІЮВАННЯ ОБРАНИХ КОЛОНОК АРКУША ──────────── */
 /* keep — номери колонок оригіналу в тому порядку, в якому вони стоять у списках:
    keep[0] стає колонкою A нового аркуша, keep[1] — колонкою B і так далі.
-   Колонки, якої у файлі немає, дають порожній стовпець — щоб решта не з'їхала. */
+   Колонки, якої у файлі немає, дають порожній стовпець — щоб решта не з'їхала.
+
+   Аркуш будується лише з клітинок обраних колонок: жодна інша клітинка
+   не зчитується зі структури аркуша, не копіюється й не показується. */
 function keepSheet(ws, keep) {
-  if (!ws || !ws['!ref']) return { ws: ws, present: 0 };
+  if (!ws || !ws['!ref']) return { ws: { '!ref': 'A1' }, present: 0 };
   const rng = XLSX.utils.decode_range(ws['!ref']);
   const out = {};
   let present = 0;
@@ -553,14 +563,13 @@ function keepSheet(ws, keep) {
     e: { r: rng.e.r, c: Math.max(0, keep.length - 1) }
   });
 
-  if (ws['!cols']) {                   // ширини колонок їдуть разом зі своїми колонками
+  if (ws['!cols']) {                   // ширини — лише самих обраних колонок
     const cols = [];
     keep.forEach(function (oldC, newC) { if (ws['!cols'][oldC]) cols[newC] = ws['!cols'][oldC]; });
     out['!cols'] = cols;
   }
-  if (ws['!rows']) out['!rows'] = ws['!rows'];
 
-  if (ws['!merges']) {                 // об'єднання лишається, лише якщо всі його колонки взяті й стоять поспіль
+  if (ws['!merges']) {              // об'єднання лишається, лише якщо всі його колонки взяті й стоять поспіль
     const pos = new Map();
     keep.forEach(function (oldC, newC) { if (!pos.has(oldC)) pos.set(oldC, newC); });
     const mg = [];
