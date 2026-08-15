@@ -1471,6 +1471,30 @@ function _verdictOf(a, b) {
     return '';
 }
 
+// Бібліотека читання .xlsx підключена в шапці з cdnjs. Якщо той домен
+// недоступний, XLSX просто немає — тому довантажуємо на місці й пробуємо
+// кілька джерел підряд. Успішне звертання осідає в кеші service worker,
+// тож наступного разу спрацює й без мережі
+const _XLSX_URLS = [
+    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js',
+    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+    'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+];
+function _loadXLSX() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    let chain = Promise.reject(new Error('start'));
+    _XLSX_URLS.forEach(url => {
+        chain = chain.catch(() => new Promise((resolve, reject) => {
+            const sc = document.createElement('script');
+            sc.src = url;
+            sc.onload = () => window.XLSX ? resolve(window.XLSX) : reject(new Error('порожньо: ' + url));
+            sc.onerror = () => reject(new Error('недоступно: ' + url));
+            document.head.appendChild(sc);
+        }));
+    });
+    return chain;
+}
+
 function showVerifyModal() {
     document.getElementById('modal').innerHTML =
         '<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box">'
@@ -1490,10 +1514,21 @@ async function runVerification(file) {
     if (!state.online || !navigator.onLine) { state.online = false; render(); _offlineMsg(); return; }
     if (!state.archiveSheets.length) { showAlert('Немає архівних аркушів для звіряння.'); return; }
 
+    let XL;
+    try {
+        XL = await _loadXLSX();
+    } catch (e) {
+        showAlert('Не вдалося підвантажити бібліотеку читання .xlsx.\n\n'
+            + 'Схоже, доступ до сховищ бібліотек заблоковано в мережі.\n'
+            + 'Спробуй з іншої мережі або вимкни блокувальник.\n\n'
+            + 'Останнє: ' + e.message);
+        return;
+    }
+
     let items;
     try {
-        const wb = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: true });
-        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
+        const wb = XL.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: true });
+        const rows = XL.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
         items = [];
         rows.forEach(r => {
             const coord = _vCoord(r[4]), date = _vDate(r[0]);
