@@ -1495,6 +1495,41 @@ function _loadXLSX() {
     return chain;
 }
 
+// Архівні аркуші створені на 10 колонок (A..J) — колонок L і M там просто
+// немає, і запис у них Google відхиляє. Тому перед записом розширюємо сітку,
+// і тільки тим аркушам, у які справді є що писати.
+async function _sheetGrid() {
+    const r = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?fields=sheets(properties(sheetId,title,gridProperties(columnCount)))`,
+        { headers: { 'Authorization': `Bearer ${state.token}` } }
+    ).then(r => r.json());
+    if (r.error) throw new Error(r.error.message);
+    const map = {};
+    (r.sheets || []).forEach(sh => {
+        const pr = sh.properties || {};
+        map[pr.title] = { id: pr.sheetId, cols: (pr.gridProperties || {}).columnCount || 0 };
+    });
+    return map;
+}
+
+async function _widenSheet(grid, title, need) {
+    const g = grid[title];
+    if (!g || g.cols >= need) return false;
+    const resp = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`,
+        {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${state.token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requests: [{ appendDimension: {
+                sheetId: g.id, dimension: 'COLUMNS', length: need - g.cols
+            } }] })
+        }
+    ).then(r => r.json());
+    if (resp.error) throw new Error(resp.error.message);
+    g.cols = need;
+    return true;
+}
+
 function showVerifyModal() {
     document.getElementById('modal').innerHTML =
         '<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box">'
@@ -1544,8 +1579,9 @@ async function runVerification(file) {
 
     state.archiveLoading = true; render();
     const matched = new Set(), ambiguous = new Set();
-    let sheetsTouched = 0;
+    let sheetsTouched = 0, sheetsWidened = 0;
     try {
+        const grid = await _sheetGrid();
         for (const name of state.archiveSheets) {
             const rows = await apiGet(name);
             if (rows.length < 2) continue;
@@ -1571,6 +1607,7 @@ async function runVerification(file) {
                 const row = rows[i] || [];
                 col[i - 1] = [row[11] || '', row[12] || ''];
             }
+            if (await _widenSheet(grid, name, 13)) sheetsWidened++;
             await apiUpdate(name + '!L2:M' + rows.length, col);
             sheetsTouched++;
         }
@@ -1593,7 +1630,8 @@ async function runVerification(file) {
         + 'Записано: ' + matched.size + '\n'
         + 'Не знайдено: ' + notFound + '\n'
         + 'Неоднозначних (кілька збігів): ' + ambiguous.size + '\n'
-        + 'Аркушів оновлено: ' + sheetsTouched);
+        + 'Аркушів оновлено: ' + sheetsTouched
+        + (sheetsWidened ? '\nДодано колонки L і M в аркушів: ' + sheetsWidened : ''));
 }
 
 // Рядки про верифікацію в доповідь. Додаються лише коли вердикти взагалі є
