@@ -562,7 +562,7 @@ function loadLocal() {
             state.reportTitle = d.reportTitle || '';
             state.costPerPoint = d.costPerPoint || 0;
             state.droneCategories = d.droneCategories || null;
-            state.archiveSheets = d.archiveSheets || [];
+            state.archiveSheets = _sortArchiveSheets(d.archiveSheets || []);
             state.listsSynced = d.listsSynced || null;
             state.notes = d.notes || {};
             // Дані з попереднього сеансу вже були в таблиці — беремо їх за точку відліку,
@@ -1358,6 +1358,25 @@ async function loadAllArchiveSheets() {
     }
 }
 
+// Аркуші архіву впорядковуємо від старого до нового: нове знизу.
+// Ключ беремо з кінцевої дати в назві — вона завжди повна (ДД.ММ.РРРР),
+// тоді як початкова буває без місяця чи року: «03-05.04.2026»
+function _sortArchiveSheets(list) {
+    const key = t => {
+        const all = String(t).match(/\d{1,2}[.\-\/]\d{1,2}[.\-\/]\d{4}/g);
+        if (!all) return '';
+        const p = all[all.length - 1].split(/[.\-\/]/);
+        return p[2] + p[1].padStart(2, '0') + p[0].padStart(2, '0');
+    };
+    return list.slice().sort((a, b) => {
+        const ka = key(a), kb = key(b);
+        if (ka && kb) return ka < kb ? -1 : ka > kb ? 1 : 0;
+        if (ka) return -1;
+        if (kb) return 1;
+        return String(a).localeCompare(String(b));
+    });
+}
+
 async function goToArchive() {
     state.page = 'archive';
     // Офлайн: показуємо лише збережені локально назви архівів
@@ -1368,15 +1387,26 @@ async function goToArchive() {
         render();
         return;
     }
-    if (!state.archiveSheets.length) {
-        state.archiveLoading = true;
-        render();
+    // Список аркушів перечитуємо щоразу. Раніше він брався з localStorage і
+    // оновлювався лише коли кеш порожній — через це архіви, створені пізніше
+    // або на іншому пристрої, у список уже не потрапляли
+    {
+        const _prev = state.archiveSheets.slice();
+        if (!_prev.length) { state.archiveLoading = true; render(); }
         try {
             const _ar = await fetch(
                 `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?fields=sheets.properties.title`,
                 { headers: { 'Authorization': `Bearer ${state.token}` } }
             ).then(r => r.json());
-            state.archiveSheets = (_ar.sheets||[]).map(s=>s.properties.title).filter(t=>/^\d/.test(t));
+            if (_ar.error) throw new Error(_ar.error.message);
+            state.archiveSheets = _sortArchiveSheets(
+                (_ar.sheets||[]).map(s=>s.properties.title).filter(t=>/^\d/.test(t))
+            );
+            // з'явились нові аркуші — зведення «за період» треба перерахувати
+            if (state.archiveSheets.join('\u0000') !== _prev.join('\u0000')) {
+                state.allArchiveLoaded = false;
+                state.allArchiveRecs = [];
+            }
             saveLocal();
         } catch(e) {
             if (_isNetErr(e)) { state.online = false; state.archiveLoading = false; render(); _offlineMsg(); return; }
