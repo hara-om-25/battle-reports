@@ -3040,7 +3040,10 @@ function render() {
             if(!state.allArchiveLoaded){
                 _periodResultHtml='<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Завантаження архіву...</p></div>';
             } else if(!_fRecs.length){
-                _periodResultHtml='<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Вильотів за цей період не знайдено</p></div>';
+                _periodResultHtml='<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Вильотів за цей період не знайдено</p>'
+                    +'<p class="stencil text-center" style="color:var(--text-dim);font-size:0.82em;opacity:0.75">'
+                    +'звірено '+_fFrom+'—'+_fTo+' · з архіву завантажено '+state.allArchiveRecs.length+' записів з '+state.archiveSheets.length+' аркушів · у поточному звіті '+state.records.length
+                    +'</p></div>';
             } else {
                 const _fPts=Math.round(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                 const _fLines=generateArchiveReport(_fRecs,_fLabel);
