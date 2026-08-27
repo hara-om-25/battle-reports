@@ -1623,6 +1623,9 @@ async function runVerification(file) {
     state.allArchiveRecs = [];
     state.archiveLoading = false;
     if (state.selArchive) await loadArchiveSheet(state.selArchive); else render();
+    // без цього зведення по всіх архівах лишалося порожнім, і фільтр «за період»
+    // після верифікації нічого не знаходив
+    if (!state.allArchiveLoading) loadAllArchiveSheets();
 
     const notFound = items.length - matched.size - ambiguous.size;
     showAlert('✅ ЗВІРЯННЯ ЗАВЕРШЕНО\n\n'
