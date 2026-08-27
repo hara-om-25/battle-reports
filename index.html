@@ -1180,6 +1180,21 @@ function _byTimeDesc(recs) {
     });
 }
 
+// Дату в записі шукаємо, а не розбираємо за жорстким шаблоном: в архівних
+// аркушах колонка дати може мати інший вигляд, ніж у ГОЛОВНІЙ, і жорсткий
+// розбір мовчки давав порожній ключ — фільтр «за період» не знаходив нічого
+function _recYMD(x) {
+    const s = String(x === null || x === undefined ? '' : x);
+    let m = s.match(/(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);          // РРРР-ММ-ДД
+    if (m) return m[1] + m[2].padStart(2, '0') + m[3].padStart(2, '0');
+    m = s.match(/(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})/);            // ДД.ММ.РРРР
+    if (m) {
+        const y = m[3].length === 2 ? '20' + m[3] : m[3];
+        return y + m[2].padStart(2, '0') + m[1].padStart(2, '0');
+    }
+    return '';
+}
+
 function getDateOnly(datetime) {
     if (!datetime) return '';
     return datetime.split(' ')[0].replace(',', '').trim();
@@ -2728,7 +2743,7 @@ function copyFilteredPeriodReport() {
     if (!state.filterFrom || !state.filterTo || !state.allArchiveLoaded) return;
     const _toYMD=s=>{const[d,m,y]=s.split('.');return y+m.padStart(2,'0')+d.padStart(2,'0');};
     const _fFrom=state.filterFrom.replace(/-/g,''), _fTo=state.filterTo.replace(/-/g,'');
-    const _fRecs=[...state.allArchiveRecs,...state.records].filter(r=>{const d=getDateOnly(r.datetime);return d&&_toYMD(d)>=_fFrom&&_toYMD(d)<=_fTo;});
+    const _fRecs=[...state.allArchiveRecs,...state.records].filter(r=>{const d=_recYMD(r.datetime);return d&&d>=_fFrom&&_toYMD(d)<=_fTo;});
     if(!_fRecs.length){showAlert('Вильотів за цей період не знайдено');return;}
     const _fPts=Math.round(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     const _fLabelFrom=state.filterFrom.split('-').reverse().join('.');
@@ -3033,17 +3048,14 @@ function render() {
         if(state.filterPeriodShown&&state.filterFrom&&state.filterTo){
             const _toYMD3=s=>{const[d,m,y]=s.split('.');return y+m.padStart(2,'0')+d.padStart(2,'0');};
             const _fFrom=state.filterFrom.replace(/-/g,''),_fTo=state.filterTo.replace(/-/g,'');
-            const _fRecs=[...state.allArchiveRecs,...state.records].filter(r=>{const d=getDateOnly(r.datetime);return d&&_toYMD3(d)>=_fFrom&&_toYMD3(d)<=_fTo;});
+            const _fRecs=[...state.allArchiveRecs,...state.records].filter(r=>{const d=_recYMD(r.datetime);return d&&d>=_fFrom&&d<=_fTo;});
             const _fLabelFrom=state.filterFrom.split('-').reverse().join('.');
             const _fLabelTo=state.filterTo.split('-').reverse().join('.');
             const _fLabel=_fLabelFrom+' — '+_fLabelTo+'р.';
             if(!state.allArchiveLoaded){
                 _periodResultHtml='<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Завантаження архіву...</p></div>';
             } else if(!_fRecs.length){
-                _periodResultHtml='<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Вильотів за цей період не знайдено</p>'
-                    +'<p class="stencil text-center" style="color:var(--text-dim);font-size:0.82em;opacity:0.75">'
-                    +'звірено '+_fFrom+'—'+_fTo+' · з архіву завантажено '+state.allArchiveRecs.length+' записів з '+state.archiveSheets.length+' аркушів · у поточному звіті '+state.records.length
-                    +'</p></div>';
+                _periodResultHtml='<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Вильотів за цей період не знайдено</p></div>';
             } else {
                 const _fPts=Math.round(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                 const _fLines=generateArchiveReport(_fRecs,_fLabel);
