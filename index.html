@@ -2781,8 +2781,8 @@ function copyFilteredPeriodReport() {
     const _fDrnCnt={};_fRecs.forEach(r=>{if(r.drone)_fDrnCnt[r.drone]=(_fDrnCnt[r.drone]||0)+1;});
     const _fAmmoCnt={};_fRecs.forEach(r=>{if(r.ammo)_fAmmoCnt[r.ammo]=(_fAmmoCnt[r.ammo]||0)+1;});
     const _fPvrCnt=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_fAmmoCnt[am]||0)*cf,0);return tot?pvr.name+': '+tot+' кг':''}).filter(Boolean);
-    if(Object.keys(_fDrnCnt).length){_fLines.push('');_fLines.push('ДРОНИ:');Object.entries(_fDrnCnt).sort((a,b)=>b[1]-a[1]).forEach(([d,c])=>_fLines.push(d+' — '+c+' шт'));}
-    if(Object.keys(_fAmmoCnt).length){_fLines.push('');_fLines.push('БОЄПРИПАСИ:');Object.entries(_fAmmoCnt).sort((a,b)=>b[1]-a[1]).forEach(([a,c])=>_fLines.push(a+' — '+c+' шт'));}
+    if(Object.keys(_fDrnCnt).length){_fLines.push('');_fLines.push('ДРОНИ ('+Object.values(_fDrnCnt).reduce((s,c)=>s+c,0)+' шт):');Object.entries(_fDrnCnt).sort((a,b)=>b[1]-a[1]).forEach(([d,c])=>_fLines.push(d+' — '+c+' шт'));}
+    if(Object.keys(_fAmmoCnt).length){_fLines.push('');_fLines.push('БОЄПРИПАСИ ('+Object.values(_fAmmoCnt).reduce((s,c)=>s+c,0)+' шт):');Object.entries(_fAmmoCnt).sort((a,b)=>b[1]-a[1]).forEach(([a,c])=>_fLines.push(a+' — '+c+' шт'));}
     if(_fPvrCnt.length){_fLines.push('');_fLines.push('ПВР:');_fPvrCnt.forEach(l=>_fLines.push(l));}
     navigator.clipboard.writeText(_fLines.join('\n')).catch(()=>{});
     showAlert('✅ Скопіювано!');
@@ -3090,8 +3090,8 @@ function render() {
                 const _fDrnCnt={};_fRecs.forEach(r=>{if(r.drone)_fDrnCnt[r.drone]=(_fDrnCnt[r.drone]||0)+1;});
                 const _fAmmoCnt={};_fRecs.forEach(r=>{if(r.ammo)_fAmmoCnt[r.ammo]=(_fAmmoCnt[r.ammo]||0)+1;});
                 const _fPvrList=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_fAmmoCnt[am]||0)*cf,0);return tot?pvr.name+' — '+tot+' кг':'';}).filter(Boolean);
-                if(Object.keys(_fDrnCnt).length){_fLines.push('');_fLines.push('ДРОНИ:');Object.entries(_fDrnCnt).sort((a,b)=>b[1]-a[1]).forEach(([d,c])=>_fLines.push(d+' — '+c+' шт'));}
-                if(Object.keys(_fAmmoCnt).length){_fLines.push('');_fLines.push('БОЄПРИПАСИ:');Object.entries(_fAmmoCnt).sort((a,b)=>b[1]-a[1]).forEach(([a,c])=>_fLines.push(a+' — '+c+' шт'));}
+                if(Object.keys(_fDrnCnt).length){_fLines.push('');_fLines.push('ДРОНИ ('+Object.values(_fDrnCnt).reduce((s,c)=>s+c,0)+' шт):');Object.entries(_fDrnCnt).sort((a,b)=>b[1]-a[1]).forEach(([d,c])=>_fLines.push(d+' — '+c+' шт'));}
+                if(Object.keys(_fAmmoCnt).length){_fLines.push('');_fLines.push('БОЄПРИПАСИ ('+Object.values(_fAmmoCnt).reduce((s,c)=>s+c,0)+' шт):');Object.entries(_fAmmoCnt).sort((a,b)=>b[1]-a[1]).forEach(([a,c])=>_fLines.push(a+' — '+c+' шт'));}
                 if(_fPvrList.length){_fLines.push('');_fLines.push('ПВР:');_fPvrList.forEach(l=>_fLines.push(l));}
                 _periodResultHtml='<div class="crate p-4">'
                     +'<div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
