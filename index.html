@@ -1145,10 +1145,13 @@ async function apiAppend(range, values) {
     });
 }
 
-async function apiUpdate(range, values) {
+// raw=true пише клітинку як є, без тлумачення. Потрібне там, де в клітинку
+// лягає перелік через кому: з USER_ENTERED Google читає коми як розділювачі
+// розрядів і склеює «2, 0, 1, 3» в число 2013
+async function apiUpdate(range, values, raw) {
     return _retryOnAuth(async () => {
         const resp = await fetch(
-            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
+            `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=${raw ? 'RAW' : 'USER_ENTERED'}`,
             {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${state.token}`, 'Content-Type': 'application/json' },
@@ -1789,7 +1792,7 @@ async function runVerification(file) {
             // покриває лише рядки, які повернув apiGet, а нижче могли лишитись
             // рядки від попередніх прогонів — вони й роздували підсумки
             await apiClear(name + '!L2:M');
-            await apiUpdate(name + '!L2:M' + rows.length, col);
+            await apiUpdate(name + '!L2:M' + rows.length, col, true);
             sheetsTouched++;
         }
     } catch (e) {
