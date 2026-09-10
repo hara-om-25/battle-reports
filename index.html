@@ -1638,7 +1638,9 @@ async function runVerification(file) {
     if (!file) return;
     closeModal();
     if (!state.online || !navigator.onLine) { state.online = false; render(); _offlineMsg(); return; }
-    if (!state.archiveSheets.length) { showAlert('Немає архівних аркушів для звіряння.'); return; }
+    // Звіряємо лише з відкритим архівом: у файлі можуть бути періоди інших
+    // аркушів, і розкидати їх по всіх аркушах не треба
+    if (!state.selArchive) { showAlert('Спершу відкрийте архів, з яким звіряти.'); return; }
 
     let XL;
     try {
@@ -1677,15 +1679,18 @@ async function runVerification(file) {
 
     state.archiveLoading = true; render();
     const matched = new Set(), ambiguous = new Set();
-    let sheetsTouched = 0, sheetsWidened = 0;
+    let sheetsTouched = 0, sheetsWidened = 0, inPeriod = 0;
     try {
         const grid = await _sheetGrid();
-        for (const name of state.archiveSheets) {
+        for (const name of [state.selArchive]) {
             const rows = await apiGet(name);
             if (rows.length < 2) continue;
             // У частині аркушів у колонці дати лежить лише час. Тоді день
             // звіряємо з періодом у назві аркуша — іншої дати там просто немає
             const period = _sheetPeriod(name);
+            items.forEach(it => {
+                if (it.verdict && (!period || (it.date >= period.from && it.date <= period.to))) inPeriod++;
+            });
 
             // для кожного рядка аркуша готуємо переліки по його цілях
             const cell = [];
@@ -1755,14 +1760,16 @@ async function runVerification(file) {
     if (!state.allArchiveLoading) loadAllArchiveSheets();
 
     const withVerdict = items.filter(i => i.verdict).length;
-    const notFound = withVerdict - matched.size - ambiguous.size;
+    const notFound = Math.max(0, inPeriod - matched.size - ambiguous.size);
     showAlert('✅ ЗВІРЯННЯ ЗАВЕРШЕНО\n\n'
+        + 'Аркуш: ' + state.selArchive + '\n\n'
         + 'Цілей у файлі: ' + withVerdict + '\n'
+        + 'З них у періоді аркуша: ' + inPeriod + '\n'
         + 'Записано: ' + matched.size + '\n'
         + 'Не знайдено: ' + notFound + '\n'
         + 'Неоднозначних (кілька збігів): ' + ambiguous.size + '\n'
-        + 'Аркушів оновлено: ' + sheetsTouched
-        + (sheetsWidened ? '\nДодано колонки L і M в аркушів: ' + sheetsWidened : ''));
+        + 'Поза періодом аркуша: ' + (withVerdict - inPeriod)
+        + (sheetsWidened ? '\n\nДодано колонки L і M' : ''));
 }
 
 // Рядки про верифікацію в доповідь. Рахуємо цілі, а не вильоти.
