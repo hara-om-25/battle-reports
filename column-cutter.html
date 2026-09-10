@@ -286,15 +286,29 @@ body {
 .divider  { border:none; border-top:1px solid var(--surface-light); margin:12px 0; }
 
 /* ── ТАБЛИЦЯ ─────────────────────────────────────── */
-.tbox { overflow:auto; max-height:60vh; border:1px solid var(--surface-light); border-radius:2px; }
-table { border-collapse:collapse; font-size:.78em; white-space:nowrap; }
+/* Прокрутка і вгору-вниз, і ліворуч-праворуч: min-width лишає таблиці
+   її природну ширину, тож вона виходить за межі рамки, а не стискається. */
+.tbox {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  max-height: 60vh;
+  border: 1px solid var(--surface-light);
+  border-radius: 2px;
+}
+table { border-collapse:collapse; font-size:.78em; white-space:nowrap; min-width:max-content; }
 th, td {
   border:1px solid var(--surface-light);
   padding:4px 8px;
-  max-width:320px;
+  max-width:460px;
   overflow:hidden;
   text-overflow:ellipsis;
 }
+/* смуги прокрутки таблиці — помітніші за загальні */
+.tbox::-webkit-scrollbar       { width:11px; height:11px; }
+.tbox::-webkit-scrollbar-track { background:var(--fill-field); }
+.tbox::-webkit-scrollbar-thumb { background:var(--olive); border-radius:6px; border:2px solid var(--surface); }
+.tbox::-webkit-scrollbar-thumb:hover { background:var(--olive-bright); }
 thead th {
   position:sticky; top:0; z-index:2;
   background:var(--olive-dark);
@@ -513,9 +527,11 @@ function handleFile(file) {
         ? ' <span style="color:var(--text-dim)">(частини колонок на сторінці немає — вони порожні)</span>' : '';
       const other = found.matched
         ? '' : ' <span style="color:var(--text-dim)">(єдина сторінка у файлі)</span>';
+      const empt = r.dropped
+        ? '<br>Прибрано порожніх рядків: <b>' + r.dropped + '</b>' : '';
       setStatus(
         'Сторінка: <b>' + esc(from) + '</b>' + other +
-        '<br>Скопійовано колонки: <b>' + cols.join(', ') + '</b>' + miss +
+        '<br>Скопійовано колонки: <b>' + cols.join(', ') + '</b>' + miss + empt +
         '<br>Збережено як <b>' + out + '</b> — файл у теці завантажень.', 'ok');
     } catch (err) {
       setStatus('Помилка обробки: ' + (err && err.message ? err.message : err), 'er');
@@ -543,28 +559,46 @@ function pickSheet(names) {
 
    Аркуш будується лише з клітинок обраних колонок: жодна інша клітинка
    не зчитується зі структури аркуша, не копіюється й не показується. */
+function isEmpty(cell) {
+  if (!cell || cell.t === 'z') return true;
+  if (cell.v === null || cell.v === undefined) return true;
+  return typeof cell.v === 'string' && cell.v.trim() === '';
+}
+
 function keepSheet(ws, keep) {
-  if (!ws || !ws['!ref']) return { ws: { '!ref': 'A1' }, present: 0 };
+  if (!ws || !ws['!ref']) return { ws: { '!ref': 'A1' }, present: 0, dropped: 0 };
   const rng = XLSX.utils.decode_range(ws['!ref']);
   const out = {};
+
   let present = 0;
+  keep.forEach(function (oldC) { if (oldC >= rng.s.c && oldC <= rng.e.c) present++; });
 
-  keep.forEach(function (oldC, newC) {
-    if (oldC < rng.s.c || oldC > rng.e.c) return;   // такої колонки у файлі немає
-    present++;
-    for (let r = rng.s.r; r <= rng.e.r; r++) {
+  // Рядок, у якому всі обрані колонки порожні, у новий файл не йде,
+  // а ті, що лишились, підтягуються вгору без пропусків.
+  const rowMap = new Map();            // старий рядок → новий
+  let newR = 0, dropped = 0;
+  for (let r = rng.s.r; r <= rng.e.r; r++) {
+    const row = [];
+    keep.forEach(function (oldC, newC) {
+      if (oldC < rng.s.c || oldC > rng.e.c) return;   // такої колонки у файлі немає
       const cell = ws[XLSX.utils.encode_cell({ r: r, c: oldC })];
-      if (!cell) continue;
-      const nc = Object.assign({}, cell);
-      delete nc.f;                     // після перестановки колонок формули вже недійсні — лишаємо значення
-      out[XLSX.utils.encode_cell({ r: r, c: newC })] = nc;
-    }
-  });
+      if (isEmpty(cell)) return;
+      row.push({ c: newC, cell: cell });
+    });
+    if (!row.length) { dropped++; continue; }
 
-  out['!ref'] = XLSX.utils.encode_range({
-    s: { r: rng.s.r, c: 0 },
-    e: { r: rng.e.r, c: Math.max(0, keep.length - 1) }
-  });
+    rowMap.set(r, newR);
+    row.forEach(function (x) {
+      const nc = Object.assign({}, x.cell);
+      delete nc.f;                     // після перестановки колонок формули вже недійсні — лишаємо значення
+      out[XLSX.utils.encode_cell({ r: newR, c: x.c })] = nc;
+    });
+    newR++;
+  }
+
+  out['!ref'] = newR
+    ? XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: newR - 1, c: Math.max(0, keep.length - 1) } })
+    : 'A1';
 
   if (ws['!cols']) {                   // ширини — лише самих обраних колонок
     const cols = [];
@@ -572,23 +606,30 @@ function keepSheet(ws, keep) {
     out['!cols'] = cols;
   }
 
-  if (ws['!merges']) {              // об'єднання лишається, лише якщо всі його колонки взяті й стоять поспіль
+  if (ws['!merges']) {              // об'єднання лишається, лише якщо всі його клітинки взяті й стоять поспіль
     const pos = new Map();
     keep.forEach(function (oldC, newC) { if (!pos.has(oldC)) pos.set(oldC, newC); });
+    const line = function (from, to, map) {
+      const ns = [];
+      for (let i = from; i <= to; i++) {
+        if (!map.has(i)) return null;
+        ns.push(map.get(i));
+      }
+      for (let i = 1; i < ns.length; i++) if (ns[i] !== ns[i - 1] + 1) return null;
+      return ns;
+    };
     const mg = [];
     ws['!merges'].forEach(function (m) {
-      const ns = [];
-      for (let c = m.s.c; c <= m.e.c; c++) {
-        if (!pos.has(c)) return;
-        ns.push(pos.get(c));
-      }
-      for (let i = 1; i < ns.length; i++) if (ns[i] !== ns[i - 1] + 1) return;
-      mg.push({ s: { r: m.s.r, c: ns[0] }, e: { r: m.e.r, c: ns[ns.length - 1] } });
+      const ns = line(m.s.c, m.e.c, pos);
+      if (!ns) return;
+      const rs = line(m.s.r, m.e.r, rowMap);
+      if (!rs) return;
+      mg.push({ s: { r: rs[0], c: ns[0] }, e: { r: rs[rs.length - 1], c: ns[ns.length - 1] } });
     });
     if (mg.length) out['!merges'] = mg;
   }
 
-  return { ws: out, present: present };
+  return { ws: out, present: present, dropped: dropped };
 }
 
 /* ── ЗБЕРЕЖЕННЯ ─────────────────────────────────── */
