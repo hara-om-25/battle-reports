@@ -1550,6 +1550,13 @@ function _verdictInfo(targetsStr, l, m) {
         repl.push({ name: _p[0], res: _p[1] || '', qty: Math.max(1, parseInt(_p[2], 10) || 1), pts: isNaN(num) ? null : num });
         if (!isNaN(num)) rsum += num;
     }
+    // Ціль, про яку веріфікатор змовчав, не підтверджена: у файл потрапляють
+    // усі цілі вильотів з балами, отже мовчання — це відмова. Рахуємо так
+    // лише тоді, коли виліт узагалі звірявся: без жодного вердикту він просто
+    // НЕ ЗВІРЕНИЙ, і перекреслювати там нічого
+    if (ok || no || repl.length) {
+        for (let i = 0; i < n; i++) if (!list[i]) { list[i] = 'no'; no++; }
+    }
     const state = repl.length ? 'repl'
                 : (!ok && !no) ? ''
                 : (ok && no) ? 'part' : ok ? 'ok' : 'no';
