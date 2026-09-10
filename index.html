@@ -1639,11 +1639,16 @@ function _vName(x) {
 // завжди: у частині рядків стоїть самий тип. Тому повертаємо і повну назву,
 // і тип окремо — за типом шукаємо, коли номера немає
 function _vFileTarget(typeRaw, idRaw) {
-    const segs = String(idRaw || '').split('-');
-    const last = segs.length > 1 ? segs[segs.length - 1].trim() : '';
-    const num = /^\d+$/.test(last) ? last : '';
+    const segs = String(idRaw || '').split('-').map(x => x.trim());
     const base = _vNorm(typeRaw) || (segs.length > 1 ? segs[1] : '');
-    return { type: _vName(base), num: num, name: _vName(base + (num ? ' ' + num : '')) };
+    const type = _vName(base);
+    const last = segs.length > 1 ? segs[segs.length - 1] : '';
+    // Число в кінці — номер цілі лише тоді, коли сам ідентифікатор складено
+    // навколо того самого типу: «62-ЛАТ-ЛАТ-1». А в «Д-30» тип — «АС», і «30»
+    // це частина назви зразка. Взяти його за номер означало б шукати ціль
+    // «АС 30», якої у вильоті немає, ще й вимкнути пошук за типом
+    const num = (/^\d+$/.test(last) && segs.some(s => _vName(s) === type)) ? last : '';
+    return { type: type, num: num, name: _vName(base + (num ? ' ' + num : '')) };
 }
 
 // Тип цілі з таблиці: та сама назва без номера в кінці — «ОС 6» це «ОС»
