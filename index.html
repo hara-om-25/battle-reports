@@ -1386,7 +1386,7 @@ async function loadAllArchiveSheets() {
                         ammo: (row[7]||'').trim(),
                         result: row[8]||'',
                         points: parseFloat(row[9])||0,
-                        verify: _verdictOf(row[11], row[12]),
+                        v: _verdictInfo(row[2]||'', row[11], row[12]),
                         sheet: name
                     });
                 }
@@ -1503,14 +1503,30 @@ function _vTargetMatch(a, b) {
     return wa.some(w => wb.indexOf(w) >= 0);
 }
 
-function _verdictOf(a, b) {
-    for (const v of [a, b]) {
-        const t = _vNorm(v).toLowerCase();
-        if (t === 'підтверджено') return 'ok';
-        if (t === 'відхилено') return 'no';
+// Вердикт і бали — на кожну ціль окремо. У L і M лежать переліки через кому,
+// у тому ж порядку, що й цілі в колонці C та результати в колонці I.
+// Повертає: list — вердикти ('ok'/'no'/''), pts — бали, sum — сума лише
+// підтверджених, state — 'ok' | 'no' | 'part' | '' на весь виліт
+function _verdictInfo(targetsStr, l, m) {
+    const n = String(targetsStr || '').split(', ').filter(x => x.trim()).length;
+    const lv = String(l || '').split(',').map(x => x.trim());
+    const mv = String(m || '').split(',').map(x => x.trim());
+    const list = [], pts = [];
+    let ok = 0, no = 0, sum = 0;
+    for (let i = 0; i < n; i++) {
+        const t = (lv[i] || '').toLowerCase();
+        const v = t === 'підтверджено' ? 'ok' : t === 'відхилено' ? 'no' : '';
+        list.push(v);
+        const num = parseFloat(String(mv[i] || '').replace(',', '.'));
+        const p = isNaN(num) ? null : num;
+        pts.push(p);
+        if (v === 'ok') { ok++; if (p !== null) sum += p; }
+        else if (v === 'no') { no++; }
     }
-    return '';
+    const state = (!ok && !no) ? '' : (ok && no) ? 'part' : ok ? 'ok' : 'no';
+    return { list: list, pts: pts, sum: sum, ok: ok, no: no, state: state };
 }
+
 
 // Бібліотека читання .xlsx підключена в шапці з cdnjs. Якщо той домен
 // недоступний, XLSX просто немає — тому довантажуємо на місці й пробуємо
@@ -1584,6 +1600,29 @@ function showVerifyModal() {
       + '</div></div></div>';
 }
 
+// Назви цілей: у файлі «БК_м», «Причіп_Л», у таблиці «БК М», «Причіп Л».
+// Зводимо до одного вигляду — підкреслення в пробіл, верхній регістр
+function _vName(x) {
+    return _vNorm(x).replace(/_/g, ' ').replace(/\s+/g, ' ').toUpperCase();
+}
+
+// Ціль рядка файлу: B — тип, C — «62-ЛАТ-ЛАТ-1», номер у кінці
+function _vFileTarget(typeRaw, idRaw) {
+    const segs = String(idRaw || '').split('-');
+    const num = segs.length > 1 ? segs[segs.length - 1] : '';
+    const base = _vNorm(typeRaw) || (segs.length > 1 ? segs[1] : '');
+    return _vName(base + ' ' + num);
+}
+
+// Час у хвилинах від початку доби. Немає часу — null
+function _vMinutes(x) {
+    if (x instanceof Date && !isNaN(x)) return x.getHours() * 60 + x.getMinutes();
+    const m = _vNorm(x).match(/(\d{1,2}):(\d{2})/);
+    return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;
+}
+
+const _V_TIME_TOL = 30;   // похибка часу в хвилинах, в обидва боки
+
 async function runVerification(file) {
     if (!file) return;
     closeModal();
@@ -1610,7 +1649,14 @@ async function runVerification(file) {
             const coord = _vCoord(r[4]), date = _vDate(r[0]);
             // рядок шапки сюди не потрапить: у нього немає ні координат, ні дати
             if (!coord || !date) return;
-            items.push({ coord: coord, date: date, tgt: _vNorm(r[2]), g: _vNorm(r[6]), h: _vNorm(r[7]) });
+            const verdict = _vNorm(r[6]).toLowerCase();
+            items.push({
+                coord: coord, date: date, min: _vMinutes(r[0]),
+                name: _vFileTarget(r[1], r[2]),
+                verdict: verdict === 'підтверджено' ? 'Підтверджено'
+                       : verdict === 'відхилено' ? 'Відхилено' : '',
+                pts: _vNorm(r[7])
+            });
         });
     } catch (e) {
         showAlert('Не вдалося прочитати файл: ' + e.message);
@@ -1626,27 +1672,46 @@ async function runVerification(file) {
         for (const name of state.archiveSheets) {
             const rows = await apiGet(name);
             if (rows.length < 2) continue;
-            const col = [];
-            for (let i = 1; i < rows.length; i++) col.push(null);
+
+            // для кожного рядка аркуша готуємо переліки по його цілях
+            const cell = [];
+            for (let i = 1; i < rows.length; i++) {
+                const tg = String((rows[i] || [])[2] || '').split(', ').map(x => x.trim());
+                cell.push({ names: tg.map(_vName), v: tg.map(() => ''), p: tg.map(() => '') });
+            }
             let touched = false;
+
             items.forEach((it, idx) => {
+                if (!it.verdict) return;
                 const hits = [];
                 for (let i = 1; i < rows.length; i++) {
                     const row = rows[i] || [];
                     if (_vCoord(row[5]) !== it.coord) continue;
                     if (_vDate(row[1]) !== it.date) continue;
-                    if (!_vTargetMatch(row[2], it.tgt)) continue;
-                    hits.push(i);
+                    const rm = _vMinutes(row[1]);
+                    // час звіряємо з похибкою; якщо часу немає — не заважає
+                    if (it.min !== null && rm !== null && Math.abs(rm - it.min) > _V_TIME_TOL) continue;
+                    const j = cell[i - 1].names.indexOf(it.name);
+                    if (j >= 0) hits.push([i - 1, j]);
                 }
-                if (hits.length === 1) { col[hits[0] - 1] = [it.g, it.h]; touched = true; matched.add(idx); }
-                else if (hits.length > 1) { ambiguous.add(idx); }
+                if (hits.length === 1) {
+                    const c = cell[hits[0][0]];
+                    c.v[hits[0][1]] = it.verdict;
+                    c.p[hits[0][1]] = it.pts;
+                    touched = true;
+                    matched.add(idx);
+                } else if (hits.length > 1) {
+                    ambiguous.add(idx);
+                }
             });
             if (!touched) continue;
-            // там, де збігу не було, лишаємо те, що вже стоїть у таблиці
+
+            const col = [];
             for (let i = 1; i < rows.length; i++) {
-                if (col[i - 1]) continue;
-                const row = rows[i] || [];
-                col[i - 1] = [row[11] || '', row[12] || ''];
+                const c = cell[i - 1], row = rows[i] || [];
+                // рядок без жодного збігу лишаємо як був
+                col.push(c.v.some(Boolean) ? [c.v.join(', '), c.p.join(', ')]
+                                           : [row[11] || '', row[12] || '']);
             }
             if (await _widenSheet(grid, name, 13)) sheetsWidened++;
             await apiUpdate(name + '!L2:M' + rows.length, col);
@@ -1668,9 +1733,10 @@ async function runVerification(file) {
     // після верифікації нічого не знаходив
     if (!state.allArchiveLoading) loadAllArchiveSheets();
 
-    const notFound = items.length - matched.size - ambiguous.size;
+    const withVerdict = items.filter(i => i.verdict).length;
+    const notFound = withVerdict - matched.size - ambiguous.size;
     showAlert('✅ ЗВІРЯННЯ ЗАВЕРШЕНО\n\n'
-        + 'Рядків у файлі: ' + items.length + '\n'
+        + 'Цілей у файлі: ' + withVerdict + '\n'
         + 'Записано: ' + matched.size + '\n'
         + 'Не знайдено: ' + notFound + '\n'
         + 'Неоднозначних (кілька збігів): ' + ambiguous.size + '\n'
@@ -1678,14 +1744,16 @@ async function runVerification(file) {
         + (sheetsWidened ? '\nДодано колонки L і M в аркушів: ' + sheetsWidened : ''));
 }
 
-// Рядки про верифікацію в доповідь. Додаються лише коли вердикти взагалі є
+// Рядки про верифікацію в доповідь. Рахуємо цілі, а не вильоти
 function _pushVerifyLines(lines, recs) {
-    const ok = recs.filter(r => r.verify === 'ok');
-    const no = recs.filter(r => r.verify === 'no');
-    if (!ok.length && !no.length) return;
-    const pts = Math.round(ok.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));
-    lines.push('Веріфіковано ' + pts + ' балів.');
-    lines.push('Підтверджено ' + ok.length + ', відхилено ' + no.length + '.');
+    let ok = 0, no = 0, sum = 0;
+    recs.forEach(r => {
+        if (!r.v) return;
+        ok += r.v.ok; no += r.v.no; sum += r.v.sum;
+    });
+    if (!ok && !no) return;
+    lines.push('Веріфіковано ' + Math.round(sum) + ' балів.');
+    lines.push('Підтверджено ' + ok + ', відхилено ' + no + '.');
 }
 /* ============ /ВЕРИФІКАЦІЯ ============ */
 
@@ -1710,7 +1778,7 @@ async function loadArchiveSheet(name) {
                     ammo: (row[7]||''  ).trim(),
                     result: row[8]||''  ,
                     points: parseFloat(row[9])||0,
-                    verify: _verdictOf(row[11], row[12])
+                    v: _verdictInfo(row[2]||'', row[11], row[12])
                 });
             }
         }
@@ -3016,9 +3084,9 @@ function render() {
                         const n=++_arNum;
                         const tgts=r.target?r.target.split(', '):[];
                         const ress=r.result?r.result.split(', '):[];
-                        const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');return tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;}),r.qty200>0?`<span style="color:#e05050">200</span>${_dash}<span style="color:#fff">${r.qty200}</span>`:'',r.qty300>0?`<span style="color:#5599dd">300</span>${_dash}<span style="color:#fff">${r.qty300}</span>`:''].filter(Boolean);
+                        const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');const _one=tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;return (r.v&&r.v.list[j]==='no')?`<span style="text-decoration:line-through">${_one}</span>`:_one;}),r.qty200>0?`<span style="color:#e05050">200</span>${_dash}<span style="color:#fff">${r.qty200}</span>`:'',r.qty300>0?`<span style="color:#5599dd">300</span>${_dash}<span style="color:#fff">${r.qty300}</span>`:''].filter(Boolean);
                         const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
-                        return `<div class="record-card text-sm" style="position:relative;padding-left:62px;${r.verify?'padding-right:150px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}<p class="stencil" style="color:var(--yellow)">${r.verify==='no'?`<span style="text-decoration:line-through">${r.points} балів</span>`:`${r.points} балів`}</p>${r.verify?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;color:${r.verify==='ok'?'var(--blue-label)':'var(--danger-bright)'}">${r.verify==='ok'?'ВЕРИФІКОВАНО':'ВІДХИЛЕНО'}</span>`:''}</div>`;
+                        return `<div class="record-card text-sm" style="position:relative;padding-left:62px;${r.v&&r.v.state?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}<p class="stencil" style="color:${r.v&&r.v.state?'var(--blue-label)':'var(--yellow)'}">${r.v&&r.v.state?Math.round(r.v.sum):r.points} балів</p>${r.v&&r.v.state?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${r.v.state==='no'?'var(--danger-bright)':'var(--blue-label)'}">${r.v.state==='ok'?'ВЕРИФІКОВАНО':r.v.state==='no'?'ВІДХИЛЕНО':'ЧАСТКОВО<br>ВЕРІФІКОВАНО'}</span>`:''}</div>`;
                     }).join('');
                     return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
                 }).join('');
