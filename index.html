@@ -1791,7 +1791,18 @@ async function runVerification(file) {
                         c.v[j] = it.verdict;
                         c.p[j] = it.pts;
                     } else {
-                        c.repl.push([it.tgt.name, it.pts, it.res, it.qty]);
+                        // веріфікатор може подати ті самі дві цілі як один
+                        // рядок з кількістю 2 або як два рядки по одиниці.
+                        // Зводимо до одного вигляду: однакова назва й результат
+                        // додають кількість і бали до вже наявної заміни
+                        const same = c.repl.find(rp => rp[0] === it.tgt.name && rp[2] === it.res);
+                        if (same) {
+                            const a = parseFloat(same[1]), b = parseFloat(it.pts);
+                            same[1] = (isNaN(a) && isNaN(b)) ? '' : String((isNaN(a) ? 0 : a) + (isNaN(b) ? 0 : b));
+                            same[3] += it.qty;
+                        } else {
+                            c.repl.push([it.tgt.name, it.pts, it.res, it.qty]);
+                        }
                     }
                     touched = true;
                     matched.add(idx);
