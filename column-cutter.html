@@ -285,20 +285,6 @@ body {
 .sline b  { color:var(--yellow); font-weight:700; }
 .divider  { border:none; border-top:1px solid var(--surface-light); margin:12px 0; }
 
-/* ── ВКЛАДКИ АРКУШІВ ─────────────────────────────── */
-.tabs { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px; }
-.tab {
-  padding:4px 12px; cursor:pointer;
-  background:var(--fill-field);
-  border:1px solid var(--surface-light);
-  border-radius:2px;
-  color:var(--text-dim);
-  font-size:.78em; font-weight:500; letter-spacing:.08em;
-  transition:.1s;
-}
-.tab:hover { border-color:var(--olive); color:var(--text); }
-.tab.act   { background:var(--olive); border-color:var(--olive-bright); color:var(--text); font-weight:700; }
-
 /* ── ТАБЛИЦЯ ─────────────────────────────────────── */
 .tbox { overflow:auto; max-height:60vh; border:1px solid var(--surface-light); border-radius:2px; }
 table { border-collapse:collapse; font-size:.78em; white-space:nowrap; }
@@ -373,6 +359,7 @@ tbody tr:hover td { background:var(--pick); }
     <button class="btn btn-yellow btn-full" id="bpick" onclick="pickFile()">📄 ОБРАТИ ФАЙЛ</button>
     <div class="sline" id="status">Оберіть колонки, потім натисніть «ОБРАТИ ФАЙЛ» — обробка почнеться одразу.</div>
     <div class="hint" style="margin-top:6px">
+      У новий файл іде лише сторінка <b>Результати Роботи</b> — решта сторінок книги стирається.<br>
       Google Таблицю спершу завантажте на диск:
       <b>Файл → Завантажити → Microsoft Excel (.xlsx)</b> або <b>CSV</b>.
     </div>
@@ -381,7 +368,6 @@ tbody tr:hover td { background:var(--pick); }
   <!-- ПЕРЕГЛЯД -->
   <div class="crate">
     <span class="label">📋 Дані нового файлу</span>
-    <div class="tabs" id="tabs" style="display:none"></div>
     <div id="prev">
       <div class="empty">
         <div class="ei">📊</div>
@@ -394,6 +380,7 @@ tbody tr:hover td { background:var(--pick); }
 
 <script>
 /* ── КОНСТАНТИ ──────────────────────────────────── */
+const SHEET      = 'Результати Роботи';   // єдина сторінка, яка потрапляє в новий файл
 const DEFAULTS   = ['G', 'H', 'I', 'J', 'K', 'L', 'X', 'AD'];  // обрані одразу при відкритті
 const BASE_SLOTS = DEFAULTS.length;   // стільки списків показуємо від початку
 const MAX_COL    = 104;    // A … CZ
@@ -507,30 +494,46 @@ function handleFile(file) {
       });
       if (!src.SheetNames.length) throw new Error('у файлі немає жодного аркуша');
 
-      // Нову книгу збираємо з нуля: у неї потрапляють лише обрані колонки.
-      // Ніщо інше з оригіналу — ні інші колонки, ні властивості книги,
-      // ні іменовані діапазони, ні макроси — сюди не переноситься.
+      const found = pickSheet(src.SheetNames);
+      if (!found) throw new Error('у файлі немає сторінки «' + SHEET + '» (є: ' + src.SheetNames.join(', ') + ')');
+      const from = found.name;
+
+      // Нову книгу збираємо з нуля: у неї потрапляють лише обрані колонки
+      // однієї сторінки. Ніщо інше з оригіналу — ні інші сторінки, ні інші
+      // колонки, ні властивості книги, ні іменовані діапазони, ні макроси —
+      // сюди не переноситься.
       const wb = XLSX.utils.book_new();
-      let present = 0;
-      src.SheetNames.forEach(function (name) {
-        const r = keepSheet(src.Sheets[name], keep);
-        XLSX.utils.book_append_sheet(wb, r.ws, name);
-        present = Math.max(present, r.present);
-      });
+      const r  = keepSheet(src.Sheets[from], keep);
+      XLSX.utils.book_append_sheet(wb, r.ws, SHEET);
 
       const out = saveWorkbook(wb, file.name);
       render(wb);
 
-      const miss = present < cols.length
-        ? ' <span style="color:var(--text-dim)">(частини колонок у файлі немає — вони порожні)</span>' : '';
+      const miss = r.present < cols.length
+        ? ' <span style="color:var(--text-dim)">(частини колонок на сторінці немає — вони порожні)</span>' : '';
+      const other = found.matched
+        ? '' : ' <span style="color:var(--text-dim)">(єдина сторінка у файлі)</span>';
       setStatus(
-        'Скопійовано колонки: <b>' + cols.join(', ') + '</b>' + miss +
+        'Сторінка: <b>' + esc(from) + '</b>' + other +
+        '<br>Скопійовано колонки: <b>' + cols.join(', ') + '</b>' + miss +
         '<br>Збережено як <b>' + out + '</b> — файл у теці завантажень.', 'ok');
     } catch (err) {
       setStatus('Помилка обробки: ' + (err && err.message ? err.message : err), 'er');
     }
   };
   rd.readAsArrayBuffer(file);
+}
+
+/* ── ПОШУК ПОТРІБНОЇ СТОРІНКИ ───────────────────── */
+/* Назву звіряємо без огляду на регістр і зайві пробіли.
+   Якщо сторінка у файлі одна (так завжди буває з CSV) — беремо її. */
+function pickSheet(names) {
+  const norm = function (s) { return String(s).trim().toLowerCase().replace(/\s+/g, ' '); };
+  const want = norm(SHEET);
+  for (let i = 0; i < names.length; i++) {
+    if (norm(names[i]) === want) return { name: names[i], matched: true };
+  }
+  return names.length === 1 ? { name: names[0], matched: false } : null;
 }
 
 /* ── КОПІЮВАННЯ ОБРАНИХ КОЛОНОК АРКУША ──────────── */
@@ -604,22 +607,10 @@ let book = null;
 
 function render(wb) {
   book = wb;
-  const tabs = document.getElementById('tabs');
-  tabs.innerHTML = '';
-  tabs.style.display = wb.SheetNames.length > 1 ? 'flex' : 'none';
-  wb.SheetNames.forEach(function (n, i) {
-    const b = document.createElement('button');
-    b.className = 'tab' + (i === 0 ? ' act' : '');
-    b.textContent = n;
-    b.onclick = function () { showSheet(n, b); };
-    tabs.appendChild(b);
-  });
-  showSheet(wb.SheetNames[0], tabs.firstChild);
+  showSheet(wb.SheetNames[0]);
 }
 
-function showSheet(name, tab) {
-  document.querySelectorAll('#tabs .tab').forEach(function (t) { t.classList.toggle('act', t === tab); });
-
+function showSheet(name) {
   const ws   = book.Sheets[name];
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false, blankrows: true });
   const box  = document.getElementById('prev');
