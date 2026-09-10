@@ -185,7 +185,7 @@
     }
     .record-card.flagged { border-color: var(--yellow); }
     /* напис ВЕРИФІКОВАНО на картці вильоту — найсвітліший синій застосунку */
-    :root { --blue-label: #5a7a9c; }
+    :root { --blue-label: #5a7a9c; --green-label: #4a7d4d; }
     /* Скасувати видалення — той самий крій, що й у зеленої «+», лише помаранчева */
     .btn-orange {
       background: #8a4a15;
@@ -1744,16 +1744,19 @@ async function runVerification(file) {
         + (sheetsWidened ? '\nДодано колонки L і M в аркушів: ' + sheetsWidened : ''));
 }
 
-// Рядки про верифікацію в доповідь. Рахуємо цілі, а не вильоти
+// Рядки про верифікацію в доповідь. Рахуємо цілі, а не вильоти.
+// Скасовані бали — різниця між нарахованими за виліт і підтвердженими
 function _pushVerifyLines(lines, recs) {
-    let ok = 0, no = 0, sum = 0;
+    let ok = 0, no = 0, sum = 0, canc = 0;
     recs.forEach(r => {
-        if (!r.v) return;
+        if (!r.v || !r.v.state) return;
         ok += r.v.ok; no += r.v.no; sum += r.v.sum;
+        canc += Math.max(0, (parseFloat(r.points) || 0) - r.v.sum);
     });
     if (!ok && !no) return;
     lines.push('Веріфіковано ' + Math.round(sum) + ' балів.');
-    lines.push('Підтверджено ' + ok + ', відхилено ' + no + '.');
+    lines.push('Скасовано ' + Math.round(canc) + ' балів.');
+    lines.push('Підтверджено ' + ok + ' цілей, відхилено ' + no + '.');
 }
 /* ============ /ВЕРИФІКАЦІЯ ============ */
 
@@ -3084,9 +3087,9 @@ function render() {
                         const n=++_arNum;
                         const tgts=r.target?r.target.split(', '):[];
                         const ress=r.result?r.result.split(', '):[];
-                        const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');const _one=tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;return (r.v&&r.v.list[j]==='no')?`<span style="text-decoration:line-through">${_one}</span>`:_one;}),r.qty200>0?`<span style="color:#e05050">200</span>${_dash}<span style="color:#fff">${r.qty200}</span>`:'',r.qty300>0?`<span style="color:#5599dd">300</span>${_dash}<span style="color:#fff">${r.qty300}</span>`:''].filter(Boolean);
+                        const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');const _one=tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;return (r.v&&r.v.list[j]==='no')?`<span style="text-decoration:line-through;text-decoration-color:var(--danger-bright)">${_one}</span>`:_one;}),r.qty200>0?`<span style="color:#e05050">200</span>${_dash}<span style="color:#fff">${r.qty200}</span>`:'',r.qty300>0?`<span style="color:#5599dd">300</span>${_dash}<span style="color:#fff">${r.qty300}</span>`:''].filter(Boolean);
                         const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
-                        return `<div class="record-card text-sm" style="position:relative;padding-left:62px;${r.v&&r.v.state?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}<p class="stencil" style="color:${r.v&&r.v.state?'var(--blue-label)':'var(--yellow)'}">${r.v&&r.v.state?Math.round(r.v.sum):r.points} балів</p>${r.v&&r.v.state?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${r.v.state==='no'?'var(--danger-bright)':'var(--blue-label)'}">${r.v.state==='ok'?'ВЕРИФІКОВАНО':r.v.state==='no'?'ВІДХИЛЕНО':'ЧАСТКОВО<br>ВЕРІФІКОВАНО'}</span>`:''}</div>`;
+                        return `<div class="record-card text-sm" style="position:relative;padding-left:62px;${r.v&&r.v.state?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;if(!_st)return `<p class="stencil" style="color:var(--yellow)">${r.points} балів</p>`;const _sum=Math.round(r.v.sum),_c=Math.max(0,Math.round((parseFloat(r.points)||0)-r.v.sum));const _clr=_st==='no'?'var(--danger-bright)':_st==='ok'?'var(--green-label)':'var(--blue-label)';return `<p class="stencil" style="color:${_clr}">${_st==='no'?0:_sum} балів${_c?` <span style="color:var(--danger-bright)">(скасовано ${_c} балів)</span>`:''}</p>`;})()}${r.v&&r.v.state?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${r.v.state==='no'?'var(--danger-bright)':r.v.state==='ok'?'var(--green-label)':'var(--blue-label)'}">${r.v.state==='ok'?'ВЕРИФІКОВАНО':r.v.state==='no'?'ВІДХИЛЕНО':'ЧАСТКОВО<br>ВЕРІФІКОВАНО'}</span>`:''}</div>`;
                     }).join('');
                     return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
                 }).join('');
