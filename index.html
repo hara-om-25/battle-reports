@@ -1771,9 +1771,11 @@ async function runVerification(file) {
 
             const col = [];
             for (let i = 1; i < rows.length; i++) {
-                const c = cell[i - 1], row = rows[i] || [];
-                // рядок без жодного збігу лишаємо як був
-                if (!c.v.some(Boolean) && !c.repl.length) { col.push([row[11] || '', row[12] || '']); continue; }
+                const c = cell[i - 1];
+                // рядок без збігу очищаємо: звіряння повністю переписує колонки
+                // верифікації аркуша, інакше в них лишається сміття від
+                // попередніх прогонів і роздуває підсумки
+                if (!c.v.some(Boolean) && !c.repl.length) { col.push(['', '']); continue; }
                 // заміни йдуть після переліку цілей окремими позначками
                 const lv = c.v.slice(), pv = c.p.slice();
                 c.repl.forEach(rp => { lv.push('ЗАМІНА:' + rp[0] + (rp[2] ? '|' + rp[2] : '')); pv.push(rp[1]); });
