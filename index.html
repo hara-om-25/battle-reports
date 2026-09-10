@@ -292,6 +292,9 @@
     }
     /* Додано офлайн і ще не потрапило в Google таблицю — сама лише рамка, без заливки */
     .record-card.pending-sync, .list-item.pending-sync { border-color: #e08a2e; }
+    /* Виліт із балами, якого звіряння не зачепило: у файлі верифікації йому
+       нічого не знайшлося. Біла рамка — щоб такі було видно з першого погляду */
+    .record-card.not-verified { border-color: #fff; }
     /* обраний елемент списку — той самий вигляд, що й під курсором,
        і тримається, доки не оберуть інший */
     .list-item.picked { border-color: var(--olive-bright); background: rgba(122, 149, 64, 0.1); }
@@ -3175,7 +3178,9 @@ function render() {
                         const ress=r.result?r.result.split(', '):[];
                         const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');const _one=tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;return (r.v&&(r.v.list[j]==='no'||r.v.state==='repl'))?`<span class="tgt-off">${_one}</span>`:_one;}),...((r.v&&r.v.repl)||[]).map(rp=>`<span style="color:var(--yellow)">веріфікатор замінив на</span> <span style="color:var(--text)">${esc(_vType(rp.name))}</span>${rp.res?`${_dash}<span style="color:var(--khaki)">${esc(String(rp.res).toLowerCase())}</span>`:''}`),r.qty200>0?`<span style="color:#e05050">200</span>${_dash}<span style="color:#fff">${r.qty200}</span>`:'',r.qty300>0?`<span style="color:#5599dd">300</span>${_dash}<span style="color:#fff">${r.qty300}</span>`:''].filter(Boolean);
                         const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
-                        return `<div class="record-card text-sm" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;if(!_st)return `<p class="stencil" style="color:var(--yellow)">${r.points} балів</p>`;const _sum=Math.round(r.v.sum);
+                        // виліт із балами, який лишився без жодного вердикту
+                        const _unv=(!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
+                        return `<div class="record-card text-sm${_unv}" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;if(!_st)return `<p class="stencil" style="color:var(--yellow)">${r.points} балів</p>`;const _sum=Math.round(r.v.sum);
 // при заміні цілі власні бали вильоту скасовані повністю, а в залік іде те,
 // що вказав веріфікатор
 const _c=_st==='repl'?Math.round(parseFloat(r.points)||0):Math.max(0,Math.round((parseFloat(r.points)||0)-r.v.sum));
