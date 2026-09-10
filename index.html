@@ -1813,15 +1813,6 @@ async function runVerification(file) {
 
     const withVerdict = items.filter(i => i.verdict).length;
     const notFound = Math.max(0, inPeriod - matched.size - ambiguous.size);
-    // підсумок рахуємо з того, що аркуш віддав назад після запису, а не з
-    // того, що ми збирались записати: так одразу видно, чи в таблиці лежить
-    // саме те, що показує доповідь
-    let vSum = 0, vTop = 0, vTopN = 0;
-    state.archiveRecs.forEach(r => {
-        if (!r.v || !r.v.state) return;
-        vSum += r.v.sum;
-        if (r.v.sum > vTop) { vTop = r.v.sum; vTopN = r.reportNum; }
-    });
     showAlert('✅ ЗВІРЯННЯ ЗАВЕРШЕНО\n\n'
         + 'Аркуш: ' + state.selArchive + '\n\n'
         + 'Цілей у файлі: ' + withVerdict + '\n'
@@ -1829,9 +1820,7 @@ async function runVerification(file) {
         + 'Записано: ' + matched.size + '\n'
         + 'Не знайдено: ' + notFound + '\n'
         + 'Неоднозначних (кілька збігів): ' + ambiguous.size + '\n'
-        + 'Поза періодом аркуша: ' + (withVerdict - inPeriod) + '\n\n'
-        + 'Веріфіковано: ' + Math.round(vSum) + ' балів\n'
-        + 'Найбільше в одному вильоті: ' + Math.round(vTop) + ' (виліт ' + vTopN + ')'
+        + 'Поза періодом аркуша: ' + (withVerdict - inPeriod)
         + (sheetsWidened ? '\n\nДодано колонки L і M' : ''));
 }
 
