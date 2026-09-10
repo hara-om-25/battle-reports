@@ -1680,6 +1680,7 @@ async function runVerification(file) {
     state.archiveLoading = true; render();
     const matched = new Set(), ambiguous = new Set();
     let sheetsTouched = 0, sheetsWidened = 0, inPeriod = 0;
+    const _vFail = [0, 0, 0, 0], _vSamples = [];
     try {
         const grid = await _sheetGrid();
         for (const name of [state.selArchive]) {
@@ -1703,19 +1704,31 @@ async function runVerification(file) {
             items.forEach((it, idx) => {
                 if (!it.verdict) return;
                 const hits = [];
+                // найдальша умова, до якої рядок дійшов: 0 координати, 1 дата,
+                // 2 час, 3 назва цілі. Потрібно, щоб бачити, де саме відсів
+                let stage = 0, nameSeen = null;
                 for (let i = 1; i < rows.length; i++) {
                     const row = rows[i] || [];
                     if (_vCoord(row[5]) !== it.coord) continue;
+                    if (stage < 1) stage = 1;
                     const sd = _vDate(row[1]);
                     if (sd) { if (sd !== it.date) continue; }
                     else if (!period || it.date < period.from || it.date > period.to) continue;
+                    if (stage < 2) stage = 2;
                     const rm = _vMinutes(row[1]);
                     // час звіряємо з похибкою; якщо часу немає — не заважає
                     if (it.min !== null && rm !== null && Math.abs(rm - it.min) > _V_TIME_TOL) continue;
+                    if (stage < 3) { stage = 3; nameSeen = cell[i - 1].names.join(' / '); }
                     const j = cell[i - 1].names.indexOf(it.name);
                     if (j < 0) continue;
                     const d = (it.min === null || rm === null) ? 0 : Math.abs(rm - it.min);
                     hits.push([i - 1, j, d]);
+                }
+                if (!hits.length) {
+                    _vFail[stage]++;
+                    if (stage === 3 && _vSamples.length < 4) {
+                        _vSamples.push('«' + it.name + '» проти «' + nameSeen + '»');
+                    }
                 }
                 // кілька збігів у межах півгодини — беремо найближчий за часом;
                 // однакова відстань у двох означає, що розрізнити нічим
@@ -1769,6 +1782,12 @@ async function runVerification(file) {
         + 'Не знайдено: ' + notFound + '\n'
         + 'Неоднозначних (кілька збігів): ' + ambiguous.size + '\n'
         + 'Поза періодом аркуша: ' + (withVerdict - inPeriod)
+        + '\n\nНЕ ЗНАЙДЕНО ЧЕРЕЗ:\n'
+        + 'координати: ' + _vFail[0] + '\n'
+        + 'дату: ' + _vFail[1] + '\n'
+        + 'час: ' + _vFail[2] + '\n'
+        + 'назву цілі: ' + _vFail[3]
+        + (_vSamples.length ? '\n\nПриклади назв:\n' + _vSamples.join('\n') : '')
         + (sheetsWidened ? '\n\nДодано колонки L і M' : ''));
 }
 
