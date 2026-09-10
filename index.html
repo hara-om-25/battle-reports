@@ -1479,7 +1479,13 @@ async function goToArchive() {
 
 function _vNorm(x) { return String(x === null || x === undefined ? '' : x).trim(); }
 
-function _vCoord(x) { return _vNorm(x).toUpperCase().replace(/[^0-9A-ZА-ЯІЇЄҐ]/g, ''); }
+// У клітинці координат буває дописане зайве: «37U CP 71227 60561, 155».
+// Тому спершу відрізаємо все після коми й лишаємо сам MGRS — рівно так, як
+// це робить cleanCoords() у решті застосунку
+function _vCoord(x) {
+    const s = _vNorm(x).split(',')[0].trim().split(/\s+/).slice(0, 4).join(' ');
+    return s.toUpperCase().replace(/[^0-9A-ZА-ЯІЇЄҐ]/g, '');
+}
 
 function _vDate(x) {
     if (x instanceof Date && !isNaN(x)) {
@@ -1697,9 +1703,14 @@ async function runVerification(file) {
                     // час звіряємо з похибкою; якщо часу немає — не заважає
                     if (it.min !== null && rm !== null && Math.abs(rm - it.min) > _V_TIME_TOL) continue;
                     const j = cell[i - 1].names.indexOf(it.name);
-                    if (j >= 0) hits.push([i - 1, j]);
+                    if (j < 0) continue;
+                    const d = (it.min === null || rm === null) ? 0 : Math.abs(rm - it.min);
+                    hits.push([i - 1, j, d]);
                 }
-                if (hits.length === 1) {
+                // кілька збігів у межах півгодини — беремо найближчий за часом;
+                // однакова відстань у двох означає, що розрізнити нічим
+                if (hits.length > 1) hits.sort((a, b) => a[2] - b[2]);
+                if (hits.length === 1 || (hits.length > 1 && hits[1][2] > hits[0][2])) {
                     const c = cell[hits[0][0]];
                     c.v[hits[0][1]] = it.verdict;
                     c.p[hits[0][1]] = it.pts;
