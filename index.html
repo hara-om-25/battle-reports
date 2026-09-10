@@ -1617,13 +1617,19 @@ function _vName(x) {
     return _vNorm(x).replace(/_/g, ' ').replace(/\s+/g, ' ').toUpperCase();
 }
 
-// Ціль рядка файлу: B — тип, C — «62-ЛАТ-ЛАТ-1», номер у кінці
+// Ціль рядка файлу: B — тип, C — «62-ЛАТ-ЛАТ-1». Номер у кінці C буває не
+// завжди: у частині рядків стоїть самий тип. Тому повертаємо і повну назву,
+// і тип окремо — за типом шукаємо, коли номера немає
 function _vFileTarget(typeRaw, idRaw) {
     const segs = String(idRaw || '').split('-');
-    const num = segs.length > 1 ? segs[segs.length - 1] : '';
+    const last = segs.length > 1 ? segs[segs.length - 1].trim() : '';
+    const num = /^\d+$/.test(last) ? last : '';
     const base = _vNorm(typeRaw) || (segs.length > 1 ? segs[1] : '');
-    return _vName(base + ' ' + num);
+    return { type: _vName(base), num: num, name: _vName(base + (num ? ' ' + num : '')) };
 }
+
+// Тип цілі з таблиці: та сама назва без номера в кінці — «ОС 6» це «ОС»
+function _vType(x) { return _vName(String(x === null || x === undefined ? '' : x).replace(/\s+\d+\s*$/, '')); }
 
 // Час у хвилинах від початку доби. Немає часу — null
 function _vMinutes(x) {
@@ -1665,7 +1671,7 @@ async function runVerification(file) {
             const verdict = _vNorm(r[6]).toLowerCase();
             items.push({
                 coord: coord, date: date, min: _vMinutes(r[0]),
-                name: _vFileTarget(r[1], r[2]),
+                tgt: _vFileTarget(r[1], r[2]),
                 verdict: verdict === 'підтверджено' ? 'Підтверджено'
                        : verdict === 'відхилено' ? 'Відхилено' : '',
                 pts: _vNorm(r[7])
@@ -1697,7 +1703,7 @@ async function runVerification(file) {
             const cell = [];
             for (let i = 1; i < rows.length; i++) {
                 const tg = String((rows[i] || [])[2] || '').split(', ').map(x => x.trim());
-                cell.push({ names: tg.map(_vName), v: tg.map(() => ''), p: tg.map(() => '') });
+                cell.push({ names: tg.map(_vName), types: tg.map(_vType), v: tg.map(() => ''), p: tg.map(() => '') });
             }
             let touched = false;
 
@@ -1719,7 +1725,12 @@ async function runVerification(file) {
                     // час звіряємо з похибкою; якщо часу немає — не заважає
                     if (it.min !== null && rm !== null && Math.abs(rm - it.min) > _V_TIME_TOL) continue;
                     if (stage < 3) { stage = 3; nameSeen = cell[i - 1].names.join(' / '); }
-                    const j = cell[i - 1].names.indexOf(it.name);
+                    const c = cell[i - 1];
+                    let j = c.names.indexOf(it.tgt.name);
+                    // номера у файлі немає — беремо першу ще не зайняту ціль
+                    // того самого типу; так кілька рядків одного типу лягають
+                    // по черзі на кілька цілей вильоту
+                    if (j < 0 && !it.tgt.num) j = c.types.findIndex((t, k) => t === it.tgt.type && !c.v[k]);
                     if (j < 0) continue;
                     const d = (it.min === null || rm === null) ? 0 : Math.abs(rm - it.min);
                     hits.push([i - 1, j, d]);
@@ -1727,7 +1738,7 @@ async function runVerification(file) {
                 if (!hits.length) {
                     _vFail[stage]++;
                     if (stage === 3 && _vSamples.length < 4) {
-                        _vSamples.push('«' + it.name + '» проти «' + nameSeen + '»');
+                        _vSamples.push('«' + it.tgt.name + '» проти «' + nameSeen + '»');
                     }
                 }
                 // кілька збігів у межах півгодини — беремо найближчий за часом;
