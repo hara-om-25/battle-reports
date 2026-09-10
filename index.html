@@ -1683,6 +1683,7 @@ async function runVerification(file) {
             const word = _vNorm(r[6]).toLowerCase();
             // Ознака підтвердження — число в колонці балів. Прочерк або порожньо
             // означає відхилено; слово у вердикті лишається запасним визначником
+            const raw = String(r[7] === null || r[7] === undefined ? '' : r[7]);
             const pts = _vNorm(r[7]).replace(/,/g, '.');
             const hasPts = pts !== '' && !isNaN(parseFloat(pts));
             let verdict = '';
@@ -1692,6 +1693,7 @@ async function runVerification(file) {
                 coord: coord, date: date, min: _vMinutes(r[0]),
                 tgt: _vFileTarget(r[1], r[2]),
                 res: _vNorm(r[5]),
+                raw: raw,
                 verdict: verdict,
                 pts: hasPts ? pts : ''
             });
@@ -1774,6 +1776,10 @@ async function runVerification(file) {
                     }
                     touched = true;
                     matched.add(idx);
+                    if (it.verdict === 'Підтверджено') {
+                        const _n = parseFloat(it.pts);
+                        _vPts.push([isNaN(_n) ? 0 : _n, (j >= 0 ? c.names[j] : it.tgt.name), it.raw]);
+                    }
                 } else if (hits.length > 1) {
                     ambiguous.add(idx);
                 }
@@ -1828,7 +1834,8 @@ async function runVerification(file) {
         + (_vSamples.length ? '\n\nПриклади назв:\n' + _vSamples.join('\n') : '')
         + (_vPts.length ? '\n\nБАЛИ ПІДТВЕРДЖЕНИХ:\nсума ' + Math.round(_vPts.reduce((a, x) => a + x[0], 0))
             + ' за ' + _vPts.length + ' цілей\nнайбільші: '
-            + _vPts.slice().sort((a, b) => b[0] - a[0]).slice(0, 5).map(x => x[1] + ' = ' + x[0]).join(', ') : '')
+            + _vPts.slice().sort((a, b) => b[0] - a[0]).slice(0, 5)
+                .map(x => x[1] + ': у файлі «' + x[2] + '» -> ' + x[0]).join('\n') : '')
         + (sheetsWidened ? '\n\nДодано колонки L і M' : ''));
 }
 
