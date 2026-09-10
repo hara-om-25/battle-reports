@@ -1542,16 +1542,22 @@ function _verdictInfo(targetsStr, l, m) {
     }
     // після переліку цілей можуть стояти заміни: веріфікатор указав ціль,
     // якої в цьому вильоті немає
+    let rsum = 0;
     for (let i = n; i < lv.length; i++) {
         if (lv[i].slice(0, 7) !== 'ЗАМІНА:') continue;
         const num = parseFloat(String(mv[i] || '').replace(',', '.'));
         const _p = lv[i].slice(7).split('|');
         repl.push({ name: _p[0], res: _p[1] || '', qty: Math.max(1, parseInt(_p[2], 10) || 1), pts: isNaN(num) ? null : num });
-        if (!isNaN(num)) sum += num;
+        if (!isNaN(num)) rsum += num;
     }
     const state = repl.length ? 'repl'
                 : (!ok && !no) ? ''
                 : (ok && no) ? 'part' : ok ? 'ok' : 'no';
+    // Виліт із заміною: жодна власна ціль не веріфікована, усі перекреслені —
+    // отже всі йдуть у «відхилено». У залік іде тільки те, що вказав
+    // веріфікатор, і бали теж лише його
+    if (repl.length) { ok = 0; no = n; sum = rsum; }
+    else { sum += rsum; }
     return { list: list, pts: pts, sum: sum, ok: ok, no: no, repl: repl, state: state };
 }
 
