@@ -1859,7 +1859,10 @@ function _pushVerifyLines(lines, recs) {
     let ok = 0, no = 0, sum = 0, canc = 0;
     recs.forEach(r => {
         if (!r.v || !r.v.state) return;
-        ok += r.v.ok + r.v.repl.length; no += r.v.no; sum += r.v.sum;
+        // заміна важить стільки цілей, скільки їх побачив веріфікатор:
+        // чотири «Антени» він замінив на дві «Антени вел», отже плюс дві
+        ok += r.v.ok + r.v.repl.reduce((s, rp) => s + (rp.qty || 1), 0);
+        no += r.v.no; sum += r.v.sum;
         canc += r.v.state === 'repl' ? (parseFloat(r.points) || 0)
                                      : Math.max(0, (parseFloat(r.points) || 0) - r.v.sum);
     });
