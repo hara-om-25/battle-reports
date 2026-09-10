@@ -196,8 +196,8 @@ body {
 /* ── ПОЛЯ ВИБОРУ КОЛОНОК ─────────────────────────── */
 .cols {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, 76px);
+  gap: 9px 8px;
   margin-bottom: 12px;
 }
 .cslot { position:relative; }
@@ -213,7 +213,7 @@ body {
   border: 2px solid var(--surface-light);
   border-radius: 2px;
   color: var(--text);
-  padding: 8px 10px;
+  padding: 8px 4px;
   width: 100%;
   font-size: .9em;
   font-weight: 500;
@@ -415,7 +415,7 @@ function colToIdx(s) {
 }
 
 const OPTIONS = (function () {
-  let h = '<option value="">— не обрано —</option>';
+  let h = '<option value="">—</option>';
   for (let i = 0; i < MAX_COL; i++) h += '<option value="' + idxToCol(i) + '">' + idxToCol(i) + '</option>';
   return h;
 })();
