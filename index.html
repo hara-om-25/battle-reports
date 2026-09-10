@@ -1683,6 +1683,9 @@ async function runVerification(file) {
         for (const name of state.archiveSheets) {
             const rows = await apiGet(name);
             if (rows.length < 2) continue;
+            // У частині аркушів у колонці дати лежить лише час. Тоді день
+            // звіряємо з періодом у назві аркуша — іншої дати там просто немає
+            const period = _sheetPeriod(name);
 
             // для кожного рядка аркуша готуємо переліки по його цілях
             const cell = [];
@@ -1698,7 +1701,9 @@ async function runVerification(file) {
                 for (let i = 1; i < rows.length; i++) {
                     const row = rows[i] || [];
                     if (_vCoord(row[5]) !== it.coord) continue;
-                    if (_vDate(row[1]) !== it.date) continue;
+                    const sd = _vDate(row[1]);
+                    if (sd) { if (sd !== it.date) continue; }
+                    else if (!period || it.date < period.from || it.date > period.to) continue;
                     const rm = _vMinutes(row[1]);
                     // час звіряємо з похибкою; якщо часу немає — не заважає
                     if (it.min !== null && rm !== null && Math.abs(rm - it.min) > _V_TIME_TOL) continue;
