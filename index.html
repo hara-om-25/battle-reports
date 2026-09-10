@@ -1716,7 +1716,6 @@ async function runVerification(file) {
     state.archiveLoading = true; render();
     const matched = new Set(), ambiguous = new Set();
     let sheetsTouched = 0, sheetsWidened = 0, inPeriod = 0;
-    const unverified = [];   // ТИМЧАСОВО
     try {
         const grid = await _sheetGrid();
         for (const name of [state.selArchive]) {
@@ -1736,9 +1735,6 @@ async function runVerification(file) {
                 cell.push({ names: tg.map(_vName), types: tg.map(_vType), v: tg.map(() => ''), p: tg.map(() => ''), repl: [] });
             }
             let touched = false;
-            // ТИМЧАСОВО: куди ліг кожен рядок файлу — щоб було видно, хто саме
-            // забрав рядок у вильоту, який лишився без вердикту
-            const place = new Map();
 
             items.forEach((it, idx) => {
                 if (!it.verdict) return;
@@ -1787,43 +1783,10 @@ async function runVerification(file) {
                     }
                     touched = true;
                     matched.add(idx);
-                    place.set(idx, hits[0][0]);
                 } else if (hits.length > 1) {
                     ambiguous.add(idx);
                 }
             });
-            // ТИМЧАСОВО: по кожному вильоту з балами, який лишився без вердикту,
-            // шукаємо в файлі рядок з тією ж координатою й кажемо, що завадило
-            for (let i = 1; i < rows.length; i++) {
-                const c = cell[i - 1], row = rows[i] || [];
-                if (c.v.some(Boolean) || c.repl.length) continue;
-                if (!(parseFloat(row[9]) || 0)) continue;
-                const co = _vCoord(row[5]);
-                const tag = _vNorm(row[5]).split(/\s+/).slice(2).join(' ') || co;
-                const cands = items.filter(it => it.verdict && it.coord === co);
-                if (!cands.length) { unverified.push(tag + ' — координати немає у файлі'); continue; }
-                const sd = _vDate(row[1]), rm = _vMinutes(row[1]);
-                const day = sd ? cands.filter(it => it.date === sd) : cands;
-                if (!day.length) { unverified.push(tag + ' — дата: ' + sd + ' проти ' + cands[0].date); continue; }
-                const hhmm = m => m === null ? '—' : String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
-                const near = day.map(it => [it, (rm === null || it.min === null) ? 0 : Math.abs(rm - it.min)])
-                                .sort((a, b) => a[1] - b[1])[0];
-                if (near[1] > _V_TIME_TOL) {
-                    unverified.push(tag + ' — час: у таблиці ' + hhmm(rm) + ', у файлі ' + hhmm(near[0].min)
-                        + ' (' + near[1] + ' хв); цілі тут: ' + (row[2] || '—') + '; у файлі: ' + near[0].tgt.name);
-                    continue;
-                }
-                const took = place.get(items.indexOf(near[0]));
-                if (took === undefined) {
-                    unverified.push(tag + ' — ціль «' + near[0].tgt.name + '» проти «' + (row[2] || '—') + '»');
-                    continue;
-                }
-                const tr = rows[took + 1] || [];
-                const td = Math.abs((_vMinutes(tr[1]) || 0) - (near[0].min || 0));
-                unverified.push(tag + ' — забрав виліт ' + (tr[0] || '?') + ' (' + td + ' хв проти ' + near[1] + ' хв)'
-                    + '; рядків файлу на цю координату: ' + cands.length + ' (' + cands.map(x => x.tgt.name).join(', ') + ')'
-                    + '; цілі тут: ' + (row[2] || '—') + '; там: ' + (tr[2] || '—'));
-            }
             if (!touched) continue;
 
             const col = [];
@@ -1872,7 +1835,6 @@ async function runVerification(file) {
         + 'Не знайдено: ' + notFound + '\n'
         + 'Неоднозначних (кілька збігів): ' + ambiguous.size + '\n'
         + 'Поза періодом аркуша: ' + (withVerdict - inPeriod)
-        + (unverified.length ? '\n\nБез вердикту:\n' + unverified.join('\n') : '')
         + (sheetsWidened ? '\n\nДодано колонки L і M' : ''));
 }
 
