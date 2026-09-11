@@ -1849,7 +1849,10 @@ async function runVerification(file) {
             // для кожного рядка аркуша готуємо переліки по його цілях
             const cell = [];
             for (let i = 1; i < rows.length; i++) {
-                const tg = String((rows[i] || [])[2] || '').split(', ').map(x => x.trim());
+                // виліт без цілей дає порожній перелік, а не одну порожню ціль:
+                // інакше в колонку L лягав зайвий перший роздільник
+                const tgRaw = String((rows[i] || [])[2] || '').trim();
+                const tg = tgRaw ? tgRaw.split(', ').map(x => x.trim()) : [];
                 // ОС — це позиція, а не людина: у файлі на неї припадає стільки
                 // рядків, скільки людей. Тому всі рядки ОС зводимо в одну ціль,
                 // але тільки коли у вильоті ОС одна — інакше розкласти нічим
@@ -1872,6 +1875,10 @@ async function runVerification(file) {
                 // 2 час, 3 назва цілі. Потрібно, щоб бачити, де саме відсів
                 for (let i = 1; i < rows.length; i++) {
                     const row = rows[i] || [];
+                    // виліт без балів у доповідь не потрапляє, отже й у файлі
+                    // верифікації його немає: усе, що збіглося з ним, насправді
+                    // належить іншому вильоту
+                    if (!(parseFloat(row[9]) || 0)) continue;
                     if (_vCoord(row[5]) !== it.coord) continue;
                     const sd = _vDate(row[1]);
                     if (sd) { if (sd !== it.date) continue; }
