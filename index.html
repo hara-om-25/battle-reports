@@ -2019,9 +2019,11 @@ async function runVerification(file) {
 // Рядки про верифікацію в доповідь. Рахуємо цілі, а не вильоти.
 // Скасовані бали — різниця між нарахованими за виліт і підтвердженими
 function _pushVerifyLines(lines, recs) {
-    let ok = 0, no = 0, sum = 0, canc = 0, add = 0;
+    let ok = 0, no = 0, sum = 0, canc = 0, add = 0, unv = 0;
     recs.forEach(r => {
-        if (!r.v || !r.v.state) return;
+        // виліт, якого звіряння не зачепило, не йде ні у веріфіковані бали,
+        // ні у скасовані — його бали рахуємо окремо
+        if (!r.v || !r.v.state) { unv += parseFloat(r.points) || 0; return; }
         add += Math.max(0, r.v.sum - (parseFloat(r.points) || 0));
         canc += Math.max(0, (parseFloat(r.points) || 0) - r.v.sum);
         // заміна важить стільки цілей, скільки їх побачив веріфікатор:
@@ -2033,6 +2035,7 @@ function _pushVerifyLines(lines, recs) {
     lines.push('Веріфіковано ' + Math.round(sum) + ' балів.');
     lines.push('Скасовано ' + Math.round(canc) + ' балів.');
     if (Math.round(add)) lines.push('Додано ' + Math.round(add) + ' балів.');
+    if (Math.round(unv)) lines.push('Не звірено ' + Math.round(unv) + ' балів.');
     lines.push('Підтверджено ' + ok + ' цілей, відхилено ' + no + '.');
 }
 /* ============ /ВЕРИФІКАЦІЯ ============ */
