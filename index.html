@@ -1397,7 +1397,7 @@ async function loadAllArchiveSheets() {
                         ammo: (row[7]||'').trim(),
                         result: row[8]||'',
                         points: parseFloat(row[9])||0,
-                        v: _verdictInfo(row[2]||'', row[11], row[12]),
+                        v: _verdictInfo(row[2]||'', row[11], row[12], row[3], row[4]),
                         sheet: name
                     });
                 }
@@ -1524,7 +1524,7 @@ function _vTargetMatch(a, b) {
 // у тому ж порядку, що й цілі в колонці C та результати в колонці I.
 // Повертає: list — вердикти ('ok'/'no'/''), pts — бали, sum — сума лише
 // підтверджених, state — 'ok' | 'no' | 'part' | '' на весь виліт
-function _verdictInfo(targetsStr, l, m) {
+function _verdictInfo(targetsStr, l, m, q200, q300) {
     const n = String(targetsStr || '').split(', ').filter(x => x.trim()).length;
     const lv = String(l || '').split(',').map(x => x.trim());
     const mv = String(m || '').split(',').map(x => x.trim());
@@ -1571,7 +1571,12 @@ function _verdictInfo(targetsStr, l, m) {
     if (ok || no || repl.length) {
         for (let i = 0; i < n; i++) if (!list[i]) { list[i] = 'no'; no++; }
     }
-    const state = repl.length ? 'repl'
+    // Веріфікатор міг втрутитися трьома способами: підмінити ціль, поставити
+    // інший результат або перевести людей з 300 у 200 чи навпаки. Кожне з них
+    // однаково робить виліт заміненим — інакше картка із заміною всередині
+    // підписувалась як просто веріфікована
+    const osDiff = !!os && (os.k !== (parseInt(q200) || 0) || os.w !== (parseInt(q300) || 0));
+    const state = (repl.length || vres.some(Boolean) || osDiff) ? 'repl'
                 : (!ok && !no) ? ''
                 : (ok && no) ? 'part' : ok ? 'ok' : 'no';
     return { list: list, pts: pts, vres: vres, sum: own + rsum, ok: ok, no: no, repl: repl, os: os, state: state };
@@ -1702,9 +1707,16 @@ function _osNote(r) {
     if (!os) return [];
     const k = parseInt(r.qty200) || 0, w = parseInt(r.qty300) || 0;
     const d2 = os.k - k, d3 = os.w - w;
+    if (!d2 && !d3) return [];
+    // людину перевели з однієї позиції в іншу
     if (d2 > 0 && d3 < 0) return [_osMove('300', -d3, '200', d2)];
     if (d3 > 0 && d2 < 0) return [_osMove('200', -d2, '300', d3)];
-    return [];
+    // інакше веріфікатор просто нарахував іншу кількість — називаємо кожну
+    // позицію, що розійшлася
+    const out = [];
+    if (d2) out.push(_osMove('200', k, '200', os.k));
+    if (d3) out.push(_osMove('300', w, '300', os.w));
+    return out;
 }
 function _osMove(from, nf, to, nt) {
     const side = (p, n) => _vW('ОС') + ' '
@@ -2039,7 +2051,7 @@ async function loadArchiveSheet(name) {
                     ammo: (row[7]||''  ).trim(),
                     result: row[8]||''  ,
                     points: parseFloat(row[9])||0,
-                    v: _verdictInfo(row[2]||'', row[11], row[12])
+                    v: _verdictInfo(row[2]||'', row[11], row[12], row[3], row[4])
                 });
             }
         }
