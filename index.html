@@ -3353,6 +3353,9 @@ function render() {
             } else {
                 const _arDates=[...new Set(state.archiveRecs.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>{const f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};return f(a)<f(b)?-1:1;});
                 const _arTotal=Math.round(state.archiveRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+                // чи звірявся цей аркуш узагалі: доки жоден виліт не дістав
+                // вердикту, немає підстав позначати решту як не звірені
+                const _anyV=state.archiveRecs.some(x=>x.v&&x.v.state);
                 const _sep='<span style="color:var(--yellow)">, </span>';
                 const _dash='<span style="color:var(--yellow)"> \u2014 </span>';
                 const _ysep='<span style="color:var(--yellow)"> | </span>';
@@ -3375,18 +3378,20 @@ const _gone=ri===0?_replacedList(r,tgts,ress):'';
 return `${_vY('веріфікатор замінив')} ${_gone?_gone+' ':''}${_vY('на')} ${_vW(_vType(rp.name))}${_rt?`${_dash}${_rt}`:''}`;}),..._resChanges(r,tgts,ress),..._osNote(r)].filter(Boolean);
                         const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
-                        const _unv=(!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
-                        return `<div class="record-card text-sm${_unv}" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')}${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;if(!_st)return `<p class="stencil" style="color:var(--yellow)">${r.points} балів</p>`;const _sum=Math.round(r.v.sum);
+                        const _unv=(_anyV&&!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
+                        return `<div class="record-card text-sm${_unv}" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')}${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;// виліт із балами, якого звіряння не зачепило: у залік не йде нічого, а власні
+// бали лишаються в дужках, щоб було видно, скільки саме не підтверджено
+if(!_st)return (_anyV&&(parseFloat(r.points)||0))?`<p class="stencil" style="color:var(--red-label)">0 балів <span style="color:var(--yellow)">(не звірено ${Math.round(parseFloat(r.points)||0)} балів)</span></p>`:`<p class="stencil" style="color:var(--yellow)">${r.points} балів</p>`;const _sum=Math.round(r.v.sum);
 // скасоване — це різниця між нарахованим за виліт і тим, що веріфікатор дав
 // власним цілям вильоту. Дописані ним понад виліт бали скасування не зменшують
 // різниця між нарахованим за виліт і тим, що дав веріфікатор. Одне число:
 // або скасовано, або додано, обох одразу не буває
 const _c=Math.max(0,Math.round((parseFloat(r.points)||0)-r.v.sum));
 const _a=Math.max(0,Math.round(r.v.sum-(parseFloat(r.points)||0)));
-const _clr=_st==='repl'?'#fff':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)';return `<p class="stencil" style="color:${_clr}">${_st==='no'?0:_sum} балів${_c?` <span style="color:var(--yellow)">(скасовано ${_c} балів)</span>`:''}${_a?` <span style="color:var(--yellow)">(додано ${_a} балів)</span>`:''}</p>`;})()}${(()=>{const _st=r.v&&r.v.state;
+const _clr=_st==='repl'?'var(--blue-label)':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)';return `<p class="stencil" style="color:${_clr}">${_st==='no'?0:_sum} балів${_c?` <span style="color:var(--yellow)">(скасовано ${_c} балів)</span>`:''}${_a?` <span style="color:var(--yellow)">(додано ${_a} балів)</span>`:''}</p>`;})()}${(()=>{const _st=r.v&&r.v.state;
 // виліт із балами, який не дістав жодного вердикту — саме такі й губляться
-if(!_st) return (parseFloat(r.points)||0)?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:var(--khaki)">НЕ ЗВІРЕНО</span>`:'';
-return `<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${_st==='repl'?'#fff':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)'}">${_st==='repl'?'ЗАМІНЕНО':_st==='ok'?'ВЕРИФІКОВАНО':_st==='no'?'ВІДХИЛЕНО':'ЧАСТКОВО<br>ВЕРІФІКОВАНО'}</span>`;})()}</div>`;
+if(!_st) return (_anyV&&(parseFloat(r.points)||0))?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:var(--red-label)">НЕ ЗВІРЕНО</span>`:'';
+return `<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${_st==='repl'?'var(--blue-label)':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)'}">${_st==='repl'?'ЗАМІНЕНО':_st==='ok'?'ВЕРИФІКОВАНО':_st==='no'?'ВІДХИЛЕНО':'ЧАСТКОВО<br>ВЕРІФІКОВАНО'}</span>`;})()}</div>`;
                     }).join('');
                     return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
                 }).join('');
