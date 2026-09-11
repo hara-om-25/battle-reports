@@ -1688,14 +1688,20 @@ function _osParts(r) {
         + '<span style="color:' + clr + '">' + lbl + '</span>' + dash
         + '<span style="color:#fff">' + num + '</span>'
         + (off ? '</span>' : '');
-    const out = [chip('200', '#e05050', k, !!os && os.k < k),
-                 chip('300', '#5599dd', w, !!os && os.w < w)];
-    if (os) {
-        const d2 = os.k - k, d3 = os.w - w;
-        if (d2 > 0 && d3 < 0) out.push(_osMove('300', -d3, '200', d2));
-        else if (d3 > 0 && d2 < 0) out.push(_osMove('200', -d2, '300', d3));
-    }
-    return out;
+    return [chip('200', '#e05050', k, !!os && os.k < k),
+            chip('300', '#5599dd', w, !!os && os.w < w)];
+}
+
+// Напис про те, що веріфікатор перевів людей з однієї позиції в іншу.
+// Йде окремим рядком, разом з рештою написів «веріфікатор замінив...»
+function _osNote(r) {
+    const os = r.v && r.v.os;
+    if (!os) return [];
+    const k = parseInt(r.qty200) || 0, w = parseInt(r.qty300) || 0;
+    const d2 = os.k - k, d3 = os.w - w;
+    if (d2 > 0 && d3 < 0) return [_osMove('300', -d3, '200', d2)];
+    if (d3 > 0 && d2 < 0) return [_osMove('200', -d2, '300', d3)];
+    return [];
 }
 function _osMove(from, nf, to, nt) {
     const side = (p, n) => _vW('ОС') + ' '
@@ -3336,16 +3342,19 @@ function render() {
                         const n=++_arNum;
                         const tgts=r.target?r.target.split(', '):[];
                         const ress=r.result?r.result.split(', '):[];
-                        const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');const _one=tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;return (r.v&&r.v.list[j]==='no')?`<span class="tgt-off">${_one}</span>`:_one;}),...((r.v&&r.v.repl)||[]).map((rp,ri)=>{const _rr=String(rp.res||'').toLowerCase();
+                        const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');const _one=tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;return (r.v&&r.v.list[j]==='no')?`<span class="tgt-off">${_one}</span>`:_one;}),..._osParts(r)].filter(Boolean);
+                        // написи «веріфікатор замінив...» — кожен окремим рядком
+                        // під переліком цілей, а не в його хвості
+                        const notes=[...((r.v&&r.v.repl)||[]).map((rp,ri)=>{const _rr=String(rp.res||'').toLowerCase();
 const _rt=[_rr?_vK(_rr):'',rp.qty>1?_vW(rp.qty)+' '+_vY('од.'):''].filter(Boolean).join(' ');
 // перший напис про заміну називає й те, що замінили: скільки саме наших цілей
 // веріфікатор не визнав і чим їх замінив
 const _gone=ri===0?_replacedList(r,tgts,ress):'';
-return `${_vY('веріфікатор замінив')} ${_gone?_gone+' ':''}${_vY('на')} ${_vW(_vType(rp.name))}${_rt?`${_dash}${_rt}`:''}`;}),..._resChanges(r,tgts,ress),..._osParts(r)].filter(Boolean);
+return `${_vY('веріфікатор замінив')} ${_gone?_gone+' ':''}${_vY('на')} ${_vW(_vType(rp.name))}${_rt?`${_dash}${_rt}`:''}`;}),..._resChanges(r,tgts,ress),..._osNote(r)].filter(Boolean);
                         const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
                         const _unv=(!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
-                        return `<div class="record-card text-sm${_unv}" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;if(!_st)return `<p class="stencil" style="color:var(--yellow)">${r.points} балів</p>`;const _sum=Math.round(r.v.sum);
+                        return `<div class="record-card text-sm${_unv}" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')}${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;if(!_st)return `<p class="stencil" style="color:var(--yellow)">${r.points} балів</p>`;const _sum=Math.round(r.v.sum);
 // скасоване — це різниця між нарахованим за виліт і тим, що веріфікатор дав
 // власним цілям вильоту. Дописані ним понад виліт бали скасування не зменшують
 // різниця між нарахованим за виліт і тим, що дав веріфікатор. Одне число:
