@@ -191,6 +191,9 @@
        Через opacity так не вийде — вона гасить і лінію разом із текстом */
     .tgt-off { text-decoration: line-through; text-decoration-color: var(--red-label); color: #6c6b62; }
     .tgt-off span { color: #45451d !important; }
+    /* Стара кількість на позначці 200/300: закреслена, але на чверть яскравіша
+       за відкинуту ціль — це не скасована ціль, а число, яке уточнили */
+    .qty-old { text-decoration: line-through; text-decoration-color: var(--red-label); color: #565624; }
     /* Скасувати видалення — той самий крій, що й у зеленої «+», лише помаранчева */
     .btn-orange {
       background: #8a4a15;
@@ -1696,7 +1699,7 @@ function _osParts(r, tgts) {
         const head = '<span style="color:' + clr + '">' + lbl + '</span>' + dash;
         if (rej || now === 0) return '<span class="tgt-off">' + head + '<span>' + num + '</span></span>';
         if (now === null || now === num) return head + '<span style="color:#fff">' + num + '</span>';
-        return head + '<span class="tgt-off"><span>' + num + '</span></span> '
+        return head + '<span class="qty-old">' + num + '</span> '
              + '<span style="color:#fff">' + now + '</span>';
     };
     return [chip('200', '#e05050', k, os ? os.k : null),
