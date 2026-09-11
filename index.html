@@ -1533,10 +1533,14 @@ function _verdictInfo(targetsStr, l, m) {
     // порівнюються нараховані бали, коли рахуємо скасоване: те, що він
     // дописав понад виліт, скасування не зменшує
     let ok = 0, no = 0, own = 0;
+    const vres = [];
     for (let i = 0; i < n; i++) {
-        const t = (lv[i] || '').toLowerCase();
+        // у вердикті може стояти й результат веріфікатора: «Підтверджено|Знищено»
+        const _q = (lv[i] || '').split('|');
+        const t = (_q[0] || '').trim().toLowerCase();
         const v = t === 'підтверджено' ? 'ok' : t === 'відхилено' ? 'no' : '';
         list.push(v);
+        vres.push((_q[1] || '').trim());
         const num = parseFloat(String(mv[i] || '').replace(',', '.'));
         const p = isNaN(num) ? null : num;
         pts.push(p);
@@ -1570,7 +1574,7 @@ function _verdictInfo(targetsStr, l, m) {
     const state = repl.length ? 'repl'
                 : (!ok && !no) ? ''
                 : (ok && no) ? 'part' : ok ? 'ok' : 'no';
-    return { list: list, pts: pts, sum: own + rsum, own: own, ok: ok, no: no, repl: repl, os: os, state: state };
+    return { list: list, pts: pts, vres: vres, sum: own + rsum, own: own, ok: ok, no: no, repl: repl, os: os, state: state };
 }
 
 
@@ -1698,6 +1702,23 @@ function _osMove(from, nf, to, nt) {
          + ' на ОС ' + to + ' - ' + nt + '</span>';
 }
 
+// Ціль підтверджена, але результат веріфікатор поставив інший — пошкоджене
+// стало знищеним чи навпаки. Пишемо окремо, тим самим зворотом, що й заміну
+function _resChanges(r, tgts, ress) {
+    if (!r.v || !r.v.vres) return [];
+    const out = [];
+    r.v.vres.forEach((nr, j) => {
+        if (!nr || r.v.list[j] !== 'ok') return;
+        const was = String(ress[j] || '').trim().toLowerCase();
+        const now = String(nr).trim().toLowerCase();
+        if (!now || now === was) return;
+        out.push('<span style="color:var(--yellow)">веріфікатор замінив</span> '
+            + '<span style="color:var(--text)">' + esc(tgts[j] || '') + '</span> '
+            + '<span style="color:var(--yellow)">' + esc(was || '—') + ' на ' + esc(now) + '</span>');
+    });
+    return out;
+}
+
 // Які власні цілі вильоту веріфікатор не визнав — за типами й кількістю:
 // «АНТЕНА 4 одиниці». Саме їх він і замінив тим, що подав від себе
 function _replacedList(r, tgts) {
@@ -1808,6 +1829,9 @@ async function runVerification(file) {
                 const os = tg.map((x, k) => _vType(x) === 'ОС' ? k : -1).filter(k => k >= 0);
                 cell.push({
                     names: tg.map(_vName), types: tg.map(_vType),
+                    // власні результати вильоту — щоб помітити, коли веріфікатор
+                    // підтвердив ціль, але з іншим результатом
+                    res: String((rows[i] || [])[8] || '').split(', ').map(x => x.trim()),
                     v: tg.map(() => ''), p: tg.map(() => ''), repl: [],
                     osIdx: os.length === 1 ? os[0] : -1, osK: 0, osW: 0
                 });
@@ -1874,7 +1898,11 @@ async function runVerification(file) {
                             else if (rs.indexOf('пошкодж') === 0) c.osW += it.qty;
                         }
                     } else if (j >= 0) {
-                        c.v[j] = it.verdict;
+                        // веріфікатор підтвердив ціль, але з іншим результатом —
+                        // дописуємо його результат до вердикту, щоб не загубити
+                        const nr = it.verdict === 'Підтверджено' && it.res
+                            && _vName(it.res) !== _vName(c.res[j] || '') ? '|' + it.res : '';
+                        c.v[j] = it.verdict + nr;
                         c.p[j] = it.pts;
                     } else {
                         // веріфікатор може подати ті самі дві цілі як один
@@ -3305,7 +3333,7 @@ function render() {
 // перший напис про заміну називає й те, що замінили: скільки саме наших цілей
 // веріфікатор не визнав і чим їх замінив
 const _gone=ri===0?_replacedList(r,tgts):'';
-return `<span style="color:var(--yellow)">веріфікатор замінив ${_gone?esc(_gone)+' ':''}на</span> <span style="color:var(--text)">${esc(_vType(rp.name))}</span>${_rt?`${_dash}<span style="color:var(--khaki)">${esc(_rt)}</span>`:''}`;}),..._osParts(r)].filter(Boolean);
+return `<span style="color:var(--yellow)">веріфікатор замінив ${_gone?esc(_gone)+' ':''}на</span> <span style="color:var(--text)">${esc(_vType(rp.name))}</span>${_rt?`${_dash}<span style="color:var(--khaki)">${esc(_rt)}</span>`:''}`;}),..._resChanges(r,tgts,ress),..._osParts(r)].filter(Boolean);
                         const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
                         const _unv=(!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
