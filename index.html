@@ -1545,8 +1545,15 @@ function _verdictInfo(targetsStr, l, m) {
     }
     // після переліку цілей можуть стояти заміни: веріфікатор указав ціль,
     // якої в цьому вильоті немає
-    let rsum = 0;
+    let rsum = 0, os = null;
     for (let i = n; i < lv.length; i++) {
+        // лічильники ОС: скільки людей веріфікатор провів знищеними й скільки
+        // пораненими. Балів за собою не несуть — вони вже в самій цілі
+        if (lv[i].slice(0, 3) === 'ОС:') {
+            const q = lv[i].slice(3).split('|');
+            os = { k: parseInt(q[0], 10) || 0, w: parseInt(q[1], 10) || 0 };
+            continue;
+        }
         if (lv[i].slice(0, 7) !== 'ЗАМІНА:') continue;
         const num = parseFloat(String(mv[i] || '').replace(',', '.'));
         const _p = lv[i].slice(7).split('|');
@@ -1563,7 +1570,7 @@ function _verdictInfo(targetsStr, l, m) {
     const state = repl.length ? 'repl'
                 : (!ok && !no) ? ''
                 : (ok && no) ? 'part' : ok ? 'ok' : 'no';
-    return { list: list, pts: pts, sum: own + rsum, own: own, ok: ok, no: no, repl: repl, state: state };
+    return { list: list, pts: pts, sum: own + rsum, own: own, ok: ok, no: no, repl: repl, os: os, state: state };
 }
 
 
@@ -1665,6 +1672,32 @@ function _vFileTarget(typeRaw, idRaw) {
 // Тип цілі з таблиці: та сама назва без номера в кінці — «ОС 6» це «ОС»
 function _vType(x) { return _vName(String(x === null || x === undefined ? '' : x).replace(/\s+\d+\s*$/, '')); }
 
+// Позначки 200 і 300 на картці архіву. Коли веріфікатор полічив людей сам,
+// непідтверджену позицію перекреслюємо, а переведення з однієї в іншу
+// підписуємо окремо: «замінив ОС 300 - 1 на ОС 200 - 1»
+function _osParts(r) {
+    const dash = '<span style="color:var(--yellow)"> — </span>';
+    const os = r.v && r.v.os;
+    const k = parseInt(r.qty200) || 0, w = parseInt(r.qty300) || 0;
+    const chip = (lbl, clr, num, off) => !num ? '' :
+        (off ? '<span class="tgt-off">' : '')
+        + '<span style="color:' + clr + '">' + lbl + '</span>' + dash
+        + '<span style="color:#fff">' + num + '</span>'
+        + (off ? '</span>' : '');
+    const out = [chip('200', '#e05050', k, !!os && os.k < k),
+                 chip('300', '#5599dd', w, !!os && os.w < w)];
+    if (os) {
+        const d2 = os.k - k, d3 = os.w - w;
+        if (d2 > 0 && d3 < 0) out.push(_osMove('300', -d3, '200', d2));
+        else if (d3 > 0 && d2 < 0) out.push(_osMove('200', -d2, '300', d3));
+    }
+    return out;
+}
+function _osMove(from, nf, to, nt) {
+    return '<span style="color:var(--yellow)">веріфікатор замінив ОС ' + from + ' - ' + nf
+         + ' на ОС ' + to + ' - ' + nt + '</span>';
+}
+
 // «1 одиниця», «2 одиниці», «5 одиниць»
 function _vUnits(n) {
     const t = n % 100, o = n % 10;
@@ -1755,7 +1788,15 @@ async function runVerification(file) {
             const cell = [];
             for (let i = 1; i < rows.length; i++) {
                 const tg = String((rows[i] || [])[2] || '').split(', ').map(x => x.trim());
-                cell.push({ names: tg.map(_vName), types: tg.map(_vType), v: tg.map(() => ''), p: tg.map(() => ''), repl: [] });
+                // ОС — це позиція, а не людина: у файлі на неї припадає стільки
+                // рядків, скільки людей. Тому всі рядки ОС зводимо в одну ціль,
+                // але тільки коли у вильоті ОС одна — інакше розкласти нічим
+                const os = tg.map((x, k) => _vType(x) === 'ОС' ? k : -1).filter(k => k >= 0);
+                cell.push({
+                    names: tg.map(_vName), types: tg.map(_vType),
+                    v: tg.map(() => ''), p: tg.map(() => ''), repl: [],
+                    osIdx: os.length === 1 ? os[0] : -1, osK: 0, osW: 0
+                });
             }
             let touched = false;
 
@@ -1774,31 +1815,51 @@ async function runVerification(file) {
                     // час звіряємо з похибкою; якщо часу немає — не заважає
                     if (it.min !== null && rm !== null && Math.abs(rm - it.min) > _V_TIME_TOL) continue;
                     const c = cell[i - 1];
-                    // серед однойменних цілей вильоту беремо ще не зайняту:
-                    // інакше другий рядок файлу лягав на те саме місце, а
-                    // сусіднє лишалося порожнім
-                    let j = c.names.findIndex((nm, k) => nm === it.tgt.name && !c.v[k]);
-                    if (j < 0) j = c.names.indexOf(it.tgt.name);
-                    // номера у файлі немає — беремо першу ще не зайняту ціль
-                    // того самого типу; так кілька рядків одного типу лягають
-                    // по черзі на кілька цілей вильоту
-                    if (j < 0 && !it.tgt.num) j = c.types.findIndex((t, k) => t === it.tgt.type && !c.v[k]);
+                    // рядок ОС завжди йде на єдину ОС вильоту, навіть якщо та
+                    // вже зайнята попереднім рядком: це не друга ціль, а друга
+                    // людина на тій самій позиції
+                    const fold = it.tgt.type === 'ОС' && c.osIdx >= 0;
+                    let j;
+                    if (fold) { j = c.osIdx; }
+                    else {
+                        // серед однойменних цілей вильоту беремо ще не зайняту:
+                        // інакше другий рядок файлу лягав на те саме місце, а
+                        // сусіднє лишалося порожнім
+                        j = c.names.findIndex((nm, k) => nm === it.tgt.name && !c.v[k]);
+                        if (j < 0) j = c.names.indexOf(it.tgt.name);
+                        // номера у файлі немає — беремо першу ще не зайняту ціль
+                        // того самого типу; так кілька рядків одного типу лягають
+                        // по черзі на кілька цілей вильоту
+                        if (j < 0 && !it.tgt.num) j = c.types.findIndex((t, k) => t === it.tgt.type && !c.v[k]);
+                    }
                     const d = (it.min === null || rm === null) ? 0 : Math.abs(rm - it.min);
                     // назви не збіглись, хоч усе решта збіглось — веріфікатор
                     // замінив ціль; запам'ятовуємо як заміну для цього рядка
-                    hits.push([i - 1, j, d]);
+                    hits.push([i - 1, j, d, fold]);
                 }
                 // кілька збігів у межах півгодини — спершу беремо той, де ціль
                 // ще вільна, і аж потім найближчий за часом. Без цього два
                 // близькі вильоти віддавали обидва рядки файлу одному, а
                 // другий лишався не звіреним. Однакові й вільність, і
                 // відстань — розрізнити нічим
-                const free = h => (h[1] >= 0 && !cell[h[0]].v[h[1]]) ? 0 : 1;
+                const free = h => (h[1] >= 0 && (h[3] || !cell[h[0]].v[h[1]])) ? 0 : 1;
                 if (hits.length > 1) hits.sort((a, b) => free(a) - free(b) || a[2] - b[2]);
                 if (hits.length === 1 || (hits.length > 1
                     && (free(hits[0]) !== free(hits[1]) || hits[1][2] > hits[0][2]))) {
                     const c = cell[hits[0][0]], j = hits[0][1];
-                    if (j >= 0) {
+                    if (j >= 0 && hits[0][3]) {
+                        // ОС: складаємо бали всіх рядків і рахуємо, скільки
+                        // людей веріфікатор провів як знищених, а скільки як
+                        // поранених — щоб потім порівняти з нашими 200 і 300
+                        if (it.verdict === 'Підтверджено' || !c.v[j]) c.v[j] = it.verdict;
+                        const a = parseFloat(c.p[j]), b = parseFloat(it.pts);
+                        c.p[j] = (isNaN(a) && isNaN(b)) ? '' : String((isNaN(a) ? 0 : a) + (isNaN(b) ? 0 : b));
+                        if (it.verdict === 'Підтверджено') {
+                            const rs = _vNorm(it.res).toLowerCase();
+                            if (rs.indexOf('знищ') === 0) c.osK += it.qty;
+                            else if (rs.indexOf('пошкодж') === 0) c.osW += it.qty;
+                        }
+                    } else if (j >= 0) {
                         c.v[j] = it.verdict;
                         c.p[j] = it.pts;
                     } else {
@@ -1836,6 +1897,9 @@ async function runVerification(file) {
                     lv.push('ЗАМІНА:' + rp[0] + (rp[2] || rp[3] > 1 ? '|' + rp[2] : '') + (rp[3] > 1 ? '|' + rp[3] : ''));
                     pv.push(rp[1]);
                 });
+                // скільки людей веріфікатор провів знищеними, а скільки
+                // пораненими — картка звірить це з нашими 200 і 300
+                if (c.osK || c.osW) { lv.push('ОС:' + c.osK + '|' + c.osW); pv.push(''); }
                 col.push([lv.join(', '), pv.join(', ')]);
             }
             if (await _widenSheet(grid, name, 13)) sheetsWidened++;
@@ -1878,9 +1942,10 @@ async function runVerification(file) {
 // Рядки про верифікацію в доповідь. Рахуємо цілі, а не вильоти.
 // Скасовані бали — різниця між нарахованими за виліт і підтвердженими
 function _pushVerifyLines(lines, recs) {
-    let ok = 0, no = 0, sum = 0, canc = 0;
+    let ok = 0, no = 0, sum = 0, canc = 0, add = 0;
     recs.forEach(r => {
         if (!r.v || !r.v.state) return;
+        add += Math.max(0, r.v.sum - (parseFloat(r.points) || 0));
         // заміна важить стільки цілей, скільки їх побачив веріфікатор:
         // чотири «Антени» він замінив на дві «Антени вел», отже плюс дві
         ok += r.v.ok + r.v.repl.reduce((s, rp) => s + (rp.qty || 1), 0);
@@ -1890,6 +1955,7 @@ function _pushVerifyLines(lines, recs) {
     if (!ok && !no) return;
     lines.push('Веріфіковано ' + Math.round(sum) + ' балів.');
     lines.push('Скасовано ' + Math.round(canc) + ' балів.');
+    if (Math.round(add)) lines.push('Додано ' + Math.round(add) + ' балів.');
     lines.push('Підтверджено ' + ok + ' цілей, відхилено ' + no + '.');
 }
 /* ============ /ВЕРИФІКАЦІЯ ============ */
@@ -3221,7 +3287,7 @@ function render() {
                         const n=++_arNum;
                         const tgts=r.target?r.target.split(', '):[];
                         const ress=r.result?r.result.split(', '):[];
-                        const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');const _one=tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;return (r.v&&r.v.list[j]==='no')?`<span class="tgt-off">${_one}</span>`:_one;}),...((r.v&&r.v.repl)||[]).map(rp=>{const _rt=[String(rp.res||'').toLowerCase(),rp.qty>1?rp.qty+' '+_vUnits(rp.qty):''].filter(Boolean).join(' ');return `<span style="color:var(--yellow)">веріфікатор замінив на</span> <span style="color:var(--text)">${esc(_vType(rp.name))}</span>${_rt?`${_dash}<span style="color:var(--khaki)">${esc(_rt)}</span>`:''}`;}),r.qty200>0?`<span style="color:#e05050">200</span>${_dash}<span style="color:#fff">${r.qty200}</span>`:'',r.qty300>0?`<span style="color:#5599dd">300</span>${_dash}<span style="color:#fff">${r.qty300}</span>`:''].filter(Boolean);
+                        const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');const _one=tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;return (r.v&&r.v.list[j]==='no')?`<span class="tgt-off">${_one}</span>`:_one;}),...((r.v&&r.v.repl)||[]).map(rp=>{const _rt=[String(rp.res||'').toLowerCase(),rp.qty>1?rp.qty+' '+_vUnits(rp.qty):''].filter(Boolean).join(' ');return `<span style="color:var(--yellow)">веріфікатор замінив на</span> <span style="color:var(--text)">${esc(_vType(rp.name))}</span>${_rt?`${_dash}<span style="color:var(--khaki)">${esc(_rt)}</span>`:''}`;}),..._osParts(r)].filter(Boolean);
                         const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
                         const _unv=(!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
@@ -3229,7 +3295,9 @@ function render() {
 // скасоване — це різниця між нарахованим за виліт і тим, що веріфікатор дав
 // власним цілям вильоту. Дописані ним понад виліт бали скасування не зменшують
 const _c=Math.max(0,Math.round((parseFloat(r.points)||0)-r.v.own));
-const _clr=_st==='repl'?'#fff':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)';return `<p class="stencil" style="color:${_clr}">${_st==='no'?0:_sum} балів${_c?` <span style="color:var(--yellow)">(скасовано ${_c} балів)</span>`:''}</p>`;})()}${(()=>{const _st=r.v&&r.v.state;
+// веріфікатор нарахував більше, ніж ми — це не скасування, а додача
+const _a=Math.max(0,Math.round(r.v.sum-(parseFloat(r.points)||0)));
+const _clr=_st==='repl'?'#fff':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)';return `<p class="stencil" style="color:${_clr}">${_st==='no'?0:_sum} балів${_c?` <span style="color:var(--yellow)">(скасовано ${_c} балів)</span>`:''}${_a?` <span style="color:var(--yellow)">(додано ${_a} балів)</span>`:''}</p>`;})()}${(()=>{const _st=r.v&&r.v.state;
 // виліт із балами, який не дістав жодного вердикту — саме такі й губляться
 if(!_st) return (parseFloat(r.points)||0)?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:var(--khaki)">НЕ ЗВІРЕНО</span>`:'';
 return `<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${_st==='repl'?'#fff':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)'}">${_st==='repl'?'ЗАМІНЕНО':_st==='ok'?'ВЕРИФІКОВАНО':_st==='no'?'ВІДХИЛЕНО':'ЧАСТКОВО<br>ВЕРІФІКОВАНО'}</span>`;})()}</div>`;
