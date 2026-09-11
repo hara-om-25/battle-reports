@@ -186,14 +186,10 @@
     .record-card.flagged { border-color: var(--yellow); }
     /* напис ВЕРИФІКОВАНО на картці вильоту — найсвітліший синій застосунку */
     :root { --blue-label: #5599dd; --green-label: #5ab558; --red-label: #e05050; }
-    /* Усе викреслене — 70% яскравості, кожне від свого звичайного кольору,
-       тому відтінки лишаються: назва цілі #d9d6c4, результат #8b8b3a, число
-       на позначці біле, самі 200 і 300 червона й блакитна (їх притемнює
-       _osParts). Лінія викреслення лишається яскравою; через opacity так не
+    /* Усе викреслене — одним кольором, тим самим, що й рядок з координатами
+       під ним. Лінія викреслення лишається яскравою; через opacity так не
        вийде — вона гасить і лінію разом із текстом */
-    .tgt-off { color: #989689; }
-    .tgt-off span { color: #616129 !important; }
-    .qty-old { color: #b3b3b3; }
+    .tgt-off, .tgt-off span, .qty-old, .mark-off, .mark-off span { color: var(--text-dim) !important; }
     /* Викреслюємо по діагоналі, знизу вгору. Лінія малюється тлом через SVG,
        розтягнутий на весь напис (preserveAspectRatio="none"), а товщина
        тримається незмінною через non-scaling-stroke — так само, як у значках.
@@ -1703,19 +1699,18 @@ function _osParts(r, tgts) {
     // вони перекреслені разом з нею — лічильників він для неї не подав
     const rej = !!(r.v && r.v.list) && (tgts || []).some((t, j) => _vType(t) === 'ОС' && r.v.list[j] === 'no');
     const k = parseInt(r.qty200) || 0, w = parseInt(r.qty300) || 0;
-    // dim — той самий колір на 70% яскравості, для скасованої позначки
-    const chip = (lbl, clr, dim, num, now) => {
+    // скасована позначка малюється в тих самих тегах, а колір їй задає
+    // .mark-off — один на все викреслене
+    const chip = (lbl, clr, num, now) => {
         if (!num) return '';
-        const off = rej || now === 0;
-        const head = '<span style="color:' + (off ? dim : clr) + '">' + lbl + '</span>'
-                   + (off ? '<span style="color:#948112"> — </span>' : dash);
-        if (off) return '<span class="mark-off">' + head + '<span style="color:#b3b3b3">' + num + '</span></span>';
+        const head = '<span style="color:' + clr + '">' + lbl + '</span>' + dash;
+        if (rej || now === 0) return '<span class="mark-off">' + head + '<span>' + num + '</span></span>';
         if (now === null || now === num) return head + '<span style="color:#fff">' + num + '</span>';
         return head + '<span class="qty-old">' + num + '</span> '
              + '<span style="color:#fff">' + now + '</span>';
     };
-    return [chip('200', '#e05050', '#9d3838', k, os ? os.k : null),
-            chip('300', '#5599dd', '#3c6b9b', w, os ? os.w : null)];
+    return [chip('200', '#e05050', k, os ? os.k : null),
+            chip('300', '#5599dd', w, os ? os.w : null)];
 }
 
 // Напис про те, що веріфікатор перевів людей з однієї позиції в іншу.
