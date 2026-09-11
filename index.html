@@ -1743,6 +1743,18 @@ function _osParts(r, tgts) {
         return head + '<span class="qty-old">' + num + '</span> '
              + '<span style="color:#fff">' + now + '</span>';
     };
+    // Чиста перестановка: усі, хто були на одній позиції, перейшли на іншу.
+    // Тоді це одна позначка — стара назва перекреслена, нова поруч, а число
+    // лишається як було
+    const move = !os ? null
+        : (w > 0 && os.w === 0 && k === 0 && os.k === w) ? ['300', '200', w]
+        : (k > 0 && os.k === 0 && w === 0 && os.w === k) ? ['200', '300', k] : null;
+    if (move) {
+        const clr = p => p === '200' ? '#e05050' : '#5599dd';
+        return ['<span class="mark-off">' + move[0] + '</span> '
+              + '<span style="color:' + clr(move[1]) + '">' + move[1] + '</span>' + dash
+              + '<span style="color:#fff">' + move[2] + '</span>'];
+    }
     return [chip('200', '#e05050', k, os ? os.k : null),
             chip('300', '#5599dd', w, os ? os.w : null)];
 }
