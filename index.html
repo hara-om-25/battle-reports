@@ -1574,7 +1574,7 @@ function _verdictInfo(targetsStr, l, m) {
     const state = repl.length ? 'repl'
                 : (!ok && !no) ? ''
                 : (ok && no) ? 'part' : ok ? 'ok' : 'no';
-    return { list: list, pts: pts, vres: vres, sum: own + rsum, own: own, ok: ok, no: no, repl: repl, os: os, state: state };
+    return { list: list, pts: pts, vres: vres, sum: own + rsum, ok: ok, no: no, repl: repl, os: os, state: state };
 }
 
 
@@ -1988,11 +1988,11 @@ function _pushVerifyLines(lines, recs) {
     recs.forEach(r => {
         if (!r.v || !r.v.state) return;
         add += Math.max(0, r.v.sum - (parseFloat(r.points) || 0));
+        canc += Math.max(0, (parseFloat(r.points) || 0) - r.v.sum);
         // заміна важить стільки цілей, скільки їх побачив веріфікатор:
         // чотири «Антени» він замінив на дві «Антени вел», отже плюс дві
         ok += r.v.ok + r.v.repl.reduce((s, rp) => s + (rp.qty || 1), 0);
         no += r.v.no; sum += r.v.sum;
-        canc += Math.max(0, (parseFloat(r.points) || 0) - r.v.own);
     });
     if (!ok && !no) return;
     lines.push('Веріфіковано ' + Math.round(sum) + ' балів.');
@@ -3340,8 +3340,9 @@ return `<span style="color:var(--yellow)">веріфікатор замінив 
                         return `<div class="record-card text-sm${_unv}" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;if(!_st)return `<p class="stencil" style="color:var(--yellow)">${r.points} балів</p>`;const _sum=Math.round(r.v.sum);
 // скасоване — це різниця між нарахованим за виліт і тим, що веріфікатор дав
 // власним цілям вильоту. Дописані ним понад виліт бали скасування не зменшують
-const _c=Math.max(0,Math.round((parseFloat(r.points)||0)-r.v.own));
-// веріфікатор нарахував більше, ніж ми — це не скасування, а додача
+// різниця між нарахованим за виліт і тим, що дав веріфікатор. Одне число:
+// або скасовано, або додано, обох одразу не буває
+const _c=Math.max(0,Math.round((parseFloat(r.points)||0)-r.v.sum));
 const _a=Math.max(0,Math.round(r.v.sum-(parseFloat(r.points)||0)));
 const _clr=_st==='repl'?'#fff':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)';return `<p class="stencil" style="color:${_clr}">${_st==='no'?0:_sum} балів${_c?` <span style="color:var(--yellow)">(скасовано ${_c} балів)</span>`:''}${_a?` <span style="color:var(--yellow)">(додано ${_a} балів)</span>`:''}</p>`;})()}${(()=>{const _st=r.v&&r.v.state;
 // виліт із балами, який не дістав жодного вердикту — саме такі й губляться
