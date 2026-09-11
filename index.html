@@ -1681,9 +1681,9 @@ function _vFileTarget(typeRaw, idRaw) {
 // Тип цілі з таблиці: та сама назва без номера в кінці — «ОС 6» це «ОС»
 function _vType(x) { return _vName(String(x === null || x === undefined ? '' : x).replace(/\s+\d+\s*$/, '')); }
 
-// Позначки 200 і 300 на картці архіву. Коли веріфікатор полічив людей сам,
-// непідтверджену позицію перекреслюємо, а переведення з однієї в іншу
-// підписуємо окремо: «замінив ОС 300 - 1 на ОС 200 - 1»
+// Позначки 200 і 300 на картці архіву. Скільки людей нарахував веріфікатор,
+// видно на самій позначці: наше число закреслене, його стоїть поруч. Нікого
+// не лишилось — позначка йде під ніж цілком
 function _osParts(r, tgts) {
     const dash = '<span style="color:var(--yellow)"> — </span>';
     const os = r.v && r.v.os;
@@ -1691,13 +1691,16 @@ function _osParts(r, tgts) {
     // вони перекреслені разом з нею — лічильників він для неї не подав
     const rej = !!(r.v && r.v.list) && (tgts || []).some((t, j) => _vType(t) === 'ОС' && r.v.list[j] === 'no');
     const k = parseInt(r.qty200) || 0, w = parseInt(r.qty300) || 0;
-    const chip = (lbl, clr, num, off) => !num ? '' :
-        (off ? '<span class="tgt-off">' : '')
-        + '<span style="color:' + clr + '">' + lbl + '</span>' + dash
-        + '<span style="color:#fff">' + num + '</span>'
-        + (off ? '</span>' : '');
-    return [chip('200', '#e05050', k, rej || (!!os && os.k < k)),
-            chip('300', '#5599dd', w, rej || (!!os && os.w < w))];
+    const chip = (lbl, clr, num, now) => {
+        if (!num) return '';
+        const head = '<span style="color:' + clr + '">' + lbl + '</span>' + dash;
+        if (rej || now === 0) return '<span class="tgt-off">' + head + '<span>' + num + '</span></span>';
+        if (now === null || now === num) return head + '<span style="color:#fff">' + num + '</span>';
+        return head + '<span class="tgt-off"><span>' + num + '</span></span> '
+             + '<span style="color:#fff">' + now + '</span>';
+    };
+    return [chip('200', '#e05050', k, os ? os.k : null),
+            chip('300', '#5599dd', w, os ? os.w : null)];
 }
 
 // Напис про те, що веріфікатор перевів людей з однієї позиції в іншу.
@@ -1707,16 +1710,12 @@ function _osNote(r) {
     if (!os) return [];
     const k = parseInt(r.qty200) || 0, w = parseInt(r.qty300) || 0;
     const d2 = os.k - k, d3 = os.w - w;
-    if (!d2 && !d3) return [];
-    // людину перевели з однієї позиції в іншу
+    // Напис лише про справжнє переведення: з однієї позиції в іншу. Коли людей
+    // просто поменшало чи побільшало, це не заміна, і видно це на самій
+    // позначці — писати ще й рядком означало б казати те саме двічі
     if (d2 > 0 && d3 < 0) return [_osMove('300', -d3, '200', d2)];
     if (d3 > 0 && d2 < 0) return [_osMove('200', -d2, '300', d3)];
-    // інакше веріфікатор просто нарахував іншу кількість — називаємо кожну
-    // позицію, що розійшлася
-    const out = [];
-    if (d2) out.push(_osMove('200', k, '200', os.k));
-    if (d3) out.push(_osMove('300', w, '300', os.w));
-    return out;
+    return [];
 }
 function _osMove(from, nf, to, nt) {
     const side = (p, n) => _vW('ОС') + ' '
