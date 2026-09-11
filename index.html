@@ -1679,17 +1679,20 @@ function _vType(x) { return _vName(String(x === null || x === undefined ? '' : x
 // Позначки 200 і 300 на картці архіву. Коли веріфікатор полічив людей сам,
 // непідтверджену позицію перекреслюємо, а переведення з однієї в іншу
 // підписуємо окремо: «замінив ОС 300 - 1 на ОС 200 - 1»
-function _osParts(r) {
+function _osParts(r, tgts) {
     const dash = '<span style="color:var(--yellow)"> — </span>';
     const os = r.v && r.v.os;
+    // 200 і 300 належать цілі ОС. Коли веріфікатор саму ціль не визнав,
+    // вони перекреслені разом з нею — лічильників він для неї не подав
+    const rej = !!(r.v && r.v.list) && (tgts || []).some((t, j) => _vType(t) === 'ОС' && r.v.list[j] === 'no');
     const k = parseInt(r.qty200) || 0, w = parseInt(r.qty300) || 0;
     const chip = (lbl, clr, num, off) => !num ? '' :
         (off ? '<span class="tgt-off">' : '')
         + '<span style="color:' + clr + '">' + lbl + '</span>' + dash
         + '<span style="color:#fff">' + num + '</span>'
         + (off ? '</span>' : '');
-    return [chip('200', '#e05050', k, !!os && os.k < k),
-            chip('300', '#5599dd', w, !!os && os.w < w)];
+    return [chip('200', '#e05050', k, rej || (!!os && os.k < k)),
+            chip('300', '#5599dd', w, rej || (!!os && os.w < w))];
 }
 
 // Напис про те, що веріфікатор перевів людей з однієї позиції в іншу.
@@ -3342,7 +3345,7 @@ function render() {
                         const n=++_arNum;
                         const tgts=r.target?r.target.split(', '):[];
                         const ress=r.result?r.result.split(', '):[];
-                        const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');const _one=tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;return (r.v&&r.v.list[j]==='no')?`<span class="tgt-off">${_one}</span>`:_one;}),..._osParts(r)].filter(Boolean);
+                        const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');const _one=tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;return (r.v&&r.v.list[j]==='no')?`<span class="tgt-off">${_one}</span>`:_one;}),..._osParts(r,tgts)].filter(Boolean);
                         // написи «веріфікатор замінив...» — кожен окремим рядком
                         // під переліком цілей, а не в його хвості
                         const notes=[...((r.v&&r.v.repl)||[]).map((rp,ri)=>{const _rr=String(rp.res||'').toLowerCase();
