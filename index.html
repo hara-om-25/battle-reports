@@ -1721,16 +1721,24 @@ function _resChanges(r, tgts, ress) {
 
 // Які власні цілі вильоту веріфікатор не визнав — за типами й кількістю:
 // «АНТЕНА 4 одиниці». Саме їх він і замінив тим, що подав від себе
-function _replacedList(r, tgts) {
+function _replacedList(r, tgts, ress) {
     if (!r.v || !r.v.repl || !r.v.repl.length) return '';
-    const cnt = {}, order = [];
+    const by = {}, order = [];
     tgts.forEach((t, j) => {
         if (r.v.list[j] !== 'no') return;
         const ty = _vType(t);
-        if (!cnt[ty]) { cnt[ty] = 0; order.push(ty); }
-        cnt[ty]++;
+        if (!by[ty]) { by[ty] = { total: 0, cnt: {}, ord: [] }; order.push(ty); }
+        const g = by[ty], rs = String(ress[j] || '').trim().toLowerCase();
+        if (!g.cnt[rs]) { g.cnt[rs] = 0; g.ord.push(rs); }
+        g.cnt[rs]++; g.total++;
     });
-    return order.map(ty => ty + ' ' + cnt[ty] + ' ' + _vUnits(cnt[ty])).join(', ');
+    // «АНТЕНА знищено 4 одиниці», а коли результати різні —
+    // «АНТЕНА знищено 3 та пошкоджено 1 одиниці»
+    return order.map(ty => {
+        const g = by[ty];
+        return ty + ' ' + g.ord.map(rs => (rs ? rs + ' ' : '') + g.cnt[rs]).join(' та ')
+             + ' ' + _vUnits(g.total);
+    }).join(', ');
 }
 
 // «1 одиниця», «2 одиниці», «5 одиниць»
@@ -3332,7 +3340,7 @@ function render() {
                         const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');const _one=tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;return (r.v&&r.v.list[j]==='no')?`<span class="tgt-off">${_one}</span>`:_one;}),...((r.v&&r.v.repl)||[]).map((rp,ri)=>{const _rt=[String(rp.res||'').toLowerCase(),rp.qty>1?rp.qty+' '+_vUnits(rp.qty):''].filter(Boolean).join(' ');
 // перший напис про заміну називає й те, що замінили: скільки саме наших цілей
 // веріфікатор не визнав і чим їх замінив
-const _gone=ri===0?_replacedList(r,tgts):'';
+const _gone=ri===0?_replacedList(r,tgts,ress):'';
 return `<span style="color:var(--yellow)">веріфікатор замінив ${_gone?esc(_gone)+' ':''}на</span> <span style="color:var(--text)">${esc(_vType(rp.name))}</span>${_rt?`${_dash}<span style="color:var(--khaki)">${esc(_rt)}</span>`:''}`;}),..._resChanges(r,tgts,ress),..._osParts(r)].filter(Boolean);
                         const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
