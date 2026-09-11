@@ -1707,6 +1707,7 @@ function _osMove(from, nf, to, nt) {
 // Спільні барви написів: службові слова жовті, назви цілей і кількості білі,
 // результати кольору хакі — так само, як у самому переліку цілей
 function _vY(s) { return '<span style="color:var(--yellow)">' + s + '</span>'; }
+function _vD() { return _vY(' — '); }
 function _vW(s) { return '<span style="color:var(--text)">' + esc(s) + '</span>'; }
 function _vK(s) { return '<span style="color:var(--khaki)">' + esc(s) + '</span>'; }
 
@@ -1743,18 +1744,9 @@ function _replacedList(r, tgts, ress) {
     // «АНТЕНА знищено 3 та пошкоджено 1 одиниці»
     return order.map(ty => {
         const g = by[ty];
-        return _vW(ty) + ' ' + g.ord.map(rs => (rs ? _vK(rs) + ' ' : '') + _vW(g.cnt[rs])).join(_vY(' та '))
-             + ' ' + _vY(_vUnits(g.total));
+        return _vW(ty) + _vD() + g.ord.map(rs => (rs ? _vK(rs) + ' ' : '') + _vW(g.cnt[rs])).join(_vY(' та '))
+             + ' ' + _vY('од.');
     }).join(_vY(', '));
-}
-
-// «1 одиниця», «2 одиниці», «5 одиниць»
-function _vUnits(n) {
-    const t = n % 100, o = n % 10;
-    if (t >= 11 && t <= 14) return 'одиниць';
-    if (o === 1) return 'одиниця';
-    if (o >= 2 && o <= 4) return 'одиниці';
-    return 'одиниць';
 }
 
 // Час у хвилинах від початку доби. Немає часу — null
@@ -3345,7 +3337,7 @@ function render() {
                         const tgts=r.target?r.target.split(', '):[];
                         const ress=r.result?r.result.split(', '):[];
                         const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');const _one=tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;return (r.v&&r.v.list[j]==='no')?`<span class="tgt-off">${_one}</span>`:_one;}),...((r.v&&r.v.repl)||[]).map((rp,ri)=>{const _rr=String(rp.res||'').toLowerCase();
-const _rt=[_rr?_vK(_rr):'',rp.qty>1?_vW(rp.qty)+' '+_vY(_vUnits(rp.qty)):''].filter(Boolean).join(' ');
+const _rt=[_rr?_vK(_rr):'',rp.qty>1?_vW(rp.qty)+' '+_vY('од.'):''].filter(Boolean).join(' ');
 // перший напис про заміну називає й те, що замінили: скільки саме наших цілей
 // веріфікатор не визнав і чим їх замінив
 const _gone=ri===0?_replacedList(r,tgts,ress):'';
