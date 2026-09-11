@@ -193,7 +193,7 @@
     .tgt-off span { color: #45451d !important; }
     /* Стара кількість на позначці 200/300: закреслена, але на чверть яскравіша
        за відкинуту ціль — це не скасована ціль, а число, яке уточнили */
-    .qty-old { text-decoration: line-through; text-decoration-color: var(--red-label); color: #565624; }
+    .qty-old { text-decoration: line-through; text-decoration-color: var(--red-label); color: #6c6c2d; }
     /* Скасувати видалення — той самий крій, що й у зеленої «+», лише помаранчева */
     .btn-orange {
       background: #8a4a15;
@@ -1767,8 +1767,13 @@ function _replacedList(r, tgts, ress) {
     // «АНТЕНА знищено 3 та пошкоджено 1 одиниці»
     return order.map(ty => {
         const g = by[ty];
-        return _vW(ty) + _vD() + g.ord.map(rs => (rs ? _vK(rs) + ' ' : '') + _vW(g.cnt[rs])).join(_vY(' та '))
-             + ' ' + _vY('од.');
+        // кількість пишемо лише тоді, коли ціль не одна: «знищено 3 од.»,
+        // а на одну просто «пошкоджено»
+        return _vW(ty) + _vD() + g.ord.map(rs => {
+            const n = g.cnt[rs];
+            if (!rs) return _vW(n) + ' ' + _vY('од.');
+            return n > 1 ? _vK(rs) + ' ' + _vW(n) + ' ' + _vY('од.') : _vK(rs);
+        }).join(_vY(' та '));
     }).join(_vY(', '));
 }
 
