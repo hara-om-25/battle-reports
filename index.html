@@ -1732,10 +1732,14 @@ function _osParts(r, tgts) {
     // скасована позначка малюється в тих самих тегах, а колір їй задає
     // .mark-off — один на все викреслене
     const chip = (lbl, clr, num, now) => {
-        if (!num) return '';
+        // ані в нас, ані у веріфікатора нікого — позначки немає
+        if (!num && !now) return '';
         const head = '<span style="color:' + clr + '">' + lbl + '</span>' + dash;
         if (rej || now === 0) return '<span class="mark-off">' + head + '<span>' + num + '</span></span>';
         if (now === null || now === num) return head + '<span style="color:#fff">' + num + '</span>';
+        // у нас на цій позиції нікого не було, а веріфікатор порахував —
+        // позначка з'являється з самим лише його числом
+        if (!num) return head + '<span style="color:#fff">' + now + '</span>';
         return head + '<span class="qty-old">' + num + '</span> '
              + '<span style="color:#fff">' + now + '</span>';
     };
