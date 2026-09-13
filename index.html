@@ -1787,21 +1787,6 @@ function _vD() { return _vY(' — '); }
 function _vW(s) { return '<span style="color:var(--text)">' + esc(s) + '</span>'; }
 function _vK(s) { return '<span style="color:var(--khaki)">' + esc(s) + '</span>'; }
 
-// Ціль підтверджена, але результат веріфікатор поставив інший — пошкоджене
-// стало знищеним чи навпаки. Пишемо окремо, тим самим зворотом, що й заміну
-function _resChanges(r, tgts, ress) {
-    if (!r.v || !r.v.vres) return [];
-    const out = [];
-    r.v.vres.forEach((nr, j) => {
-        if (!nr || r.v.list[j] !== 'ok') return;
-        const was = String(ress[j] || '').trim().toLowerCase();
-        const now = String(nr).trim().toLowerCase();
-        if (!now || now === was) return;
-        out.push(_vY('веріфікатор замінив') + ' ' + _vW(tgts[j] || '') + ' '
-            + _vK(was || '—') + _vY(' на ') + _vK(now));
-    });
-    return out;
-}
 
 // Які власні цілі вильоту веріфікатор не визнав — за типами й кількістю:
 // «АНТЕНА 4 одиниці». Саме їх він і замінив тим, що подав від себе
@@ -3441,7 +3426,14 @@ function render() {
                         const n=++_arNum;
                         const tgts=r.target?r.target.split(', '):[];
                         const ress=r.result?r.result.split(', '):[];
-                        const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');const _one=tn?tn+_dash+`<span style="color:var(--khaki)">${rv}</span>`:rv;return (r.v&&r.v.list[j]==='no')?`<span class="tgt-off">${_one}</span>`:_one;}),..._osParts(r,tgts)].filter(Boolean);
+                        const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');
+// веріфікатор поставив цілі інший результат — старий закреслений, новий поруч,
+// так само як із кількістю на позначках
+const _nv=(r.v&&r.v.vres&&r.v.list[j]==='ok')?String(r.v.vres[j]||'').trim().toLowerCase():'';
+const _res=(_nv&&_nv!==String(ress[j]||'').trim().toLowerCase())
+    ?`<span class="qty-old">${rv}</span> <span style="color:var(--khaki)">${esc(_nv)}</span>`
+    :`<span style="color:var(--khaki)">${rv}</span>`;
+const _one=tn?tn+_dash+_res:_res;return (r.v&&r.v.list[j]==='no')?`<span class="tgt-off">${_one}</span>`:_one;}),..._osParts(r,tgts)].filter(Boolean);
                         // написи «веріфікатор замінив...» — кожен окремим рядком
                         // під переліком цілей, а не в його хвості
                         const notes=[...((r.v&&r.v.repl)||[]).map((rp,ri)=>{const _rr=String(rp.res||'').toLowerCase();
@@ -3449,7 +3441,7 @@ const _rt=[_rr?_vK(_rr):'',rp.qty>1?_vW(rp.qty)+' '+_vY('од.'):''].filter(Bool
 // перший напис про заміну називає й те, що замінили: скільки саме наших цілей
 // веріфікатор не визнав і чим їх замінив
 const _gone=ri===0?_replacedList(r,tgts,ress):'';
-return `${_vY('веріфікатор замінив')} ${_gone?_gone+' ':''}${_vY('на')} ${_vW(_vType(rp.name))}${_rt?`${_dash}${_rt}`:''}`;}),..._resChanges(r,tgts,ress),..._osNote(r)].filter(Boolean);
+return `${_vY('веріфікатор замінив')} ${_gone?_gone+' ':''}${_vY('на')} ${_vW(_vType(rp.name))}${_rt?`${_dash}${_rt}`:''}`;}),..._osNote(r)].filter(Boolean);
                         const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
                         const _unv=(_anyV&&!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
