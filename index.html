@@ -1770,6 +1770,8 @@ function _osNote(r) {
     const out = [];
     if (os.k - k) out.push(one('200', '#e05050', os.k - k));
     if (os.w - w) out.push(one('300', '#5599dd', os.w - w));
+    // «кількість» стоїть один раз, перед першою позицією, що змінилась
+    if (out.length) out[0] = _vY('кількість') + ' ' + out[0];
     return out;
 }
 
