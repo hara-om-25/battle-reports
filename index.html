@@ -3431,7 +3431,7 @@ function render() {
 // так само як із кількістю на позначках
 const _nv=(r.v&&r.v.vres&&r.v.list[j]==='ok')?String(r.v.vres[j]||'').trim().toLowerCase():'';
 const _res=(_nv&&_nv!==String(ress[j]||'').trim().toLowerCase())
-    ?`<span class="qty-old">${rv}</span> <span style="color:var(--khaki)">${esc(_nv)}</span>`
+    ?`${_vY('веріфікатор замінив')} <span class="qty-old">${rv}</span> ${_vY('на')} <span style="color:var(--khaki)">${esc(_nv)}</span>`
     :`<span style="color:var(--khaki)">${rv}</span>`;
 const _one=tn?tn+_dash+_res:_res;return (r.v&&r.v.list[j]==='no')?`<span class="tgt-off">${_one}</span>`:_one;}),..._osParts(r,tgts)].filter(Boolean);
                         // написи «веріфікатор замінив...» — кожен окремим рядком
