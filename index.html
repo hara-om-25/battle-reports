@@ -1766,7 +1766,7 @@ function _osNote(r) {
     if (!os) return [];
     const k = parseInt(r.qty200) || 0, w = parseInt(r.qty300) || 0;
     const one = (lbl, clr, d) => '<span style="color:' + clr + '">' + lbl + '</span> '
-        + _vY(d < 0 ? 'зменшено на' : 'збільшено на') + ' ' + _vW(Math.abs(d));
+        + _vW((d < 0 ? '-' : '+') + Math.abs(d));
     const out = [];
     if (os.k - k) out.push(one('200', '#e05050', os.k - k));
     if (os.w - w) out.push(one('300', '#5599dd', os.w - w));
