@@ -1815,11 +1815,18 @@ function _sameRes(r, tgts, ress, sub) {
 
 function _replacedList(r, tgts, ress, plain) {
     if (!r.v || !r.v.repl || !r.v.repl.length) return '';
-    // результат той самий — називаємо самі цілі повними назвами. Перекреслення
+    // результат той самий — досить назвати самі цілі, без номерів. Перекреслення
     // тут не потрібне: воно вже стоїть у переліку цілей
     if (plain) {
-        return tgts.map((t, j) => r.v.list[j] === 'no' ? _vW(t) : '')
-                   .filter(Boolean).join(_vY(', '));
+        const cnt = {}, ord = [];
+        tgts.forEach((t, j) => {
+            if (r.v.list[j] !== 'no') return;
+            const ty = _vType(t);
+            if (!cnt[ty]) { cnt[ty] = 0; ord.push(ty); }
+            cnt[ty]++;
+        });
+        return ord.map(ty => _vW(ty) + (cnt[ty] > 1 ? ' ' + _vW(cnt[ty]) + ' ' + _vY('од.') : ''))
+                  .join(_vY(', '));
     }
     const by = {}, order = [];
     tgts.forEach((t, j) => {
