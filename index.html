@@ -1587,8 +1587,10 @@ function _verdictInfo(targetsStr, l, m, q200, q300) {
     }
     // після переліку цілей можуть стояти заміни: верифікатор указав ціль,
     // якої в цьому вильоті немає
-    let rsum = 0, os = null;
+    let rsum = 0, os = null, pack = false;
     for (let i = n; i < lv.length; i++) {
+        // виліт іде пакетом із таким самим, який верифікатор уже підтвердив
+        if (lv[i] === 'ПАКЕТ') { pack = true; continue; }
         // лічильники ОС: скільки людей верифікатор провів знищеними й скільки
         // пораненими. Балів за собою не несуть — вони вже в самій цілі
         if (lv[i].slice(0, 3) === 'ОС:') {
@@ -1615,9 +1617,9 @@ function _verdictInfo(targetsStr, l, m, q200, q300) {
     // підписувалась як просто верифікована
     const osDiff = !!os && (os.k !== (parseInt(q200) || 0) || os.w !== (parseInt(q300) || 0));
     const state = (repl.length || vres.some(Boolean) || osDiff) ? 'repl'
-                : (!ok && !no) ? ''
+                : (!ok && !no) ? (pack ? 'pack' : '')
                 : (ok && no) ? 'part' : ok ? 'ok' : 'no';
-    return { list: list, pts: pts, vres: vres, sum: own + rsum, ok: ok, no: no, repl: repl, os: os, state: state };
+    return { list: list, pts: pts, vres: vres, sum: own + rsum, ok: ok, no: no, repl: repl, os: os, pack: pack, state: state };
 }
 
 
@@ -2074,13 +2076,33 @@ async function runVerification(file) {
             });
             if (!touched) continue;
 
+            // Два однакові вильоти — верифікатор зараховує один, а другий
+            // пропускає, щоб не подвоювати. Такий виліт не загублений: він іде
+            // пакетом із підтвердженим, і ми це позначаємо
+            const _key = i => {
+                const row = rows[i] || [], c = cell[i - 1];
+                return (_vDate(row[1]) || '') + '|' + _vCoord(row[5]).slice(0, -2)
+                     + '|' + c.names.join(',') + '|' + c.res.map(_vName).join(',');
+            };
+            const _done = {};
+            for (let i = 1; i < rows.length; i++) {
+                const c = cell[i - 1];
+                if (c.v.some(Boolean) || c.repl.length) _done[_key(i)] = true;
+            }
+            for (let i = 1; i < rows.length; i++) {
+                const c = cell[i - 1];
+                if (c.v.some(Boolean) || c.repl.length) continue;
+                if (!String((rows[i] || [])[2] || '').trim()) continue;
+                if (_done[_key(i)]) c.pack = true;
+            }
+
             const col = [];
             for (let i = 1; i < rows.length; i++) {
                 const c = cell[i - 1];
                 // рядок без збігу очищаємо: звіряння повністю переписує колонки
                 // верифікації аркуша, інакше в них лишається сміття від
                 // попередніх прогонів і роздуває підсумки
-                if (!c.v.some(Boolean) && !c.repl.length) { col.push(['', '']); continue; }
+                if (!c.v.some(Boolean) && !c.repl.length && !c.pack) { col.push(['', '']); continue; }
                 // Результат ОС випливає з лічильників: є хтось у 200 — знищено,
                 // немає — пошкоджено. Верифікатор окремо його не пише, тож
                 // виводимо самі й дописуємо до вердикту, коли він розійшовся
@@ -2097,6 +2119,8 @@ async function runVerification(file) {
                     lv.push('ЗАМІНА:' + rp[0] + (rp[2] || rp[3] > 1 ? '|' + rp[2] : '') + (rp[3] > 1 ? '|' + rp[3] : ''));
                     pv.push(rp[1]);
                 });
+                // виліт іде пакетом з таким самим підтвердженим
+                if (c.pack) { lv.push('ПАКЕТ'); pv.push(''); }
                 // скільки людей верифікатор провів знищеними, а скільки
                 // пораненими — картка звірить це з нашими 200 і 300
                 if (c.osK || c.osW) { lv.push('ОС:' + c.osK + '|' + c.osW); pv.push(''); }
@@ -2142,11 +2166,12 @@ async function runVerification(file) {
 // Рядки про верифікацію в доповідь. Рахуємо цілі, а не вильоти.
 // Скасовані бали — різниця між нарахованими за виліт і підтвердженими
 function _pushVerifyLines(lines, recs) {
-    let ok = 0, no = 0, sum = 0, canc = 0, add = 0, unv = 0;
+    let ok = 0, no = 0, sum = 0, canc = 0, add = 0, unv = 0, pk = 0;
     recs.forEach(r => {
         // виліт, якого звіряння не зачепило, не йде ні у верифіковані бали,
         // ні у скасовані — його бали рахуємо окремо
         if (!r.v || !r.v.state) { unv += parseFloat(r.points) || 0; return; }
+        if (r.v.state === 'pack') { pk += parseFloat(r.points) || 0; return; }
         add += Math.max(0, r.v.sum - (parseFloat(r.points) || 0));
         canc += Math.max(0, (parseFloat(r.points) || 0) - r.v.sum);
         // заміна важить стільки цілей, скільки їх побачив верифікатор:
@@ -2159,6 +2184,7 @@ function _pushVerifyLines(lines, recs) {
     lines.push('Скасовано ' + Math.round(canc) + ' ' + _bal(Math.round(canc)) + '.');
     if (Math.round(add)) lines.push('Додано ' + Math.round(add) + ' ' + _bal(Math.round(add)) + '.');
     if (Math.round(unv)) lines.push('Не звірено ' + Math.round(unv) + ' ' + _bal(Math.round(unv)) + '.');
+    if (Math.round(pk)) lines.push('У пакеті з підтвердженими ' + Math.round(pk) + ' ' + _bal(Math.round(pk)) + '.');
     lines.push('Підтверджено ' + ok + ' ' + _plu(ok, 'ціль', 'цілі', 'цілей') + ', відхилено ' + no + '.');
 }
 /* ============ /ВЕРИФІКАЦІЯ ============ */
@@ -3536,7 +3562,7 @@ return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`
                         const _unv=(_anyV&&!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
                         return `<div class="record-card text-sm${_unv}" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')}${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;// виліт із балами, якого звіряння не зачепило: у залік не йде нічого, а власні
 // бали лишаються в дужках, щоб було видно, скільки саме не підтверджено
-if(!_st)return (_anyV&&(parseFloat(r.points)||0))?`<p class="stencil" style="color:var(--red-label)">0 балів <span style="color:var(--yellow)">(не звірено ${Math.round(parseFloat(r.points)||0)} ${_bal(r.points)})</span></p>`:`<p class="stencil" style="color:var(--yellow)">${r.points} ${_bal(r.points)}</p>`;const _sum=Math.round(r.v.sum);
+if(!_st)return (_anyV&&(parseFloat(r.points)||0))?`<p class="stencil" style="color:var(--red-label)">0 балів <span style="color:var(--yellow)">(не звірено ${Math.round(parseFloat(r.points)||0)} ${_bal(r.points)})</span></p>`:`<p class="stencil" style="color:var(--yellow)">${r.points} ${_bal(r.points)}</p>`;if(_st==='pack')return `<p class="stencil" style="color:var(--blue-label)">${r.points} ${_bal(r.points)} <span style="color:var(--yellow)">(у пакеті)</span></p>`;const _sum=Math.round(r.v.sum);
 // скасоване — це різниця між нарахованим за виліт і тим, що верифікатор дав
 // власним цілям вильоту. Дописані ним понад виліт бали скасування не зменшують
 // різниця між нарахованим за виліт і тим, що дав верифікатор. Одне число:
@@ -3546,7 +3572,7 @@ const _a=Math.max(0,Math.round(r.v.sum-(parseFloat(r.points)||0)));
 const _clr=_st==='repl'?'var(--blue-label)':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)';return `<p class="stencil" style="color:${_clr}">${_st==='no'?0:_sum} ${_bal(_st==='no'?0:_sum)}${_c?` <span style="color:var(--yellow)">(скасовано ${_c} ${_bal(_c)})</span>`:''}${_a?` <span style="color:var(--yellow)">(додано ${_a} ${_bal(_a)})</span>`:''}</p>`;})()}${(()=>{const _st=r.v&&r.v.state;
 // виліт із балами, який не дістав жодного вердикту — саме такі й губляться
 if(!_st) return (_anyV&&(parseFloat(r.points)||0))?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:var(--red-label)">НЕ ЗВІРЕНО</span>`:'';
-return `<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${_st==='repl'?'var(--blue-label)':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)'}">${_st==='repl'?'ЗАМІНЕНО':_st==='ok'?'ВЕРИФІКОВАНО':_st==='no'?'ВІДХИЛЕНО':'ЧАСТКОВО<br>ВЕРИФІКОВАНО'}</span>`;})()}</div>`;
+return `<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)'}">${_st==='repl'?'ЗАМІНЕНО':_st==='ok'?'ВЕРИФІКОВАНО':_st==='no'?'ВІДХИЛЕНО':_st==='pack'?'У ПАКЕТІ':'ЧАСТКОВО<br>ВЕРИФІКОВАНО'}</span>`;})()}</div>`;
                     }).join('');
                     return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
                 }).join('');
