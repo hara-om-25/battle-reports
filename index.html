@@ -1354,7 +1354,7 @@ function _calcDroneCost(recs) {
 }
 function _pushCostLines(lines, totalPts, recs) {
     if(state.costPerPoint) lines.push('В грошовому еквіваленті приблизно на ' + _fmtNum(totalPts * state.costPerPoint) + ' грн.');
-    if(state.droneCategories) { const c=_calcDroneCost(recs); if(c) { lines.push(''); lines.push('Засобів витрачено на ' + _fmtNum(c) + ' грн.'); } }
+    if(state.droneCategories) { const c=_calcDroneCost(recs); if(c) lines.push('Засобів витрачено на ' + _fmtNum(c) + ' грн.'); }
 }
 
 function copyArchiveSheetReport() {
@@ -2215,6 +2215,7 @@ function _pushVerifyLines(lines, recs) {
         no += r.v.no; sum += r.v.sum;
     });
     if (!ok && !no) return;
+    lines.push('');
     lines.push('Верифіковано ' + Math.round(sum) + ' ' + _bal(Math.round(sum)) + '.');
     lines.push('Скасовано ' + Math.round(canc) + ' ' + _bal(Math.round(canc)) + '.');
     if (Math.round(add)) lines.push('Додано ' + Math.round(add) + ' ' + _bal(Math.round(add)) + '.');
