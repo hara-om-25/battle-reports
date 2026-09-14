@@ -3473,7 +3473,7 @@ function render() {
                             // нова ціль стає на місце останньої з викреслених
                             return {j:_no[_no.length-1],name:_vType(_rp[0].name),qty:_rp[0].qty};})();
                         const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');
-if(_swap1&&_swap1.j===j)return `<span class="qty-old">${tn}</span> ${_vW(_swap1.name)}${_swap1.qty>1?' '+_vW(_swap1.qty)+' '+_vY('од.'):''}${_dash}<span style="color:var(--khaki)">${rv}</span>`;
+if(_swap1&&_swap1.j===j)return `<span class="qty-old">${tn}</span> ${_swap1.qty>1?_vW(_swap1.qty)+' '+_vY('од.')+' ':''}${_vW(_swap1.name)}${_dash}<span style="color:var(--khaki)">${rv}</span>`;
 // веріфікатор поставив цілі інший результат — старий закреслений, новий поруч,
 // так само як із кількістю на позначках
 const _nv=(r.v&&r.v.vres&&r.v.list[j]==='ok')?String(r.v.vres[j]||'').trim().toLowerCase():'';
@@ -3487,11 +3487,13 @@ const _one=tn?tn+_dash+_res:_res;return (r.v&&r.v.list[j]==='no')?`<span class="
 // результат той самий, що й був — замінена сама ціль, і писати результат
 // обабіч означало б повторювати те, що й так видно вище
 const _same=ri===0&&_sameRes(r,tgts,ress,_rr);
-const _rt=[(!_same&&_rr)?_vK(_rr):'',rp.qty>1?_vW(rp.qty)+' '+_vY('од.'):''].filter(Boolean).join(' ');
+// кількість іде попереду назви, результат — після неї через риску
+const _rq=rp.qty>1?_vW(rp.qty)+' '+_vY('од.')+' ':'';
+const _rt=(!_same&&_rr)?`${_dash}${_vK(_rr)}`:'';
 // перший напис про заміну називає й те, що замінили: скільки саме наших цілей
 // веріфікатор не визнав і чим їх замінив
 const _gone=ri===0?_replacedList(r,tgts,ress,_same):'';
-return `${_gone?_gone+' ':''}${_vY('на')} ${_vW(_vType(rp.name))}${_rt?`${_dash}${_rt}`:''}`;}),..._resChanges(r,tgts,ress),..._osNote(r)].filter(Boolean);
+return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`;}),..._resChanges(r,tgts,ress),..._osNote(r)].filter(Boolean);
                         const notes=_swaps.length?[`${_vY('веріфікатор замінив')} ${_swaps.join(_vY(', '))}`]:[];
                         const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
