@@ -1800,8 +1800,26 @@ function _resChanges(r, tgts, ress) {
 
 // Які власні цілі вильоту веріфікатор не визнав — за типами й кількістю:
 // «АНТЕНА 4 одиниці». Саме їх він і замінив тим, що подав від себе
-function _replacedList(r, tgts, ress) {
+// Чи всі відкинуті цілі мали той самий результат, що й та, на яку замінили.
+// Тоді результат не змінювався, і писати його обабіч нема сенсу
+function _sameRes(r, tgts, ress, sub) {
+    if (!sub || !r.v || !r.v.list) return false;
+    let n = 0;
+    for (let j = 0; j < tgts.length; j++) {
+        if (r.v.list[j] !== 'no') continue;
+        n++;
+        if (String(ress[j] || '').trim().toLowerCase() !== sub) return false;
+    }
+    return n > 0;
+}
+
+function _replacedList(r, tgts, ress, plain) {
     if (!r.v || !r.v.repl || !r.v.repl.length) return '';
+    // результат той самий — називаємо самі цілі, повними назвами й перекреслені
+    if (plain) {
+        return tgts.map((t, j) => r.v.list[j] === 'no' ? '<span class="qty-old">' + esc(t) + '</span>' : '')
+                   .filter(Boolean).join(_vY(', '));
+    }
     const by = {}, order = [];
     tgts.forEach((t, j) => {
         if (r.v.list[j] !== 'no') return;
@@ -3447,10 +3465,13 @@ const _one=tn?tn+_dash+_res:_res;return (r.v&&r.v.list[j]==='no')?`<span class="
                         // усі заміни — одним рядком під переліком цілей: фраза
                         // «веріфікатор замінив» один раз, далі через кому
                         const _swaps=[...((r.v&&r.v.repl)||[]).map((rp,ri)=>{const _rr=String(rp.res||'').toLowerCase();
-const _rt=[_rr?_vK(_rr):'',rp.qty>1?_vW(rp.qty)+' '+_vY('од.'):''].filter(Boolean).join(' ');
+// результат той самий, що й був — замінена сама ціль, і писати результат
+// обабіч означало б повторювати те, що й так видно вище
+const _same=ri===0&&_sameRes(r,tgts,ress,_rr);
+const _rt=[(!_same&&_rr)?_vK(_rr):'',rp.qty>1?_vW(rp.qty)+' '+_vY('од.'):''].filter(Boolean).join(' ');
 // перший напис про заміну називає й те, що замінили: скільки саме наших цілей
 // веріфікатор не визнав і чим їх замінив
-const _gone=ri===0?_replacedList(r,tgts,ress):'';
+const _gone=ri===0?_replacedList(r,tgts,ress,_same):'';
 return `${_gone?_gone+' ':''}${_vY('на')} ${_vW(_vType(rp.name))}${_rt?`${_dash}${_rt}`:''}`;}),..._resChanges(r,tgts,ress),..._osNote(r)].filter(Boolean);
                         const notes=_swaps.length?[`${_vY('веріфікатор замінив')} ${_swaps.join(_vY(', '))}`]:[];
                         const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
