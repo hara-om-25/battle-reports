@@ -1567,13 +1567,13 @@ function _verdictInfo(targetsStr, l, m, q200, q300) {
     const lv = String(l || '').split(',').map(x => x.trim());
     const mv = String(m || '').split(',').map(x => x.trim());
     const list = [], pts = [], repl = [];
-    // own — бали, які веріфікатор дав власним цілям вильоту. Саме з ними
+    // own — бали, які верифікатор дав власним цілям вильоту. Саме з ними
     // порівнюються нараховані бали, коли рахуємо скасоване: те, що він
     // дописав понад виліт, скасування не зменшує
     let ok = 0, no = 0, own = 0;
     const vres = [];
     for (let i = 0; i < n; i++) {
-        // у вердикті може стояти й результат веріфікатора: «Підтверджено|Знищено»
+        // у вердикті може стояти й результат верифікатора: «Підтверджено|Знищено»
         const _q = (lv[i] || '').split('|');
         const t = (_q[0] || '').trim().toLowerCase();
         const v = t === 'підтверджено' ? 'ok' : t === 'відхилено' ? 'no' : '';
@@ -1585,11 +1585,11 @@ function _verdictInfo(targetsStr, l, m, q200, q300) {
         if (v === 'ok') { ok++; if (p !== null) own += p; }
         else if (v === 'no') { no++; }
     }
-    // після переліку цілей можуть стояти заміни: веріфікатор указав ціль,
+    // після переліку цілей можуть стояти заміни: верифікатор указав ціль,
     // якої в цьому вильоті немає
     let rsum = 0, os = null;
     for (let i = n; i < lv.length; i++) {
-        // лічильники ОС: скільки людей веріфікатор провів знищеними й скільки
+        // лічильники ОС: скільки людей верифікатор провів знищеними й скільки
         // пораненими. Балів за собою не несуть — вони вже в самій цілі
         if (lv[i].slice(0, 3) === 'ОС:') {
             const q = lv[i].slice(3).split('|');
@@ -1602,17 +1602,17 @@ function _verdictInfo(targetsStr, l, m, q200, q300) {
         repl.push({ name: _p[0], res: _p[1] || '', qty: Math.max(1, parseInt(_p[2], 10) || 1), pts: isNaN(num) ? null : num });
         if (!isNaN(num)) rsum += num;
     }
-    // Ціль, про яку веріфікатор змовчав, не підтверджена: у файл потрапляють
+    // Ціль, про яку верифікатор змовчав, не підтверджена: у файл потрапляють
     // усі цілі вильотів з балами, отже мовчання — це відмова. Рахуємо так
     // лише тоді, коли виліт узагалі звірявся: без жодного вердикту він просто
     // НЕ ЗВІРЕНИЙ, і перекреслювати там нічого
     if (ok || no || repl.length) {
         for (let i = 0; i < n; i++) if (!list[i]) { list[i] = 'no'; no++; }
     }
-    // Веріфікатор міг втрутитися трьома способами: підмінити ціль, поставити
+    // Верифікатор міг втрутитися трьома способами: підмінити ціль, поставити
     // інший результат або перевести людей з 300 у 200 чи навпаки. Кожне з них
     // однаково робить виліт заміненим — інакше картка із заміною всередині
-    // підписувалась як просто веріфікована
+    // підписувалась як просто верифікована
     const osDiff = !!os && (os.k !== (parseInt(q200) || 0) || os.w !== (parseInt(q300) || 0));
     const state = (repl.length || vres.some(Boolean) || osDiff) ? 'repl'
                 : (!ok && !no) ? ''
@@ -1719,25 +1719,25 @@ function _vFileTarget(typeRaw, idRaw) {
 // Тип цілі з таблиці: та сама назва без номера в кінці — «ОС 6» це «ОС»
 function _vType(x) { return _vName(String(x === null || x === undefined ? '' : x).replace(/\s+\d+\s*$/, '')); }
 
-// Позначки 200 і 300 на картці архіву. Скільки людей нарахував веріфікатор,
+// Позначки 200 і 300 на картці архіву. Скільки людей нарахував верифікатор,
 // видно на самій позначці: наше число закреслене, його стоїть поруч. Нікого
 // не лишилось — позначка йде під ніж цілком
 function _osParts(r, tgts) {
     const dash = '<span style="color:var(--yellow)"> — </span>';
     const os = r.v && r.v.os;
-    // 200 і 300 належать цілі ОС. Коли веріфікатор саму ціль не визнав,
+    // 200 і 300 належать цілі ОС. Коли верифікатор саму ціль не визнав,
     // вони перекреслені разом з нею — лічильників він для неї не подав
     const rej = !!(r.v && r.v.list) && (tgts || []).some((t, j) => _vType(t) === 'ОС' && r.v.list[j] === 'no');
     const k = parseInt(r.qty200) || 0, w = parseInt(r.qty300) || 0;
     // скасована позначка малюється в тих самих тегах, а колір їй задає
     // .mark-off — один на все викреслене
     const chip = (lbl, clr, num, now) => {
-        // ані в нас, ані у веріфікатора нікого — позначки немає
+        // ані в нас, ані у верифікатора нікого — позначки немає
         if (!num && !now) return '';
         const head = '<span style="color:' + clr + '">' + lbl + '</span>' + dash;
         if (rej || now === 0) return '<span class="mark-off">' + head + '<span>' + num + '</span></span>';
         if (now === null || now === num) return head + '<span style="color:#fff">' + num + '</span>';
-        // у нас на цій позиції нікого не було, а веріфікатор порахував —
+        // у нас на цій позиції нікого не було, а верифікатор порахував —
         // позначка з'являється з самим лише його числом
         if (!num) return head + '<span style="color:#fff">' + now + '</span>';
         return head + '<span class="qty-old">' + num + '</span> '
@@ -1759,7 +1759,7 @@ function _osParts(r, tgts) {
             chip('300', '#5599dd', w, os ? os.w : null)];
 }
 
-// Наскільки веріфікатор змінив кількість на позиціях ОС. Кожна позиція, що
+// Наскільки верифікатор змінив кількість на позиціях ОС. Кожна позиція, що
 // розійшлася з нашою, дає свій шматок у спільний рядок замін
 function _osNote(r) {
     const os = r.v && r.v.os;
@@ -1783,7 +1783,7 @@ function _vW(s) { return '<span style="color:var(--text)">' + esc(s) + '</span>'
 function _vK(s) { return '<span style="color:var(--khaki)">' + esc(s) + '</span>'; }
 
 
-// Результат, який веріфікатор замінив. У самому переліку цілей старе вже
+// Результат, який верифікатор замінив. У самому переліку цілей старе вже
 // закреслене, а нове стоїть поруч; цей рядок каже, хто це зробив
 function _resChanges(r, tgts, ress) {
     if (!r.v || !r.v.vres) return [];
@@ -1798,7 +1798,7 @@ function _resChanges(r, tgts, ress) {
     return out;
 }
 
-// Які власні цілі вильоту веріфікатор не визнав — за типами й кількістю:
+// Які власні цілі вильоту верифікатор не визнав — за типами й кількістю:
 // «АНТЕНА 4 одиниці». Саме їх він і замінив тим, що подав від себе
 // Чи всі відкинуті цілі мали той самий результат, що й та, на яку замінили.
 // Тоді результат не змінювався, і писати його обабіч нема сенсу
@@ -1900,7 +1900,7 @@ async function runVerification(file) {
                 coord: coord, date: date, min: _vMinutes(r[0]),
                 tgt: _vFileTarget(r[1], r[2]),
                 res: _vNorm(r[5]),
-                // скільки одиниць покриває рядок: веріфікатор може замінити
+                // скільки одиниць покриває рядок: верифікатор може замінити
                 // чотири «Антени» на дві «Антени вел» одним рядком
                 qty: Math.max(1, parseInt(_vNorm(r[3]), 10) || 1),
                 verdict: verdict,
@@ -1941,7 +1941,7 @@ async function runVerification(file) {
                 const os = tg.map((x, k) => _vType(x) === 'ОС' ? k : -1).filter(k => k >= 0);
                 cell.push({
                     names: tg.map(_vName), types: tg.map(_vType),
-                    // власні результати вильоту — щоб помітити, коли веріфікатор
+                    // власні результати вильоту — щоб помітити, коли верифікатор
                     // підтвердив ціль, але з іншим результатом
                     res: String((rows[i] || [])[8] || '').split(', ').map(x => x.trim()),
                     v: tg.map(() => ''), p: tg.map(() => ''), repl: [],
@@ -1988,7 +1988,7 @@ async function runVerification(file) {
                         if (j < 0 && !it.tgt.num) j = c.types.findIndex((t, k) => t === it.tgt.type && !c.v[k]);
                     }
                     const d = (it.min === null || rm === null) ? 0 : Math.abs(rm - it.min);
-                    // назви не збіглись, хоч усе решта збіглось — веріфікатор
+                    // назви не збіглись, хоч усе решта збіглось — верифікатор
                     // замінив ціль; запам'ятовуємо як заміну для цього рядка
                     hits.push([i - 1, j, d, fold]);
                 }
@@ -2004,7 +2004,7 @@ async function runVerification(file) {
                     const c = cell[hits[0][0]], j = hits[0][1];
                     if (j >= 0 && hits[0][3]) {
                         // ОС: складаємо бали всіх рядків і рахуємо, скільки
-                        // людей веріфікатор провів як знищених, а скільки як
+                        // людей верифікатор провів як знищених, а скільки як
                         // поранених — щоб потім порівняти з нашими 200 і 300
                         if (it.verdict === 'Підтверджено' || !c.v[j]) c.v[j] = it.verdict;
                         const a = parseFloat(c.p[j]), b = parseFloat(it.pts);
@@ -2015,14 +2015,14 @@ async function runVerification(file) {
                             else if (rs.indexOf('пошкодж') === 0) c.osW += it.qty;
                         }
                     } else if (j >= 0) {
-                        // веріфікатор підтвердив ціль, але з іншим результатом —
+                        // верифікатор підтвердив ціль, але з іншим результатом —
                         // дописуємо його результат до вердикту, щоб не загубити
                         const nr = it.verdict === 'Підтверджено' && it.res
                             && _vName(it.res) !== _vName(c.res[j] || '') ? '|' + it.res : '';
                         c.v[j] = it.verdict + nr;
                         c.p[j] = it.pts;
                     } else {
-                        // веріфікатор може подати ті самі дві цілі як один
+                        // верифікатор може подати ті самі дві цілі як один
                         // рядок з кількістю 2 або як два рядки по одиниці.
                         // Зводимо до одного вигляду: однакова назва й результат
                         // додають кількість і бали до вже наявної заміни
@@ -2051,7 +2051,7 @@ async function runVerification(file) {
                 // попередніх прогонів і роздуває підсумки
                 if (!c.v.some(Boolean) && !c.repl.length) { col.push(['', '']); continue; }
                 // Результат ОС випливає з лічильників: є хтось у 200 — знищено,
-                // немає — пошкоджено. Веріфікатор окремо його не пише, тож
+                // немає — пошкоджено. Верифікатор окремо його не пише, тож
                 // виводимо самі й дописуємо до вердикту, коли він розійшовся
                 // з нашим
                 if (c.osIdx >= 0 && (c.osK || c.osW) && c.v[c.osIdx]) {
@@ -2066,7 +2066,7 @@ async function runVerification(file) {
                     lv.push('ЗАМІНА:' + rp[0] + (rp[2] || rp[3] > 1 ? '|' + rp[2] : '') + (rp[3] > 1 ? '|' + rp[3] : ''));
                     pv.push(rp[1]);
                 });
-                // скільки людей веріфікатор провів знищеними, а скільки
+                // скільки людей верифікатор провів знищеними, а скільки
                 // пораненими — картка звірить це з нашими 200 і 300
                 if (c.osK || c.osW) { lv.push('ОС:' + c.osK + '|' + c.osW); pv.push(''); }
                 col.push([lv.join(', '), pv.join(', ')]);
@@ -2113,18 +2113,18 @@ async function runVerification(file) {
 function _pushVerifyLines(lines, recs) {
     let ok = 0, no = 0, sum = 0, canc = 0, add = 0, unv = 0;
     recs.forEach(r => {
-        // виліт, якого звіряння не зачепило, не йде ні у веріфіковані бали,
+        // виліт, якого звіряння не зачепило, не йде ні у верифіковані бали,
         // ні у скасовані — його бали рахуємо окремо
         if (!r.v || !r.v.state) { unv += parseFloat(r.points) || 0; return; }
         add += Math.max(0, r.v.sum - (parseFloat(r.points) || 0));
         canc += Math.max(0, (parseFloat(r.points) || 0) - r.v.sum);
-        // заміна важить стільки цілей, скільки їх побачив веріфікатор:
+        // заміна важить стільки цілей, скільки їх побачив верифікатор:
         // чотири «Антени» він замінив на дві «Антени вел», отже плюс дві
         ok += r.v.ok + r.v.repl.reduce((s, rp) => s + (rp.qty || 1), 0);
         no += r.v.no; sum += r.v.sum;
     });
     if (!ok && !no) return;
-    lines.push('Веріфіковано ' + Math.round(sum) + ' балів.');
+    lines.push('Верифіковано ' + Math.round(sum) + ' балів.');
     lines.push('Скасовано ' + Math.round(canc) + ' балів.');
     if (Math.round(add)) lines.push('Додано ' + Math.round(add) + ' балів.');
     if (Math.round(unv)) lines.push('Не звірено ' + Math.round(unv) + ' балів.');
@@ -3479,7 +3479,7 @@ function render() {
                         const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');
 const _sw=_swap1&&_swap1[j];
 if(_sw)return `<span class="qty-old">${tn}</span> ${_sw.qty>1?_vW(_sw.qty)+' '+_vY('од.')+' ':''}${_vW(_sw.name)}${_dash}<span style="color:var(--khaki)">${rv}</span>`;
-// веріфікатор поставив цілі інший результат — старий закреслений, новий поруч,
+// верифікатор поставив цілі інший результат — старий закреслений, новий поруч,
 // так само як із кількістю на позначках
 const _nv=(r.v&&r.v.vres&&r.v.list[j]==='ok')?String(r.v.vres[j]||'').trim().toLowerCase():'';
 const _res=(_nv&&_nv!==String(ress[j]||'').trim().toLowerCase())
@@ -3487,7 +3487,7 @@ const _res=(_nv&&_nv!==String(ress[j]||'').trim().toLowerCase())
     :`<span style="color:var(--khaki)">${rv}</span>`;
 const _one=tn?tn+_dash+_res:_res;return (r.v&&r.v.list[j]==='no')?`<span class="tgt-off">${_one}</span>`:_one;}),..._osParts(r,tgts)].filter(Boolean);
                         // усі заміни — одним рядком під переліком цілей: фраза
-                        // «веріфікатор замінив» один раз, далі через кому
+                        // «верифікатор замінив» один раз, далі через кому
                         const _swaps=[...((r.v&&r.v.repl)||[]).map((rp,ri)=>{const _rr=String(rp.res||'').toLowerCase();
 // результат той самий, що й був — замінена сама ціль, і писати результат
 // обабіч означало б повторювати те, що й так видно вище
@@ -3496,26 +3496,26 @@ const _same=ri===0&&_sameRes(r,tgts,ress,_rr);
 const _rq=rp.qty>1?_vW(rp.qty)+' '+_vY('од.')+' ':'';
 const _rt=(!_same&&_rr)?`${_dash}${_vK(_rr)}`:'';
 // перший напис про заміну називає й те, що замінили: скільки саме наших цілей
-// веріфікатор не визнав і чим їх замінив
+// верифікатор не визнав і чим їх замінив
 const _gone=ri===0?_replacedList(r,tgts,ress,_same):'';
 return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`;}),..._resChanges(r,tgts,ress),..._osNote(r)].filter(Boolean);
-                        const notes=_swaps.length?[`${_vY('веріфікатор замінив')} ${_swaps.join(_vY(', '))}`]:[];
+                        const notes=_swaps.length?[`${_vY('верифікатор замінив')} ${_swaps.join(_vY(', '))}`]:[];
                         const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
                         const _unv=(_anyV&&!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
                         return `<div class="record-card text-sm${_unv}" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')}${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;// виліт із балами, якого звіряння не зачепило: у залік не йде нічого, а власні
 // бали лишаються в дужках, щоб було видно, скільки саме не підтверджено
 if(!_st)return (_anyV&&(parseFloat(r.points)||0))?`<p class="stencil" style="color:var(--red-label)">0 балів <span style="color:var(--yellow)">(не звірено ${Math.round(parseFloat(r.points)||0)} балів)</span></p>`:`<p class="stencil" style="color:var(--yellow)">${r.points} балів</p>`;const _sum=Math.round(r.v.sum);
-// скасоване — це різниця між нарахованим за виліт і тим, що веріфікатор дав
+// скасоване — це різниця між нарахованим за виліт і тим, що верифікатор дав
 // власним цілям вильоту. Дописані ним понад виліт бали скасування не зменшують
-// різниця між нарахованим за виліт і тим, що дав веріфікатор. Одне число:
+// різниця між нарахованим за виліт і тим, що дав верифікатор. Одне число:
 // або скасовано, або додано, обох одразу не буває
 const _c=Math.max(0,Math.round((parseFloat(r.points)||0)-r.v.sum));
 const _a=Math.max(0,Math.round(r.v.sum-(parseFloat(r.points)||0)));
 const _clr=_st==='repl'?'var(--blue-label)':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)';return `<p class="stencil" style="color:${_clr}">${_st==='no'?0:_sum} балів${_c?` <span style="color:var(--yellow)">(скасовано ${_c} балів)</span>`:''}${_a?` <span style="color:var(--yellow)">(додано ${_a} балів)</span>`:''}</p>`;})()}${(()=>{const _st=r.v&&r.v.state;
 // виліт із балами, який не дістав жодного вердикту — саме такі й губляться
 if(!_st) return (_anyV&&(parseFloat(r.points)||0))?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:var(--red-label)">НЕ ЗВІРЕНО</span>`:'';
-return `<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${_st==='repl'?'var(--blue-label)':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)'}">${_st==='repl'?'ЗАМІНЕНО':_st==='ok'?'ВЕРИФІКОВАНО':_st==='no'?'ВІДХИЛЕНО':'ЧАСТКОВО<br>ВЕРІФІКОВАНО'}</span>`;})()}</div>`;
+return `<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${_st==='repl'?'var(--blue-label)':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)'}">${_st==='repl'?'ЗАМІНЕНО':_st==='ok'?'ВЕРИФІКОВАНО':_st==='no'?'ВІДХИЛЕНО':'ЧАСТКОВО<br>ВЕРИФІКОВАНО'}</span>`;})()}</div>`;
                     }).join('');
                     return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
                 }).join('');
@@ -3529,13 +3529,13 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _resRows=Object.entries(_resCnt).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,' разів')).join('');
                 // Скільки вильотів взагалі без балів, скільки отримали вердикт,
                 // і скільки не потрапили ні туди, ні туди — саме вони й дають
-                // розрив між загальною сумою балів і «веріфіковано + скасовано»
+                // розрив між загальною сумою балів і «верифіковано + скасовано»
                 const _vrZero=state.archiveRecs.filter(r=>!(parseFloat(r.points)||0)).length;
                 const _vrJudged=state.archiveRecs.filter(r=>r.v&&r.v.state).length;
                 const _vrLeft=state.archiveRecs.filter(r=>(parseFloat(r.points)||0)&&!(r.v&&r.v.state));
                 const _vrLeftPts=Math.round(_vrLeft.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                 const _vrRows=_row('Вильотів з 0 балів',_vrZero,' шт')
-                    +_row('Веріфіковано',_vrJudged,' шт')
+                    +_row('Верифіковано',_vrJudged,' шт')
                     +_row('Поза обома списками',_vrLeft.length,' шт')
                     +_row('&nbsp;&nbsp;у них балів',_vrLeftPts,'');
                 const _statsBlock=state.archiveRecs.length>0?`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}</div><div style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_resRows)}${_sec('ВЕРИФІКАЦІЯ',_vrRows)}</div></div>`:'';
