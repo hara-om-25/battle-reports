@@ -2223,16 +2223,21 @@ function _pushVerifyLines(lines, recs) {
     // Останній рядок рахує вильоти, а не цілі — рівно ті підписи, що стоять
     // на картках. НЕ ЗВІРЕНО беремо лише з балами: виліт без балів картка теж
     // ніяк не підписує
-    let cOk = 0, cPart = 0, cUnv = 0;
+    let cOk = 0, cPart = 0, cRepl = 0, cNo = 0, cPack = 0, cUnv = 0;
     recs.forEach(r => {
         const st = r.v && r.v.state;
         if (st === 'ok') cOk++;
         else if (st === 'part') cPart++;
+        else if (st === 'repl') cRepl++;
+        else if (st === 'no') cNo++;
+        else if (st === 'pack') cPack++;
         else if (!st && (parseFloat(r.points) || 0)) cUnv++;
     });
+    // спершу ті, за якими бали зарахувалися, далі ті, за якими ні
     lines.push('');
     lines.push('Верифіковано ' + cOk + ', частково верифіковано ' + cPart
-             + ', не звірено ' + cUnv + '.');
+             + ', замінено ' + cRepl + ', відхилено ' + cNo
+             + ', дублюючих ' + cPack + ', не звірено ' + cUnv + '.');
 }
 /* ============ /ВЕРИФІКАЦІЯ ============ */
 
