@@ -1815,9 +1815,10 @@ function _sameRes(r, tgts, ress, sub) {
 
 function _replacedList(r, tgts, ress, plain) {
     if (!r.v || !r.v.repl || !r.v.repl.length) return '';
-    // результат той самий — називаємо самі цілі, повними назвами й перекреслені
+    // результат той самий — називаємо самі цілі повними назвами. Перекреслення
+    // тут не потрібне: воно вже стоїть у переліку цілей
     if (plain) {
-        return tgts.map((t, j) => r.v.list[j] === 'no' ? '<span class="qty-old">' + esc(t) + '</span>' : '')
+        return tgts.map((t, j) => r.v.list[j] === 'no' ? _vW(t) : '')
                    .filter(Boolean).join(_vY(', '));
     }
     const by = {}, order = [];
