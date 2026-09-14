@@ -1623,31 +1623,42 @@ function _verdictInfo(targetsStr, l, m, q200, q300) {
     return { list: list, pts: pts, vres: vres, sum: own + rsum, ok: ok, no: no, repl: repl, os: os, pack: pack, state: state };
 }
 
-// Два однакові вильоти — верифікатор зараховує один, а другий пропускає, щоб
-// не подвоювати. Другий не загублений: він іде пакетом із зарахованим. Однакові
-// це той самий день, та сама ціль і та сама координата: два крайні знаки
-// відкидаємо, бо в них буває розбіжність. Результат не рахується — пошкоджена
-// чи знищена, це та сама ціль на тому самому місці, отже той самий удар
+// Місце удару: день і координата, у якої відкинуто два крайні знаки — у них
+// буває розбіжність. Цілі в ключ не входять: їх звіряємо окремо
 function _packKeyRec(r) {
     return (r.sheet || '') + '|' + (getDateOnly(r.datetime) || '')
-         + '|' + _vCoord(r.coordinates).slice(0, -2)
-         + '|' + String(r.target || '').split(', ').map(_vName).join(',');
+         + '|' + _vCoord(r.coordinates).slice(0, -2);
 }
 
+function _packNames(r) {
+    return String(r.target || '').split(', ').map(x => x.trim()).filter(Boolean).map(_vName);
+}
+
+// Два однакові вильоти — верифікатор зараховує один, а другий пропускає, щоб не
+// подвоювати. Другий не загублений: він іде пакетом із зарахованим. Результат
+// не рахується — пошкоджена чи знищена, це та сама ціль на тому самому місці,
+// отже той самий удар. Цілі мають уміститися в цілі зарахованого: той міг
+// накрити ще щось поруч, але наше він накрив усе.
 // Позначка ПАКЕТ лежить і в колонці L, але покладатися на неї не можна: вона
-// з'являється там лише після звіряння. Тому пару шукаємо ще раз на самих
-// записах, щойно архів завантажено
+// з'являється там лише після звіряння. Тому пару шукаємо заново на самих
+// записах, щойно архів завантажено, а ту позначку маємо за підказку
 function _markPacks(recs) {
-    const done = {};
+    const owners = {};
     recs.forEach(r => {
         const st = r.v && r.v.state;
-        // відхилений виліт балів не дістав, отже й пакета з нього не буде
-        if (st && st !== 'pack' && st !== 'no') done[_packKeyRec(r)] = true;
+        // дублюючий сам пари не дає, відхилений теж — за ним балів немає
+        if (!st || st === 'pack' || st === 'no') return;
+        const k = _packKeyRec(r);
+        (owners[k] = owners[k] || []).push({ rec: r, names: _packNames(r) });
     });
     recs.forEach(r => {
-        if (!r.v || r.v.state) return;
-        if (!String(r.target || '').trim()) return;
-        if (done[_packKeyRec(r)]) r.v.state = 'pack';
+        if (!r.v || (r.v.state && r.v.state !== 'pack')) return;
+        r.v.state = ''; r.v.packOf = null;
+        const names = _packNames(r);
+        if (!names.length) return;
+        const own = (owners[_packKeyRec(r)] || [])
+            .find(o => names.every(n => o.names.indexOf(n) >= 0));
+        if (own) { r.v.state = 'pack'; r.v.packOf = own.rec; }
     });
 }
 
@@ -1886,11 +1897,12 @@ function _replacedList(r, tgts, ress, plain) {
     return order.map(ty => {
         const g = by[ty];
         // кількість пишемо лише тоді, коли ціль не одна: «знищено 3 од.»,
-        // а на одну просто «пошкоджено»
+        // а на одну просто «пошкоджено». Виняток — коли результатів кілька:
+        // «знищено 3 од. та пошкоджено» не показує, скільки ж їх пошкоджено
         return _vW(ty) + _vD() + g.ord.map(rs => {
             const n = g.cnt[rs];
             if (!rs) return _vW(n) + ' ' + _vY('од.');
-            return n > 1 ? _vK(rs) + ' ' + _vW(n) + ' ' + _vY('од.') : _vK(rs);
+            return (n > 1 || g.ord.length > 1) ? _vK(rs) + ' ' + _vW(n) + ' ' + _vY('од.') : _vK(rs);
         }).join(_vY(' та '));
     }).join(_vY(', '));
 }
@@ -3570,13 +3582,9 @@ function render() {
                 // на користь якого скасовано однаковий із ним
                 const _arOrder=[];
                 _arDates.forEach(d=>{_byTime(state.archiveRecs.filter(x=>getDateOnly(x.datetime)===d)).forEach(x=>_arOrder.push(x));});
-                const _packKey=_packKeyRec;
-                const _packOwner={};
-                _arOrder.forEach((x,i)=>{const st=x.v&&x.v.state;
-                    if(st&&st!=='pack'&&st!=='no'){const k=_packKey(x);if(!(k in _packOwner))_packOwner[k]=i+1;}});
-                // Пари не стало — виліт-переможець відредагували після звіряння.
-                // Дублюючим без пари виліт бути не може, тож він просто не звірений
-                _arOrder.forEach(x=>{if(x.v&&x.v.state==='pack'&&!_packOwner[_packKey(x)])x.v.state='';});
+                // Пару вже знайшов _markPacks — тут лишається дізнатись, під
+                // яким номером той виліт малюється
+                const _packNum=x=>(x.v&&x.v.packOf)?_arOrder.indexOf(x.v.packOf)+1:0;
                 const _arGroups=_arDates.map(d=>{
                     const dayR=_byTime(state.archiveRecs.filter(r=>getDateOnly(r.datetime)===d));
                     const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
@@ -3623,8 +3631,8 @@ const _gone=ri===0?_replacedList(r,tgts,ress,_same):'';
 return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`;}),..._resChanges(r,tgts,ress),..._osNote(r)].filter(Boolean);
                         const notes=_swaps.length?[`${_vY('верифікатор замінив')} ${_swaps.join(_vY(', '))}`]:[];
                         // виліт скасовано на користь такого самого, який верифікатор зарахував
-                        if(r.v&&r.v.state==='pack'){const _po=_packOwner[_packKey(r)];
-                            notes.push(`${_vY('верифікатор скасував цей виліт на користь')} ${_vW(_po)} ${_vY('вильоту')}`);}
+                        if(r.v&&r.v.state==='pack'){const _po=_packNum(r);
+                            if(_po)notes.push(`${_vY('верифікатор скасував цей виліт на користь')} ${_vW(_po)} ${_vY('вильоту')}`);}
                         const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
                         const _unv=(_anyV&&!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
