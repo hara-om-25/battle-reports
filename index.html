@@ -2217,7 +2217,7 @@ function _pushVerifyLines(lines, recs) {
     if (!ok && !no) return;
     lines.push('');
     lines.push('Верифіковано ' + Math.round(sum) + ' ' + _bal(Math.round(sum)) + '.');
-    lines.push('Скасовано ' + Math.round(canc) + ' ' + _bal(Math.round(canc)) + '.');
+    if (Math.round(canc)) lines.push('Скасовано ' + Math.round(canc) + ' ' + _bal(Math.round(canc)) + '.');
     if (Math.round(add)) lines.push('Додано ' + Math.round(add) + ' ' + _bal(Math.round(add)) + '.');
     if (Math.round(unv)) lines.push('Не звірено ' + Math.round(unv) + ' ' + _bal(Math.round(unv)) + '.');
     // Останній рядок рахує вильоти, а не цілі — рівно ті підписи, що стоять
