@@ -1975,7 +1975,16 @@ async function runVerification(file) {
                     // іншому вильоту. Бали тут за ознаку не годяться — ціль
                     // може бути записана, а бали ще не проставлені
                     if (!String(row[2] || '').trim()) continue;
-                    if (_vCoord(row[5]) !== it.coord) continue;
+                    // координата може розійтися двома крайніми знаками — але
+                    // тільки коли решта збігається точно. Дрона й боєприпасу у
+                    // файлі немає, тож звіряємо те, що там є: ціль і результат
+                    const rc = _vCoord(row[5]);
+                    let fuzzy = false;
+                    if (rc !== it.coord) {
+                        if (rc.length !== it.coord.length) continue;
+                        if (rc.slice(0, -2) !== it.coord.slice(0, -2)) continue;
+                        fuzzy = true;
+                    }
                     const sd = _vDate(row[1]);
                     if (sd) { if (sd !== it.date) continue; }
                     else if (!period || it.date < period.from || it.date > period.to) continue;
@@ -1983,6 +1992,14 @@ async function runVerification(file) {
                     // час звіряємо з похибкою; якщо часу немає — не заважає
                     if (it.min !== null && rm !== null && Math.abs(rm - it.min) > _V_TIME_TOL) continue;
                     const c = cell[i - 1];
+                    // приблизну координату беремо лише за точного збігу цілі
+                    // та її результату — інакше це просто сусідній удар
+                    if (fuzzy) {
+                        let k = c.names.indexOf(it.tgt.name);
+                        if (k < 0) k = c.types.indexOf(it.tgt.type);
+                        if (k < 0) continue;
+                        if (_vName(c.res[k] || '') !== _vName(it.res)) continue;
+                    }
                     // рядок ОС завжди йде на єдину ОС вильоту, навіть якщо та
                     // вже зайнята попереднім рядком: це не друга ціль, а друга
                     // людина на тій самій позиції
@@ -2003,7 +2020,7 @@ async function runVerification(file) {
                     const d = (it.min === null || rm === null) ? 0 : Math.abs(rm - it.min);
                     // назви не збіглись, хоч усе решта збіглось — верифікатор
                     // замінив ціль; запам'ятовуємо як заміну для цього рядка
-                    hits.push([i - 1, j, d, fold]);
+                    hits.push([i - 1, j, d, fold, fuzzy ? 1 : 0]);
                 }
                 // кілька збігів у межах півгодини — спершу беремо той, де ціль
                 // ще вільна, і аж потім найближчий за часом. Без цього два
@@ -2011,9 +2028,10 @@ async function runVerification(file) {
                 // другий лишався не звіреним. Однакові й вільність, і
                 // відстань — розрізнити нічим
                 const free = h => (h[1] >= 0 && (h[3] || !cell[h[0]].v[h[1]])) ? 0 : 1;
-                if (hits.length > 1) hits.sort((a, b) => free(a) - free(b) || a[2] - b[2]);
+                // точний збіг координати сильніший за приблизний
+                if (hits.length > 1) hits.sort((a, b) => a[4] - b[4] || free(a) - free(b) || a[2] - b[2]);
                 if (hits.length === 1 || (hits.length > 1
-                    && (free(hits[0]) !== free(hits[1]) || hits[1][2] > hits[0][2]))) {
+                    && (hits[0][4] !== hits[1][4] || free(hits[0]) !== free(hits[1]) || hits[1][2] > hits[0][2]))) {
                     const c = cell[hits[0][0]], j = hits[0][1];
                     if (j >= 0 && hits[0][3]) {
                         // ОС: складаємо бали всіх рядків і рахуємо, скільки
