@@ -1354,7 +1354,7 @@ function _calcDroneCost(recs) {
 }
 function _pushCostLines(lines, totalPts, recs) {
     if(state.costPerPoint) lines.push('В грошовому еквіваленті приблизно на ' + _fmtNum(totalPts * state.costPerPoint) + ' грн.');
-    if(state.droneCategories) { const c=_calcDroneCost(recs); if(c) lines.push('Засобів витрачено на ' + _fmtNum(c) + ' грн.'); }
+    if(state.droneCategories) { const c=_calcDroneCost(recs); if(c) { lines.push(''); lines.push('Засобів витрачено на ' + _fmtNum(c) + ' грн.'); } }
 }
 
 function copyArchiveSheetReport() {
@@ -1362,7 +1362,7 @@ function copyArchiveSheetReport() {
     if (!recs.length) return;
     const _pts=Math.round(recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     const lines = generateArchiveReport(recs, state.selArchive+'р.');
-    lines.push('Загалом уражено орієнтовно на '+_pts+' '+_bal(_pts)+'.');
+    lines.push(''),lines.push('Загалом уражено орієнтовно на '+_pts+' '+_bal(_pts)+'.');
     _pushCostLines(lines,_pts,recs);
     navigator.clipboard.writeText(lines.join('\n')).catch(()=>{});
 }
@@ -1374,7 +1374,7 @@ function copyAllArchiveReport() {
     const earliest=_bd.length?_bd.reduce((a,b)=>a.k<b.k?a:b).d:(recs.map(r=>getDateOnly(r.datetime)).filter(Boolean).sort()[0]||'');
     const _pts=Math.round(recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     const lines = generateArchiveReport(recs, 'Від ' + earliest + ' дотепер');
-    lines.push('Загалом уражено орієнтовно на '+_pts+' '+_bal(_pts)+'.');
+    lines.push(''),lines.push('Загалом уражено орієнтовно на '+_pts+' '+_bal(_pts)+'.');
     _pushCostLines(lines,_pts,recs);
     navigator.clipboard.writeText(lines.join('\n')).catch(()=>{});
 }
@@ -2219,7 +2219,19 @@ function _pushVerifyLines(lines, recs) {
     lines.push('Скасовано ' + Math.round(canc) + ' ' + _bal(Math.round(canc)) + '.');
     if (Math.round(add)) lines.push('Додано ' + Math.round(add) + ' ' + _bal(Math.round(add)) + '.');
     if (Math.round(unv)) lines.push('Не звірено ' + Math.round(unv) + ' ' + _bal(Math.round(unv)) + '.');
-    lines.push('Підтверджено ' + ok + ' ' + _plu(ok, 'ціль', 'цілі', 'цілей') + ', відхилено ' + no + '.');
+    // Останній рядок рахує вильоти, а не цілі — рівно ті підписи, що стоять
+    // на картках. НЕ ЗВІРЕНО беремо лише з балами: виліт без балів картка теж
+    // ніяк не підписує
+    let cOk = 0, cPart = 0, cUnv = 0;
+    recs.forEach(r => {
+        const st = r.v && r.v.state;
+        if (st === 'ok') cOk++;
+        else if (st === 'part') cPart++;
+        else if (!st && (parseFloat(r.points) || 0)) cUnv++;
+    });
+    lines.push('');
+    lines.push('Верифіковано ' + cOk + ', частково верифіковано ' + cPart
+             + ', не звірено ' + cUnv + '.');
 }
 /* ============ /ВЕРИФІКАЦІЯ ============ */
 
@@ -3280,7 +3292,7 @@ function copyZvityPeriodReport() {
     const _fLabelTo=_zFmt(state.zvityFilterTo);
     const _fLabel=_fLabelFrom+' — '+_fLabelTo+'р.';
     const _lines=generateArchiveReport(_fRecs,_fLabel);
-    _lines.push('Загалом уражено орієнтовно на '+_fPts+' '+_bal(_fPts)+'.');
+    _lines.push(''),_lines.push('Загалом уражено орієнтовно на '+_fPts+' '+_bal(_fPts)+'.');
     _pushCostLines(_lines,_fPts,_fRecs);
     navigator.clipboard.writeText(_lines.join('\n')).catch(()=>{});
     showAlert('✅ Скопійовано!');
@@ -3294,7 +3306,7 @@ function copyZvityAllReport() {
     const _p=(_zd[0]===_zd[_zd.length-1])?_zd[0]+'р.':(m1===m2&&y1===y2)?d1+'-'+d2+'.'+m1+'.'+y1+'р.':(y1===y2)?d1+'.'+m1+'-'+d2+'.'+m2+'.'+y1+'р.':_zd[0]+'р. — '+_zd[_zd.length-1]+'р.';
     const _zvT2=Math.round(_recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     const lines=generateArchiveReport(_recs,_p);
-    lines.push('Загалом уражено орієнтовно на '+_zvT2+' '+_bal(_zvT2)+'.');
+    lines.push(''),lines.push('Загалом уражено орієнтовно на '+_zvT2+' '+_bal(_zvT2)+'.');
     _pushCostLines(lines,_zvT2,_recs);
     navigator.clipboard.writeText(lines.join('\n')).catch(()=>{});
     showAlert('✅ Скопійовано!');
@@ -3311,7 +3323,7 @@ function copyFilteredPeriodReport() {
     const _fLabelTo=state.filterTo.split('-').reverse().join('.');
     const _fLabel=_fLabelFrom+' — '+_fLabelTo+'р.';
     const _fLines=generateArchiveReport(_fRecs,_fLabel);
-    _fLines.push('Загалом уражено орієнтовно на '+_fPts+' '+_bal(_fPts)+'.');
+    _fLines.push(''),_fLines.push('Загалом уражено орієнтовно на '+_fPts+' '+_bal(_fPts)+'.');
     _pushCostLines(_fLines,_fPts,_fRecs);
     const _fDrnCnt={};_fRecs.forEach(r=>{if(r.drone)_fDrnCnt[r.drone]=(_fDrnCnt[r.drone]||0)+1;});
     const _fAmmoCnt={};_fRecs.forEach(r=>{if(r.ammo)_fAmmoCnt[r.ammo]=(_fAmmoCnt[r.ammo]||0)+1;});
@@ -3646,7 +3658,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                     +_row('Поза обома списками',_vrLeft.length,' шт')
                     +_row('&nbsp;&nbsp;у них балів',_vrLeftPts,'');
                 const _statsBlock=state.archiveRecs.length>0?`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}</div><div style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_resRows)}${_sec('ВЕРИФІКАЦІЯ',_vrRows)}</div></div>`:'';
-                const _shRptLines=(()=>{if(!state.archiveRecs.length)return[];const _l=generateArchiveReport(state.archiveRecs,state.selArchive+'р.');_l.push('Загалом уражено орієнтовно на '+_arTotal+' '+_bal(_arTotal)+'.');_pushCostLines(_l,_arTotal,state.archiveRecs);_pushVerifyLines(_l,state.archiveRecs);return _l;})();
+                const _shRptLines=(()=>{if(!state.archiveRecs.length)return[];const _l=generateArchiveReport(state.archiveRecs,state.selArchive+'р.');_l.push(''),_l.push('Загалом уражено орієнтовно на '+_arTotal+' '+_bal(_arTotal)+'.');_pushCostLines(_l,_arTotal,state.archiveRecs);_pushVerifyLines(_l,state.archiveRecs);return _l;})();
                 const _shRptBlock=state.archiveRecs.length>0?`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ${esc(state.selArchive)}</h3><span class="stencil" style="color:var(--khaki)">Уражено орієнтовно на <span style="color:var(--text)">${_arTotal}</span> ${_bal(_arTotal)}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyArchiveSheetReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_shRptLines.join('\n')}</div></div>`:'';
                 _arContent=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px"><h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">${esc(state.selArchive)}</h1>${_arHeader}</div>${_shRptBlock}<h2 class="stencil-shadow text-xl px-2" style="color:var(--yellow)">СТАТИСТИКА</h2>${_statsBlock}<h2 class="stencil-shadow text-xl px-2" style="color:var(--yellow)">ВИЛЬОТИ</h2>${_arGroups||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає записів</p></div>'}`;
             }
@@ -3660,7 +3672,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _allBD=state.archiveSheets.map(s=>{let m=s.match(/^(\d{1,2})-(\d{1,2})\.(\d{1,2})\.(\d{4})/);if(m)return{k:m[4]+m[3].padStart(2,'0')+m[1].padStart(2,'0'),d:m[1].padStart(2,'0')+'.'+m[3].padStart(2,'0')+'.'+m[4]};m=s.match(/^(\d{1,2})\.(\d{1,2})-(\d{1,2})\.(\d{1,2})\.(\d{4})/);if(m)return{k:m[5]+m[2].padStart(2,'0')+m[1].padStart(2,'0'),d:m[1].padStart(2,'0')+'.'+m[2].padStart(2,'0')+'.'+m[5]};return null;}).filter(Boolean);
                 const _allEarliest=_allBD.length?_allBD.reduce((a,b)=>a.k<b.k?a:b).d:(_allRecs.map(r=>getDateOnly(r.datetime)).filter(Boolean).sort()[0]||'');
                 const _allTotal=Math.round(_allRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
-                const _allRptLines=(()=>{const _l=generateArchiveReport(_allRecs,'Від '+_allEarliest+' дотепер');_l.push('Загалом уражено орієнтовно на '+_allTotal+' '+_bal(_allTotal)+'.');_pushCostLines(_l,_allTotal,_allRecs);_pushVerifyLines(_l,_allRecs);return _l;})();
+                const _allRptLines=(()=>{const _l=generateArchiveReport(_allRecs,'Від '+_allEarliest+' дотепер');_l.push(''),_l.push('Загалом уражено орієнтовно на '+_allTotal+' '+_bal(_allTotal)+'.');_pushCostLines(_l,_allTotal,_allRecs);_pushVerifyLines(_l,_allRecs);return _l;})();
                 const _allRptBlock=`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ВСІ ВИЇЗДИ З ${_allEarliest} ДОТЕПЕР</h3><span class="stencil" style="color:var(--khaki)">Уражено орієнтовно на <span style="color:var(--text)">${_allTotal}</span> ${_bal(_allTotal)}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyAllArchiveReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_allRptLines.join('\n')}</div></div>`;
                 const _allDrnCnt={};_allRecs.forEach(r=>{if(r.drone)_allDrnCnt[r.drone]=(_allDrnCnt[r.drone]||0)+1;});
                 const _allAmmoCnt={};_allRecs.forEach(r=>{if(r.ammo)_allAmmoCnt[r.ammo]=(_allAmmoCnt[r.ammo]||0)+1;});
@@ -3700,7 +3712,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             } else {
                 const _fPts=Math.round(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                 const _fLines=generateArchiveReport(_fRecs,_fLabel);
-                _fLines.push('Загалом уражено орієнтовно на '+_fPts+' '+_bal(_fPts)+'.');
+                _fLines.push(''),_fLines.push('Загалом уражено орієнтовно на '+_fPts+' '+_bal(_fPts)+'.');
                 _pushCostLines(_fLines,_fPts,_fRecs);
                 const _fDrnCnt={};_fRecs.forEach(r=>{if(r.drone)_fDrnCnt[r.drone]=(_fDrnCnt[r.drone]||0)+1;});
                 const _fAmmoCnt={};_fRecs.forEach(r=>{if(r.ammo)_fAmmoCnt[r.ammo]=(_fAmmoCnt[r.ammo]||0)+1;});
@@ -3797,7 +3809,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _zReports='<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><h3 class="stencil-shadow" style="color:var(--yellow)">ДОПОВІДЬ '+_zHdrLabel+'</h3></div><div class="report-box">'+_zRepLines.join('\n')+'</div></div>';
                 // підсумки
                 const _zSumLines=generateArchiveReport(_zRecs,_zLabel);
-                _zSumLines.push('Загалом уражено орієнтовно на '+_zPts+' '+_bal(_zPts)+'.');
+                _zSumLines.push(''),_zSumLines.push('Загалом уражено орієнтовно на '+_zPts+' '+_bal(_zPts)+'.');
                 _pushCostLines(_zSumLines,_zPts,_zRecs);
                 const _zSumBlock='<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ПЕРІОД</h3><button onclick="copyZvityPeriodReport()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div><div class="report-box">'+_zSumLines.join('\n')+'</div></div>';
                 _zvResult=_zGroups+_zReports+_zSumBlock;
@@ -3876,7 +3888,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             const _zvP=(_zvD[0]===_zvD[_zvD.length-1])?_zvD[0]+'р.':(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1+'р.':(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1+'р.':_zvD[0]+'р. — '+_zvD[_zvD.length-1]+'р.';
             const _zvT=Math.round(_zvR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
             const _zvL=generateArchiveReport(_zvR,_zvP);
-            _zvL.push('Загалом уражено орієнтовно на '+_zvT+' '+_bal(_zvT)+'.');
+            _zvL.push(''),_zvL.push('Загалом уражено орієнтовно на '+_zvT+' '+_bal(_zvT)+'.');
             _pushCostLines(_zvL,_zvT,_zvR);
             h+='<div class="p-4 zvity-wrap">'
              +'<div class="crate p-4">'
