@@ -3470,10 +3470,15 @@ function render() {
                             const _no=tgts.map((t,j)=>(r.v.list[j]==='no')?j:-1).filter(j=>j>=0);
                             if(!_no.length)return null;
                             if(!_sameRes(r,tgts,ress,String(_rp[0].res||'').toLowerCase()))return null;
-                            // нова ціль стає на місце останньої з викреслених
-                            return {j:_no[_no.length-1],name:_vType(_rp[0].name),qty:_rp[0].qty};})();
+                            const _nm=_vType(_rp[0].name),_q=_rp[0].qty,_m={};
+                            // скільки викреслили, стільки й вписали — тоді кожна
+                            // дістає свою; інакше нова стає на місце останньої
+                            if(_q===_no.length)_no.forEach(j=>{_m[j]={name:_nm,qty:1};});
+                            else _m[_no[_no.length-1]]={name:_nm,qty:_q};
+                            return _m;})();
                         const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');
-if(_swap1&&_swap1.j===j)return `<span class="qty-old">${tn}</span> ${_swap1.qty>1?_vW(_swap1.qty)+' '+_vY('од.')+' ':''}${_vW(_swap1.name)}${_dash}<span style="color:var(--khaki)">${rv}</span>`;
+const _sw=_swap1&&_swap1[j];
+if(_sw)return `<span class="qty-old">${tn}</span> ${_sw.qty>1?_vW(_sw.qty)+' '+_vY('од.')+' ':''}${_vW(_sw.name)}${_dash}<span style="color:var(--khaki)">${rv}</span>`;
 // веріфікатор поставив цілі інший результат — старий закреслений, новий поруч,
 // так само як із кількістю на позначках
 const _nv=(r.v&&r.v.vres&&r.v.list[j]==='ok')?String(r.v.vres[j]||'').trim().toLowerCase():'';
