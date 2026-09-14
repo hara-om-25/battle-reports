@@ -3522,6 +3522,9 @@ function render() {
                 const _packOwner={};
                 _arOrder.forEach((x,i)=>{const st=x.v&&x.v.state;
                     if(st&&st!=='pack'&&st!=='no'){const k=_packKey(x);if(!(k in _packOwner))_packOwner[k]=i+1;}});
+                // Пари не стало — виліт-переможець відредагували після звіряння.
+                // Дублюючим без пари виліт бути не може, тож він просто не звірений
+                _arOrder.forEach(x=>{if(x.v&&x.v.state==='pack'&&!_packOwner[_packKey(x)])x.v.state='';});
                 const _arGroups=_arDates.map(d=>{
                     const dayR=_byTime(state.archiveRecs.filter(r=>getDateOnly(r.datetime)===d));
                     const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
@@ -3569,8 +3572,7 @@ return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`
                         const notes=_swaps.length?[`${_vY('верифікатор замінив')} ${_swaps.join(_vY(', '))}`]:[];
                         // виліт скасовано на користь такого самого, який верифікатор зарахував
                         if(r.v&&r.v.state==='pack'){const _po=_packOwner[_packKey(r)];
-                            notes.push(_po?`${_vY('верифікатор скасував цей виліт на користь')} ${_vW(_po)} ${_vY('вильоту')}`
-                                          :_vY('верифікатор скасував цей виліт як дублюючий'));}
+                            notes.push(`${_vY('верифікатор скасував цей виліт на користь')} ${_vW(_po)} ${_vY('вильоту')}`);}
                         const meta=[esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
                         const _unv=(_anyV&&!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
