@@ -2166,12 +2166,12 @@ async function runVerification(file) {
 // Рядки про верифікацію в доповідь. Рахуємо цілі, а не вильоти.
 // Скасовані бали — різниця між нарахованими за виліт і підтвердженими
 function _pushVerifyLines(lines, recs) {
-    let ok = 0, no = 0, sum = 0, canc = 0, add = 0, unv = 0, pk = 0;
+    let ok = 0, no = 0, sum = 0, canc = 0, add = 0, unv = 0;
     recs.forEach(r => {
         // виліт, якого звіряння не зачепило, не йде ні у верифіковані бали,
         // ні у скасовані — його бали рахуємо окремо
         if (!r.v || !r.v.state) { unv += parseFloat(r.points) || 0; return; }
-        if (r.v.state === 'pack') { pk += parseFloat(r.points) || 0; return; }
+        if (r.v.state === 'pack') { canc += parseFloat(r.points) || 0; return; }
         add += Math.max(0, r.v.sum - (parseFloat(r.points) || 0));
         canc += Math.max(0, (parseFloat(r.points) || 0) - r.v.sum);
         // заміна важить стільки цілей, скільки їх побачив верифікатор:
@@ -2184,7 +2184,6 @@ function _pushVerifyLines(lines, recs) {
     lines.push('Скасовано ' + Math.round(canc) + ' ' + _bal(Math.round(canc)) + '.');
     if (Math.round(add)) lines.push('Додано ' + Math.round(add) + ' ' + _bal(Math.round(add)) + '.');
     if (Math.round(unv)) lines.push('Не звірено ' + Math.round(unv) + ' ' + _bal(Math.round(unv)) + '.');
-    if (Math.round(pk)) lines.push('У пакеті з підтвердженими ' + Math.round(pk) + ' ' + _bal(Math.round(pk)) + '.');
     lines.push('Підтверджено ' + ok + ' ' + _plu(ok, 'ціль', 'цілі', 'цілей') + ', відхилено ' + no + '.');
 }
 /* ============ /ВЕРИФІКАЦІЯ ============ */
@@ -3512,6 +3511,17 @@ function render() {
                 const _dash='<span style="color:var(--yellow)"> \u2014 </span>';
                 const _ysep='<span style="color:var(--yellow)"> | </span>';
                 let _arNum=0;
+                // Номери карток рахуються в тому ж порядку, що й малюються.
+                // Заздалегідь проходимо цей порядок, щоб знати номер вильоту,
+                // на користь якого скасовано однаковий із ним
+                const _arOrder=[];
+                _arDates.forEach(d=>{_byTime(state.archiveRecs.filter(x=>getDateOnly(x.datetime)===d)).forEach(x=>_arOrder.push(x));});
+                const _packKey=x=>(getDateOnly(x.datetime)||'')+'|'+_vCoord(x.coordinates).slice(0,-2)
+                    +'|'+String(x.target||'').split(', ').map(_vName).join(',')
+                    +'|'+String(x.result||'').split(', ').map(_vName).join(',');
+                const _packOwner={};
+                _arOrder.forEach((x,i)=>{const st=x.v&&x.v.state;
+                    if(st&&st!=='pack'&&st!=='no'){const k=_packKey(x);if(!(k in _packOwner))_packOwner[k]=i+1;}});
                 const _arGroups=_arDates.map(d=>{
                     const dayR=_byTime(state.archiveRecs.filter(r=>getDateOnly(r.datetime)===d));
                     const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
@@ -3562,7 +3572,7 @@ return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`
                         const _unv=(_anyV&&!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
                         return `<div class="record-card text-sm${_unv}" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')}${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;// виліт із балами, якого звіряння не зачепило: у залік не йде нічого, а власні
 // бали лишаються в дужках, щоб було видно, скільки саме не підтверджено
-if(!_st)return (_anyV&&(parseFloat(r.points)||0))?`<p class="stencil" style="color:var(--red-label)">0 балів <span style="color:var(--yellow)">(не звірено ${Math.round(parseFloat(r.points)||0)} ${_bal(r.points)})</span></p>`:`<p class="stencil" style="color:var(--yellow)">${r.points} ${_bal(r.points)}</p>`;if(_st==='pack')return `<p class="stencil" style="color:var(--blue-label)">${r.points} ${_bal(r.points)} <span style="color:var(--yellow)">(у пакеті)</span></p>`;const _sum=Math.round(r.v.sum);
+if(!_st)return (_anyV&&(parseFloat(r.points)||0))?`<p class="stencil" style="color:var(--red-label)">0 балів <span style="color:var(--yellow)">(не звірено ${Math.round(parseFloat(r.points)||0)} ${_bal(r.points)})</span></p>`:`<p class="stencil" style="color:var(--yellow)">${r.points} ${_bal(r.points)}</p>`;if(_st==='pack'){const _p=Math.round(parseFloat(r.points)||0);return `<p class="stencil" style="color:var(--red-label)">0 балів${_p?` <span style="color:var(--yellow)">(скасовано ${_p} ${_bal(_p)})</span>`:''}</p>`;}const _sum=Math.round(r.v.sum);
 // скасоване — це різниця між нарахованим за виліт і тим, що верифікатор дав
 // власним цілям вильоту. Дописані ним понад виліт бали скасування не зменшують
 // різниця між нарахованим за виліт і тим, що дав верифікатор. Одне число:
@@ -3572,7 +3582,7 @@ const _a=Math.max(0,Math.round(r.v.sum-(parseFloat(r.points)||0)));
 const _clr=_st==='repl'?'var(--blue-label)':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)';return `<p class="stencil" style="color:${_clr}">${_st==='no'?0:_sum} ${_bal(_st==='no'?0:_sum)}${_c?` <span style="color:var(--yellow)">(скасовано ${_c} ${_bal(_c)})</span>`:''}${_a?` <span style="color:var(--yellow)">(додано ${_a} ${_bal(_a)})</span>`:''}</p>`;})()}${(()=>{const _st=r.v&&r.v.state;
 // виліт із балами, який не дістав жодного вердикту — саме такі й губляться
 if(!_st) return (_anyV&&(parseFloat(r.points)||0))?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:var(--red-label)">НЕ ЗВІРЕНО</span>`:'';
-return `<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)'}">${_st==='repl'?'ЗАМІНЕНО':_st==='ok'?'ВЕРИФІКОВАНО':_st==='no'?'ВІДХИЛЕНО':_st==='pack'?'У ПАКЕТІ':'ЧАСТКОВО<br>ВЕРИФІКОВАНО'}</span>`;})()}</div>`;
+return `<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;${_st==='pack'?'max-width:150px;line-height:1.15;':''}color:${(_st==='no'||_st==='pack')?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)'}">${_st==='repl'?'ЗАМІНЕНО':_st==='ok'?'ВЕРИФІКОВАНО':_st==='no'?'ВІДХИЛЕНО':_st==='pack'?('СКАСОВАНО НА КОРИСТЬ'+(_packOwner[_packKey(r)]?' '+_packOwner[_packKey(r)]+' ВИЛЬОТУ':'')):'ЧАСТКОВО<br>ВЕРИФІКОВАНО'}</span>`;})()}</div>`;
                     }).join('');
                     return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
                 }).join('');
