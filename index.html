@@ -1074,10 +1074,12 @@ async function _loadSheetPicks() {
         const id = String((r || [])[0] || '').trim();
         const name = String((r || [])[1] || '').trim();
         if (!name) return '';
-        return `<button onclick="_pickSheet('${esc(id)}')" class="btn-stencil w-full${id===SHEET_ID?' active':''}">ТГ ${esc(name)}</button>`;
+        // жовті, як кнопки звітів і дат: відкрита таблиця світла, решта приглушені
+        return `<button onclick="_pickSheet('${esc(id)}')" class="btn-stencil ${id===SHEET_ID?'btn-yellow':'btn-yellow-dim'}" style="flex:1 1 calc(50% - 4px);min-width:0">ТГ ${esc(name)}</button>`;
     }).filter(Boolean).join('');
     const box = document.getElementById('_sheetPicks');
-    if (box && html) box.innerHTML = html + '<div style="height:1rem"></div>';
+    // по дві в рядок; більше двох переносяться наступним рядком тієї ж ширини
+    if (box && html) box.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px">' + html + '</div><div style="height:1rem"></div>';
 }
 
 function _pickSheet(id) {
