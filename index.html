@@ -3376,10 +3376,10 @@ function renderListSection(list, title) {
 }
 
 const _MNAMES=['СІЧЕНЬ','ЛЮТИЙ','БЕРЕЗЕНЬ','КВІТЕНЬ','ТРАВЕНЬ','ЧЕРВЕНЬ','ЛИПЕНЬ','СЕРПЕНЬ','ВЕРЕСЕНЬ','ЖОВТЕНЬ','ЛИСТОПАД','ГРУДЕНЬ'];
-let _pck={yr:2026,mo:0,dy:null,hr:0,mn:0,hasTime:false,key:null,hrOpen:false,mnOpen:false};
+let _pck={yr:2026,mo:0,dy:null,hr:0,mn:0,hasTime:false,key:null,hrOpen:false,mnOpen:false,moOpen:false,yrOpen:false};
 function _pckOpen(key,hasTime,cur){
     const now=new Date();
-    _pck.key=key;_pck.hasTime=hasTime;_pck.hrOpen=false;_pck.mnOpen=false;
+    _pck.key=key;_pck.hasTime=hasTime;_pck.hrOpen=false;_pck.mnOpen=false;_pck.moOpen=false;_pck.yrOpen=false;
     if(cur){
         const[dt,tm]=(cur||'').split('T');
         const pts=dt.split('-');
@@ -3409,6 +3409,19 @@ function _pckRender(){
     const _mns=Array.from({length:60},(_,i)=>59-i);
     const _hList=_hrs.map(h=>`<div onclick="_pck.hr=${h};_pck.hrOpen=false;_pckRender()" ${h===p.hr?'data-sel':''} style="padding:9px 0;cursor:pointer;text-align:center;background:${h===p.hr?'var(--yellow)':'transparent'};color:${h===p.hr?'#1a1a12':'var(--text)'};font-family:inherit;font-size:0.9em;letter-spacing:0.05em;border-radius:3px">${String(h).padStart(2,'0')}</div>`).join('');
     const _mList=_mns.map(m=>`<div onclick="_pck.mn=${m};_pck.mnOpen=false;_pckRender()" ${m===p.mn?'data-sel':''} style="padding:9px 0;cursor:pointer;text-align:center;background:${m===p.mn?'var(--yellow)':'transparent'};color:${m===p.mn?'#1a1a12':'var(--text)'};font-family:inherit;font-size:0.9em;letter-spacing:0.05em;border-radius:3px">${String(m).padStart(2,'0')}</div>`).join('');
+    // Назва місяця й рік — самі собі списки, щоб не гортати по місяцю стрілками.
+    // Обидва йдуть на спад, а прокручені так, щоб зверху стояло те, що на крок
+    // назад: у вересні 2026 це серпень і 2025 — саме туди й треба найчастіше
+    const _ddSt='position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);z-index:20;max-height:196px;overflow-y:auto;background:var(--surface);border:1px solid var(--yellow);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,0.5)';
+    const _itSt=on=>`padding:8px 14px;cursor:pointer;text-align:center;white-space:nowrap;background:${on?'var(--yellow)':'transparent'};color:${on?'#1a1a12':'var(--text)'};font-family:inherit;font-size:0.9em;letter-spacing:0.05em;border-radius:3px`;
+    const _moNext=(p.mo+11)%12;
+    const _moList=_MNAMES.map((nm,i)=>({nm:nm,i:i})).sort((a,b)=>b.i-a.i)
+        .map(o=>`<div onclick="_pckSetMo(${o.i})" ${o.i===_moNext?'data-next':''} style="${_itSt(o.i===p.mo)}">${o.nm}</div>`).join('');
+    const _yNow=new Date().getFullYear();
+    const _yrs=[];for(let y=Math.max(_yNow,p.yr);y>=Math.min(p.yr,_yNow-9);y--)_yrs.push(y);
+    const _yrNext=_yrs.indexOf(p.yr-1)>=0?p.yr-1:p.yr;
+    const _yrList=_yrs.map(y=>`<div onclick="_pckSetYr(${y})" ${y===_yrNext?'data-next':''} style="${_itSt(y===p.yr)}">${y}</div>`).join('');
+    const _hdSt='color:var(--yellow);font-size:1.05em;cursor:pointer';
     const _hBrd=p.hrOpen?'var(--yellow)':'var(--surface-light)';
     const _mBrd=p.mnOpen?'var(--yellow)':'var(--surface-light)';
     const _boxSt='width:38px;height:32px;display:flex;align-items:center;justify-content:center;background:var(--surface-light);border-radius:4px;cursor:pointer;font-size:0.9em;color:var(--yellow);font-family:inherit;letter-spacing:0.05em;border:2px solid ';
@@ -3417,15 +3430,26 @@ function _pckRender(){
     const timeHtml=p.hasTime?`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--surface-light)"><div style="display:flex;justify-content:center;align-items:center;gap:10px"><div style="position:relative;padding-top:18px"><div style="${_lblSt}">ГОД</div><div onclick="_pck.hrOpen=!_pck.hrOpen;_pck.mnOpen=false;_pckRender()" style="${_boxSt}${_hBrd}">${String(p.hr).padStart(2,'0')}</div>${p.hrOpen?`<div id="_pckHrList" style="${_dropSt}">${_hList}</div>`:''}</div><div style="color:var(--yellow);font-size:1.5em;font-weight:bold;line-height:1">:</div><div style="position:relative;padding-top:18px"><div style="${_lblSt}">ХВ</div><div onclick="_pck.mnOpen=!_pck.mnOpen;_pck.hrOpen=false;_pckRender()" style="${_boxSt}${_mBrd}">${String(p.mn).padStart(2,'0')}</div>${p.mnOpen?`<div id="_pckMnList" style="${_dropSt}">${_mList}</div>`:''}</div></div></div>`:'';
     const okDis=p.dy?'':'disabled';
     const okSt=p.dy?'':'opacity:0.38;pointer-events:none;';
-    document.getElementById('modal').innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box" style="max-width:330px;width:95%;padding:18px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><button onclick="_pckNav(-1)" class="btn-stencil" style="padding:5px 14px;font-size:1em">◀</button><span class="stencil-shadow" style="color:var(--yellow);font-size:1.05em">${_MNAMES[p.mo]} ${p.yr}</span><button onclick="_pckNav(1)" class="btn-stencil" style="padding:5px 14px;font-size:1em">▶</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">${cells}</div>${timeHtml}<div style="display:flex;gap:10px;margin-top:14px"><button onclick="closeModal()" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil" style="flex:1">СКАСУВАТИ</button><button onclick="_pckConfirm()" onmousedown="this.style.background='#b8a020'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#b8a020'" ontouchend="this.style.background=''" class="btn-stencil btn-yellow-dim" style="flex:1;${okSt}" ${okDis}>ВСТАНОВИТИ</button></div></div></div>`;
+    document.getElementById('modal').innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box" style="max-width:330px;width:95%;padding:18px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><button onclick="_pckNav(-1)" class="btn-stencil" style="padding:5px 14px;font-size:1em">◀</button><div style="display:flex;align-items:center;gap:9px"><div style="position:relative"><span onclick="_pck.moOpen=!_pck.moOpen;_pck.yrOpen=false;_pckRender()" class="stencil-shadow" style="${_hdSt}">${_MNAMES[p.mo]}</span>${p.moOpen?`<div id="_pckMoList" style="${_ddSt}">${_moList}</div>`:''}</div><div style="position:relative"><span onclick="_pck.yrOpen=!_pck.yrOpen;_pck.moOpen=false;_pckRender()" class="stencil-shadow" style="${_hdSt}">${p.yr}</span>${p.yrOpen?`<div id="_pckYrList" style="${_ddSt}">${_yrList}</div>`:''}</div></div><button onclick="_pckNav(1)" class="btn-stencil" style="padding:5px 14px;font-size:1em">▶</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">${cells}</div>${timeHtml}<div style="display:flex;gap:10px;margin-top:14px"><button onclick="closeModal()" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil" style="flex:1">СКАСУВАТИ</button><button onclick="_pckConfirm()" onmousedown="this.style.background='#b8a020'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#b8a020'" ontouchend="this.style.background=''" class="btn-stencil btn-yellow-dim" style="flex:1;${okSt}" ${okDis}>ВСТАНОВИТИ</button></div></div></div>`;
     if(p.hasTime){
         const _hc=document.getElementById('_pckHrList');
         const _mc=document.getElementById('_pckMnList');
         if(_hc){const _s=_hc.querySelector('[data-sel]');if(_s)_hc.scrollTop=_s.offsetTop-_hc.clientHeight/2+_s.clientHeight/2;}
         if(_mc){const _s=_mc.querySelector('[data-sel]');if(_s)_mc.scrollTop=_s.offsetTop-_mc.clientHeight/2+_s.clientHeight/2;}
     }
+    // крок назад — першим рядком; те, що новіше, лишається вище, до нього
+    // можна догорнути
+    ['_pckMoList','_pckYrList'].forEach(id=>{
+        const c=document.getElementById(id);if(!c)return;
+        const s=c.querySelector('[data-next]');if(s)c.scrollTop=s.offsetTop;
+    });
 }
-function _pckNav(dir){_pck.mo+=dir;if(_pck.mo<0){_pck.mo=11;_pck.yr--;}if(_pck.mo>11){_pck.mo=0;_pck.yr++;}  _pckRender();}
+// У короткому місяці 31-го числа немає — інакше ВСТАНОВИТИ віддало б
+// неіснуючу дату на кшталт 2026-09-31
+function _pckClampDay(){const dim=new Date(_pck.yr,_pck.mo+1,0).getDate();if(_pck.dy&&_pck.dy>dim)_pck.dy=dim;}
+function _pckSetMo(m){_pck.mo=m;_pck.moOpen=false;_pckClampDay();_pckRender();}
+function _pckSetYr(y){_pck.yr=y;_pck.yrOpen=false;_pckClampDay();_pckRender();}
+function _pckNav(dir){_pck.mo+=dir;if(_pck.mo<0){_pck.mo=11;_pck.yr--;}if(_pck.mo>11){_pck.mo=0;_pck.yr++;}_pck.moOpen=false;_pck.yrOpen=false;_pckClampDay();_pckRender();}
 function _pckDay(d){_pck.dy=d;_pckRender();}
 function _pckConfirm(){
     if(!_pck.dy)return;
