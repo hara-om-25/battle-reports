@@ -3753,6 +3753,15 @@ function render() {
                                 for(let k=0;k<Math.max(1,rp.qty||1);k++)_u.push({name:_nm,qty:1,res:_rr});});
                             const _m={};
                             _no.forEach((j,k)=>{if(_u[k])_m[j]=_u[k];});
+                            // нових більше, ніж викреслених — місця під них немає,
+                            // тож решту дописуємо кількістю до останньої. Коли
+                            // серед решти різні цілі, злічити їх в одну не можна:
+                            // повний перелік лишається в поясненні
+                            if(_u.length>_no.length){
+                                const _lj=_no[_no.length-1],_t=_u.slice(_no.length-1);
+                                if(_t.every(u=>u.name===_t[0].name&&u.res===_t[0].res))
+                                    _m[_lj]={name:_t[0].name,qty:_t.length,res:_t[0].res};
+                            }
                             return _m;})();
                         const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');
 const _sw=_swap1&&_swap1[j];
