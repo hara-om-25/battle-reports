@@ -424,7 +424,10 @@ const SHIELD_SVG = `<svg class="shield-svg" width="40" height="50" viewBox="0 0 
 
 
 const CLIENT_ID = '1095528804215-gjcnuo3oc12osqm596dpda81slodrmvs.apps.googleusercontent.com';
-let SHEET_ID = localStorage.getItem('sheetId') || '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
+// Головна таблиця — з неї застосунок починає і до неї має бути змога
+// повернутись із будь-якого іншого файла
+const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
+let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
     page: 'login', user: null, token: null, loaded: false,
@@ -1119,6 +1122,9 @@ async function _loadSheetPicks() {
         const hName = id => { const it = hist.find(x => x && x.id === id); return (it && it.name) || ''; };
         // відкрита зараз — завжди в списку, далі все, де вже бували
         if (!picks.some(p => p.id === SHEET_ID)) picks.unshift({ id: SHEET_ID, name: hName(SHEET_ID) });
+        // головна — завжди в списку, хоч що написано в «start» чужого файла
+        // і хоч чи бували ми на цьому пристрої раніше
+        if (!picks.some(p => p.id === HOME_SHEET_ID)) picks.push({ id: HOME_SHEET_ID, name: hName(HOME_SHEET_ID) });
         hist.forEach(x => { if (x && x.id && !picks.some(p => p.id === x.id)) picks.push({ id: x.id, name: x.name || '' }); });
         for (const p of picks) {
             if (p.name) continue;
