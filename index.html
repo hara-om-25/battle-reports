@@ -1748,6 +1748,9 @@ function _markPacks(recs) {
     recs.forEach(r => {
         if (!r.v || (r.v.state && r.v.state !== 'pack')) return;
         r.v.state = ''; r.v.packOf = null;
+        // нуль балів — це не удар: «НЕвлучання» чи збитий дрон. Скасовувати
+        // там нема чого, отже й дублювати нема чого
+        if (!(parseFloat(r.points) || 0)) return;
         const names = _packNames(r);
         if (!names.length) return;
         const own = (owners[_packKeyRec(r)] || [])
