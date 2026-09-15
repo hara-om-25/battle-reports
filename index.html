@@ -2870,11 +2870,15 @@ const tgtList = er.targets.length > 0
     const _hasOs300 = er.targets.some(t=>{const _ab=Object.keys(state.scoreTable).find(k=>t.name.startsWith(k))||'';return _ab==='ОС'&&(t.result==='знищено'||t.result==='пошкоджено');})||(er.newTarget==='ОС'&&(er.newResult==='знищено'||er.newResult==='пошкоджено'));
     if (!_hasOs200) er.qty200=0;
     if (!_hasOs300) er.qty300=0;
-    // Час правлять у менший бік, тож списки йдуть на зростання: над обраним
-    // стоять менші числа — 15 має над собою 14, 13, 12. Обране лишається на
-    // своєму місці й ніде не повторюється
-    const _tOpts = (len, cur) => Array.from({length:len},(_,i)=>String(i).padStart(2,'0'))
-        .map(v=>`<option value="${v}" ${cur===v?'selected':''}>${v}</option>`).join('');
+    // Час правлять у менший бік. Браузер прокручує рідний список так, щоб
+    // обране було першим видимим рядком, тож усе вище нього лишається за
+    // екраном. Отже менші числа ставимо одразу під обраним: 15, 14, 13 …
+    // За нулем список іде по колу, обране трапляється рівно раз
+    const _tOpts = (len, cur) => {
+        const s = /^\d+$/.test(cur) ? parseInt(cur, 10) % len : -1;
+        return Array.from({length:len},(_,i)=>String(s < 0 ? i : (s-i+len)%len).padStart(2,'0'))
+            .map(v=>`<option value="${v}" ${cur===v?'selected':''}>${v}</option>`).join('');
+    };
     const hhOpts = _tOpts(24, er.hour);
     const mmOpts = _tOpts(60, er.minute);
     const q200opts = [9,8,7,6,5,4,3,2,1,0].map(n=>`<option value="${n}" ${er.qty200===n?'selected':''}>${n}</option>`).join('');
