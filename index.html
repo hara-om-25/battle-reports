@@ -3742,7 +3742,9 @@ function render() {
                             if(_rp.length!==1)return null;
                             const _no=tgts.map((t,j)=>(r.v.list[j]==='no')?j:-1).filter(j=>j>=0);
                             if(!_no.length)return null;
-                            const _nm=_vType(_rp[0].name),_q=_rp[0].qty,_rr=String(_rp[0].res||''),_m={};
+                            // у файлі результат пишуть з великої, у переліку все
+                            // з малої — зводимо до одного вигляду
+                            const _nm=_vType(_rp[0].name),_q=_rp[0].qty,_rr=String(_rp[0].res||'').toLowerCase(),_m={};
                             // скільки викреслили, стільки й вписали — тоді кожна
                             // дістає свою; інакше нова стає на місце першої
                             if(_q===_no.length)_no.forEach(j=>{_m[j]={name:_nm,qty:1,res:_rr};});
