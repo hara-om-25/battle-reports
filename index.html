@@ -741,6 +741,7 @@ async function manualPush() {
         showAlert('✅ Дані записані та синхронізовані з таблицею!');
     } catch (e) {
         if (_isNetErr(e)) { state.online = false; _offlineMsg(); }
+        else if (_isAuthErr(e)) _authFail(true);
         else showAlert('⚠️ Помилка синхронізації: ' + e.message);
     } finally {
         state.syncing = false; render();
@@ -764,6 +765,7 @@ async function manualPull() {
     } catch (e) {
         state.syncing = false;
         if (_isNetErr(e)) { state.online = false; _offlineMsg(); }
+        else if (_isAuthErr(e)) _authFail(true);
         else showAlert('⚠️ Помилка: ' + e.message);
         render();
     }
@@ -932,6 +934,10 @@ function initAuth() {
             }
             state.token = response.access_token;
             localStorage.setItem('token', state.token);
+            // позначку часу ставимо на кожен виданий токен, а не лише на запуск
+            // таймера — інакше перевірка при поверненні у вкладку рахує не від
+            // того моменту й токен устигає протухнути
+            localStorage.setItem('_lastRefresh', Date.now().toString());
             _tokenArrived(state.token);
             if (window._pendingSync) {
                 window._pendingSync = false;
@@ -963,7 +969,12 @@ function initAuth() {
                 showAlert('Помилка: ' + err.message);
                 logout();
             }
-        }
+        },
+        // Коли тихий запит токена не вдається — вікно заблокував браузер або
+        // сесія Google скінчилась — бібліотека кличе саме сюди, а не callback.
+        // Без цього обробника запит зависав: блок не знімався, а той, хто чекав
+        // на токен, діставав відмову аж за таймаутом
+        error_callback: () => { _tokenReqBusy = false; _tokenArrived(null); }
     });
 }
 
@@ -1135,9 +1146,27 @@ function _refreshToken() {
     return new Promise(resolve => {
         _tokenWaiters.push(resolve);
         if (_tokenWaiters.length > 1) return;         // запит уже в дорозі
-        if (!requestToken({ prompt: '', hint: state.user })) { _tokenArrived(null); return; }
+        // Запит міг піти й не від нас — таймером чи поверненням у вкладку.
+        // Тоді не замовляємо другий, а чекаємо на відповідь того самого
+        if (!_tokenReqBusy && !requestToken({ prompt: '', hint: state.user })) { _tokenArrived(null); return; }
         setTimeout(() => { if (_tokenWaiters.length) _tokenArrived(null); }, 20000);
     });
+}
+// Тихо оновити токен не вдалося — браузер заблокував вікно або сесія Google
+// скінчилась. Показуємо це людською мовою й пропонуємо повторити: натискання
+// кнопки це вже дія користувача, тож вікно Google відкриється без блокування
+function _authFail(retry) {
+    showConfirm('ПОТРІБЕН ВХІД',
+        'Сесія Google завершилась, тому таблиця не прийняла запис.\n\n'
+      + 'Дані збережені локально — нічого не втрачено, черга на місці.\n\n'
+      + 'Натисніть ПІДТВЕРДИТИ, щоб увійти знову й повторити.',
+        () => {
+            window._pendingSync = !!retry;
+            if (!requestToken({ prompt: '', hint: state.user })) {
+                window._pendingSync = false;
+                showAlert('Не вдалося відкрити вікно входу.\n\nВийдіть і зайдіть у застосунок знову — дані лишаються збережені локально.');
+            }
+        });
 }
 function _isAuthErr(e) {
     const m = (e && e.message || '').toLowerCase();
