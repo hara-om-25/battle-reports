@@ -1855,6 +1855,10 @@ function _vFileTarget(typeRaw, idRaw) {
     return { type: type, num: num, name: _vName(base + (num ? ' ' + num : '')) };
 }
 
+// «НЕвлучання» на верифікацію не подають, отже такої цілі у файлі бути не може
+// і рядок файлу ніколи не належить їй
+function _vMiss(res) { return _vName(res).replace(/[^А-ЯҐЄІЇA-Z]/g, '') === 'НЕВЛУЧАННЯ'; }
+
 // Тип цілі з таблиці: та сама назва без номера в кінці — «ОС 6» це «ОС»
 function _vType(x) { return _vName(String(x === null || x === undefined ? '' : x).replace(/\s+\d+\s*$/, '')); }
 
@@ -2095,11 +2099,13 @@ async function runVerification(file) {
                 // рядків, скільки людей. Тому всі рядки ОС зводимо в одну ціль,
                 // але тільки коли у вильоті ОС одна — інакше розкласти нічим
                 const os = tg.map((x, k) => _vType(x) === 'ОС' ? k : -1).filter(k => k >= 0);
+                // власні результати вильоту — щоб помітити, коли верифікатор
+                // підтвердив ціль, але з іншим результатом
+                const rs = String((rows[i] || [])[8] || '').split(', ').map(x => x.trim());
                 cell.push({
                     names: tg.map(_vName), types: tg.map(_vType),
-                    // власні результати вильоту — щоб помітити, коли верифікатор
-                    // підтвердив ціль, але з іншим результатом
-                    res: String((rows[i] || [])[8] || '').split(', ').map(x => x.trim()),
+                    res: rs,
+                    miss: tg.map((x, k) => _vMiss(rs[k])),
                     v: tg.map(() => ''), p: tg.map(() => ''), repl: [],
                     osIdx: os.length === 1 ? os[0] : -1, osK: 0, osW: 0
                 });
@@ -2135,12 +2141,15 @@ async function runVerification(file) {
                     // час звіряємо з похибкою; якщо часу немає — не заважає
                     if (it.min !== null && rm !== null && Math.abs(rm - it.min) > _V_TIME_TOL) continue;
                     const c = cell[i - 1];
+                    // усі цілі вильоту — НЕвлучання: його на верифікацію не
+                    // подавали, отже рядок файлу належить комусь іншому
+                    if (c.miss.length && c.miss.every(Boolean)) continue;
                     // приблизну координату беремо лише за збігу самої цілі.
                     // Результат може й різнитися: верифікатор бере знищене,
                     // а пошкоджене на тому ж місці пропускає
                     if (fuzzy) {
-                        let k = c.names.indexOf(it.tgt.name);
-                        if (k < 0) k = c.types.indexOf(it.tgt.type);
+                        let k = c.names.findIndex((nm, q) => nm === it.tgt.name && !c.miss[q]);
+                        if (k < 0) k = c.types.findIndex((t, q) => t === it.tgt.type && !c.miss[q]);
                         if (k < 0) continue;
                     }
                     // рядок ОС завжди йде на єдину ОС вильоту, навіть якщо та
@@ -2153,12 +2162,12 @@ async function runVerification(file) {
                         // серед однойменних цілей вильоту беремо ще не зайняту:
                         // інакше другий рядок файлу лягав на те саме місце, а
                         // сусіднє лишалося порожнім
-                        j = c.names.findIndex((nm, k) => nm === it.tgt.name && !c.v[k]);
-                        if (j < 0) j = c.names.indexOf(it.tgt.name);
+                        j = c.names.findIndex((nm, k) => nm === it.tgt.name && !c.miss[k] && !c.v[k]);
+                        if (j < 0) j = c.names.findIndex((nm, k) => nm === it.tgt.name && !c.miss[k]);
                         // номера у файлі немає — беремо першу ще не зайняту ціль
                         // того самого типу; так кілька рядків одного типу лягають
                         // по черзі на кілька цілей вильоту
-                        if (j < 0 && !it.tgt.num) j = c.types.findIndex((t, k) => t === it.tgt.type && !c.v[k]);
+                        if (j < 0 && !it.tgt.num) j = c.types.findIndex((t, k) => t === it.tgt.type && !c.miss[k] && !c.v[k]);
                     }
                     const d = (it.min === null || rm === null) ? 0 : Math.abs(rm - it.min);
                     // назви не збіглись, хоч усе решта збіглось — верифікатор
