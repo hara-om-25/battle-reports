@@ -3734,23 +3734,23 @@ function render() {
                         const n=++_arNum;
                         const tgts=r.target?r.target.split(', '):[];
                         const ress=r.result?r.result.split(', '):[];
-                        // одну нашу ціль замінили однією чужою, і результат той
-                        // самий — показуємо це просто в переліку: стара назва
-                        // перекреслена, нова поруч
+                        // Нашу ціль замінили чужою — показуємо це просто в переліку:
+                        // стара назва перекреслена, нова поруч із тим результатом,
+                        // який дав верифікатор. Результати відкинутих цілей при
+                        // цьому не важать: замінили їх усі однаково
                         const _swap1=(()=>{const _rp=(r.v&&r.v.repl)||[];
                             if(_rp.length!==1)return null;
                             const _no=tgts.map((t,j)=>(r.v.list[j]==='no')?j:-1).filter(j=>j>=0);
                             if(!_no.length)return null;
-                            if(!_sameRes(r,tgts,ress,String(_rp[0].res||'').toLowerCase()))return null;
-                            const _nm=_vType(_rp[0].name),_q=_rp[0].qty,_m={};
+                            const _nm=_vType(_rp[0].name),_q=_rp[0].qty,_rr=String(_rp[0].res||''),_m={};
                             // скільки викреслили, стільки й вписали — тоді кожна
-                            // дістає свою; інакше нова стає на місце останньої
-                            if(_q===_no.length)_no.forEach(j=>{_m[j]={name:_nm,qty:1};});
-                            else _m[_no[_no.length-1]]={name:_nm,qty:_q};
+                            // дістає свою; інакше нова стає на місце першої
+                            if(_q===_no.length)_no.forEach(j=>{_m[j]={name:_nm,qty:1,res:_rr};});
+                            else _m[_no[0]]={name:_nm,qty:_q,res:_rr};
                             return _m;})();
                         const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');
 const _sw=_swap1&&_swap1[j];
-if(_sw)return `<span class="qty-old">${tn}</span> ${_sw.qty>1?_vW(_sw.qty)+' '+_vY('од.')+' ':''}${_vW(_sw.name)}${_dash}<span style="color:var(--khaki)">${rv}</span>`;
+if(_sw)return `<span class="qty-old">${tn}</span> ${_sw.qty>1?_vW(_sw.qty)+' '+_vY('од.')+' ':''}${_vW(_sw.name)}${_dash}<span style="color:var(--khaki)">${esc(_sw.res||ress[j]||'')}</span>`;
 // верифікатор поставив цілі інший результат — старий закреслений, новий поруч,
 // так само як із кількістю на позначках
 const _nv=(r.v&&r.v.vres&&r.v.list[j]==='ok')?String(r.v.vres[j]||'').trim().toLowerCase():'';
