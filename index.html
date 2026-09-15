@@ -2871,11 +2871,11 @@ const tgtList = er.targets.length > 0
     if (!_hasOs200) er.qty200=0;
     if (!_hasOs300) er.qty300=0;
     // Час правлять у менший бік, тож список починається з числа на одиницю
-    // меншого за обране: воно перше, а обране стоїть одразу під ним. Далі
-    // список іде по колу — за 23 чи 59 знову 00
+    // меншого за обране і йде на спад: 51 дає 50, 49, 48 … Далі за нулем
+    // список іде по колу, а обране стає останнім. Порожнє поле — просто 59…00
     const _rot = (n, len, cur) => {
-        const s = /^\d+$/.test(cur) ? (parseInt(cur, 10) - 1 + len) % len : 0;
-        return Array.from({length:len},(_,i)=>String((s+i)%len).padStart(n,'0'));
+        const s = /^\d+$/.test(cur) ? (parseInt(cur, 10) - 1 + len) % len : len - 1;
+        return Array.from({length:len},(_,i)=>String((s-i+len)%len).padStart(n,'0'));
     };
     const hhOpts = _rot(2,24,er.hour).map(h=>`<option value="${h}" ${er.hour===h?'selected':''}>${h}</option>`).join('');
     const mmOpts = _rot(2,60,er.minute).map(m=>`<option value="${m}" ${er.minute===m?'selected':''}>${m}</option>`).join('');
