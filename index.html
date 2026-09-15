@@ -439,6 +439,32 @@ let tokenClient = null;
 
 /* ============ ОФЛАЙН-ЯДРО ============ */
 const LS_DATA = 'br_offline_data', LS_QUEUE = 'br_offline_queue';
+// Власник застосунку. Для нього перемикання таблиць не впирається в аркуш
+// «start»: він має потрапляти в будь-який файл, навіть якщо в поточній
+// таблиці того аркуша немає або він порожній
+const OWNER_EMAIL = 'murugan.160825@gmail.com';
+function _isOwner() { return String(state.user || '').trim().toLowerCase() === OWNER_EMAIL; }
+// Таблиці, які вже відкривали на цьому пристрої — щоб було куди повернутись
+function _sheetHist() { try { return JSON.parse(localStorage.getItem('sheetHist') || '[]'); } catch (e) { return []; } }
+function _sheetHistAdd(id, name) {
+    if (!id) return;
+    const h = _sheetHist();
+    const old = h.find(x => x && x.id === id);
+    // назву, яку вже знаємо, порожньою не затираємо
+    const keep = name || (old && old.name) || '';
+    h.splice(0, h.length, ...h.filter(x => x && x.id && x.id !== id));
+    h.unshift({ id: id, name: keep });
+    try { localStorage.setItem('sheetHist', JSON.stringify(h.slice(0, 12))); } catch (e) {}
+}
+// дописати назву, не рухаючи запис у списку — інакше порядок кнопок стрибав би
+// щоразу, коли вікно відкривають
+function _sheetHistName(id, name) {
+    const h = _sheetHist();
+    const it = h.find(x => x && x.id === id);
+    if (!it || it.name === name) return;
+    it.name = name;
+    try { localStorage.setItem('sheetHist', JSON.stringify(h)); } catch (e) {}
+}
 state.online = navigator.onLine;
 state.queue = [];          // [{op:'add'|'edit'|'del', uid, rec}]
 state.syncing = false;
@@ -1066,17 +1092,45 @@ function showSheetSettings() {
 // перемикатися: у колонці B назва, у колонці A того ж рядка — ID. Кнопок
 // стільки, скільки заповнених клітинок у B. Немає аркуша, токена чи мережі —
 // вікно лишається таким, як було
+// Назва файла — щоб кнопка на таблицю, якої немає в «start», мала людський
+// підпис, а не обрізаний ID
+async function _sheetTitle(id) {
+    try {
+        const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}?fields=properties.title`,
+            { headers: { 'Authorization': `Bearer ${state.token}` } }).then(r => r.json());
+        return (r && r.properties && r.properties.title) || '';
+    } catch (e) { return ''; }
+}
+
 async function _loadSheetPicks() {
     if (!state.token || !state.online) return;
-    let rows;
-    try { rows = await apiGet('start!A:B'); } catch (e) { return; }
-    const html = (rows || []).map(r => {
+    let rows = [];
+    // немає аркуша «start» — не біда, для власника список збереться з пам'яті
+    try { rows = await apiGet('start!A:B'); } catch (e) { rows = []; }
+    const picks = [];
+    (rows || []).forEach(r => {
         const id = String((r || [])[0] || '').trim();
         const name = String((r || [])[1] || '').trim();
-        if (!name) return '';
+        if (id && name) picks.push({ id: id, name: name });
+    });
+    if (_isOwner()) {
+        _sheetHistAdd(SHEET_ID, '');          // відкриту теж треба пам'ятати
+        const hist = _sheetHist();
+        const hName = id => { const it = hist.find(x => x && x.id === id); return (it && it.name) || ''; };
+        // відкрита зараз — завжди в списку, далі все, де вже бували
+        if (!picks.some(p => p.id === SHEET_ID)) picks.unshift({ id: SHEET_ID, name: hName(SHEET_ID) });
+        hist.forEach(x => { if (x && x.id && !picks.some(p => p.id === x.id)) picks.push({ id: x.id, name: x.name || '' }); });
+        for (const p of picks) {
+            if (p.name) continue;
+            p.name = (await _sheetTitle(p.id)) || (p.id.slice(0, 6) + '…');
+            _sheetHistName(p.id, p.name);
+        }
+    }
+    const html = picks.map(p => {
+        const id = p.id, name = p.name;
         // жовті, як кнопки звітів і дат: відкрита таблиця світла, решта приглушені
         return `<button onclick="_pickSheet('${esc(id)}')" class="btn-stencil ${id===SHEET_ID?'btn-yellow':'btn-yellow-dim'}" style="flex:1 1 calc(50% - 4px);min-width:0">ТГ ${esc(name)}</button>`;
-    }).filter(Boolean).join('');
+    }).join('');
     const box = document.getElementById('_sheetPicks');
     // по дві в рядок; більше двох переносяться наступним рядком тієї ж ширини
     if (box && html) box.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px">' + html + '</div><div style="height:1rem"></div>';
@@ -1088,6 +1142,7 @@ function _pickSheet(id) {
     if (id !== SHEET_ID) state.listsSynced = null;
     SHEET_ID = id;
     localStorage.setItem('sheetId', id);
+    _sheetHistAdd(id, '');
     closeModal();
     showAlert('✅ Таблицю збережено!\nНатисніть кнопку завантаження для перезавантаження даних');
 }
@@ -1096,8 +1151,10 @@ function _saveSheetModal() {
     const raw=el?el.value.trim():'';
     const id=parseSheetId(raw)||raw;
     if(!id){showAlert('Введіть посилання!');return;}
+    if(id!==SHEET_ID)state.listsSynced=null;
     SHEET_ID=id;
     localStorage.setItem('sheetId',id);
+    _sheetHistAdd(id,'');
     closeModal();
     showAlert('✅ Таблицю збережено!\nНатисніть кнопку завантаження для перезавантаження даних');
 }
