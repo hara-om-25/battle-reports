@@ -872,8 +872,11 @@ function _initToTop() {
     b.addEventListener('touchend', up);
     b.addEventListener('touchcancel', up);
     document.body.appendChild(b);
+    // на СПИСКАХ кнопки немає: поле збоку там удвічі вужче, вона не вміщається
+    // й заходила б на самі списки
     const upd = () => b.classList.toggle('show',
-        (window.pageYOffset || document.documentElement.scrollTop || 0) > 300);
+        state.page !== 'lists'
+        && (window.pageYOffset || document.documentElement.scrollTop || 0) > 300);
 
     // Просвіт ліворуч від кнопки (до краю вмісту), праворуч (до краю екрана)
     // і знизу має бути однаковий. Ширина поля збоку від вмісту на кожній
@@ -899,7 +902,7 @@ function _initToTop() {
     window.addEventListener('resize', both, { passive: true });
     // сторінка перемальовується цілком — після кожного разу міряємо наново
     const app = document.getElementById('app');
-    if (app && window.MutationObserver) new MutationObserver(place).observe(app, { childList: true, subtree: true });
+    if (app && window.MutationObserver) new MutationObserver(both).observe(app, { childList: true, subtree: true });
     both();
 }
 
