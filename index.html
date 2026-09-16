@@ -457,6 +457,9 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
+    // рядки файлу верифікації, які не лягли в жоден виліт — результат
+    // останнього звіряння, показується блоком під підсумками
+    vLeft: [],
     page: 'login', user: null, token: null, loaded: false,
     scoreTable: {}, drones: [], ammo: [], results: [], records: [],
     report: 1, counts: {},
@@ -2193,6 +2196,9 @@ async function runVerification(file) {
             else if (word || pts) oddRows++;
             items.push({
                 coord: coord, date: date, min: _vMinutes(r[0]),
+                // як воно написано у файлі — щоб було що показати людині,
+                // коли рядок нікуди не ляже
+                dt: _vNorm(r[0]), rawCoord: _vNorm(r[4]),
                 tgt: _vFileTarget(r[1], r[2]),
                 res: _vNorm(r[5]),
                 // скільки одиниць покриває рядок: верифікатор може замінити
@@ -2465,6 +2471,21 @@ async function runVerification(file) {
 
     const withVerdict = items.filter(i => i.verdict).length;
     const notFound = Math.max(0, inPeriod - matched.size - ambiguous.size);
+    // Рядки файлу, які нікуди не лягли. Тримаємо їх, щоб показати переліком —
+    // самих чисел «не знайдено 34» мало, треба бачити, яких саме
+    state.vLeft = [];
+    items.forEach((it, idx) => {
+        if (!it.verdict || matched.has(idx)) return;
+        const inP = _sheets.some(nm => {
+            const p = _sheetPeriod(nm);
+            return !p || (it.date >= p.from && it.date <= p.to);
+        });
+        state.vLeft.push({
+            dt: it.dt, tgt: it.tgt.name, coord: it.rawCoord, res: it.res,
+            verdict: it.verdict, pts: it.pts,
+            why: !inP ? 'поза періодом' : ambiguous.has(idx) ? 'неоднозначно' : 'не знайдено'
+        });
+    });
     showAlert('✅ ЗВІРЯННЯ ЗАВЕРШЕНО\n\n'
         + 'Архівів звірено: ' + sheetsTouched + ' з ' + _sheets.length + '\n'
         + _sheets.join(', ') + '\n\n'
@@ -2507,6 +2528,17 @@ function _pushVerifyLines(lines, recs) {
 }
 
 /* ============ /ВЕРИФІКАЦІЯ ============ */
+
+// Перелік рядків файлу, що не лягли — у буфер, щоб було з чим іти до верифікатора
+function copyVerifyLeft() {
+    const L = state.vLeft || [];
+    if (!L.length) return;
+    const _ord = { 'не знайдено': 0, 'неоднозначно': 1, 'поза періодом': 2 };
+    const lines = [...L].sort((a, b) => (_ord[a.why] - _ord[b.why]) || (a.dt < b.dt ? -1 : 1))
+        .map(x => [x.dt, x.tgt, x.coord, x.res, x.verdict + (x.pts ? ' ' + x.pts : ''), x.why]
+        .filter(Boolean).join(' | '));
+    navigator.clipboard.writeText(lines.join('\n')).catch(() => {});
+}
 
 async function loadArchiveSheet(name) {
     state.selArchive = name;
@@ -4087,12 +4119,31 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                     +'<div class="report-box">'+_fLines.join('\n')+'</div></div>';
             }
         }
+        // Рядки файлу верифікації, які не лягли в жоден виліт. Показуємо
+        // переліком: самих чисел у підсумковому вікні мало, треба бачити, які саме
+        const _vlHtml=(()=>{
+            const L=state.vLeft||[];
+            if(!L.length)return '';
+            const _ord={'не знайдено':0,'неоднозначно':1,'поза періодом':2};
+            const _s=[...L].sort((a,b)=>(_ord[a.why]-_ord[b.why])||(a.dt<b.dt?-1:1));
+            const _n=w=>L.filter(x=>x.why===w).length;
+            const _hdr=[['не знайдено',_n('не знайдено')],['неоднозначно',_n('неоднозначно')],
+                        ['поза періодом',_n('поза періодом')]].filter(x=>x[1]).map(x=>x[0]+' '+x[1]).join(', ');
+            const _lines=_s.map(x=>[x.dt,x.tgt,x.coord,x.res,
+                x.verdict+(x.pts?' '+x.pts:''),x.why].filter(Boolean).join(' | '));
+            return '<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
+                +'<h3 class="stencil-shadow" style="color:var(--yellow)">РЯДКИ ФАЙЛУ, ЩО НЕ ЛЯГЛИ</h3>'
+                +'<span class="stencil" style="color:var(--khaki)">'+esc(_hdr)+'</span>'
+                +'<button onclick="copyVerifyLeft()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
+                +'</div><div class="report-box">'+esc(_lines.join('\n'))+'</div></div>';
+        })();
         h+=`<div class="p-4 space-y-4 arch-wrap">
             <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><div style="display:flex;align-items:center;gap:12px">${state.online?'<button onclick="showVerifyModal()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-blue" style="font-size:0.78em;padding:5px 10px">ВЕРИФІКАЦІЯ</button>':''}${(()=>{if(!state.records.length||!state.online)return'';const _f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};const _sd=[...new Set(state.records.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_f(a)<_f(b)?-1:1);const[_d1,_m1,_y1]=_sd[0].split('.'),[_d2,_m2,_y2]=_sd[_sd.length-1].split('.');const _n=(_sd[0]===_sd[_sd.length-1])?_sd[0]:(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1:(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1:_sd[0]+' — '+_sd[_sd.length-1];return'<button onclick="archiveMainSheet()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">АРХІВУВАТИ '+_n+'</button>';})()}<span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em;${state.online?'':'display:none'}">за період</span></div></div>
             ${!state.filterPeriodOpen?`<div class="crate p-4"><div class="flex flex-wrap gap-2">${state.archiveLoading&&!state.selArchive?'<p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p>':_arBtns}</div></div>`:''}
             ${!state.online?'<div class="crate p-4"><p class="stencil text-center py-3" style="color:#c05a3e">Відображення архівних даних неможливе за відсутності з\'єднання</p></div>':''}
             ${state.online?_periodPickerHtml:''}
             ${state.online?(state.filterPeriodOpen?(state.filterPeriodShown?_periodResultHtml:''):(state.selArchive?_arContent:_allSection)):''}
+            ${state.online?_vlHtml:''}
         </div>`;
         }
     }
