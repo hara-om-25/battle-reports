@@ -1495,7 +1495,9 @@ function copyArchiveSheetReport() {
     const _pts=Math.round(recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     const lines = generateArchiveReport(recs, state.selArchive+'р.');
     lines.push(''),lines.push('Прогнозовано уражень на '+_pts+' '+_bal(_pts)+'.');
+    if(_pushVerifyLines(lines,recs))lines.push('');
     _pushCostLines(lines,_pts,recs);
+    _pushCountLine(lines,recs);
     navigator.clipboard.writeText(lines.join('\n')).catch(()=>{});
 }
 
@@ -1507,7 +1509,9 @@ function copyAllArchiveReport() {
     const _pts=Math.round(recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     const lines = generateArchiveReport(recs, 'Від ' + earliest + ' дотепер');
     lines.push(''),lines.push('Прогнозовано уражень на '+_pts+' '+_bal(_pts)+'.');
+    if(_pushVerifyLines(lines,recs))lines.push('');
     _pushCostLines(lines,_pts,recs);
+    _pushCountLine(lines,recs);
     navigator.clipboard.writeText(lines.join('\n')).catch(()=>{});
 }
 
@@ -3481,7 +3485,9 @@ function copyZvityPeriodReport() {
     const _fLabel=_fLabelFrom+' — '+_fLabelTo+'р.';
     const _lines=generateArchiveReport(_fRecs,_fLabel);
     _lines.push(''),_lines.push('Прогнозовано уражень на '+_fPts+' '+_bal(_fPts)+'.');
+    if(_pushVerifyLines(_lines,_fRecs))_lines.push('');
     _pushCostLines(_lines,_fPts,_fRecs);
+    _pushCountLine(_lines,_fRecs);
     navigator.clipboard.writeText(_lines.join('\n')).catch(()=>{});
     showAlert('✅ Скопійовано!');
 }
@@ -3495,7 +3501,9 @@ function copyZvityAllReport() {
     const _zvT2=Math.round(_recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     const lines=generateArchiveReport(_recs,_p);
     lines.push(''),lines.push('Прогнозовано уражень на '+_zvT2+' '+_bal(_zvT2)+'.');
+    if(_pushVerifyLines(lines,_recs))lines.push('');
     _pushCostLines(lines,_zvT2,_recs);
+    _pushCountLine(lines,_recs);
     navigator.clipboard.writeText(lines.join('\n')).catch(()=>{});
     showAlert('✅ Скопійовано!');
 }
@@ -3512,7 +3520,9 @@ function copyFilteredPeriodReport() {
     const _fLabel=_fLabelFrom+' — '+_fLabelTo+'р.';
     const _fLines=generateArchiveReport(_fRecs,_fLabel);
     _fLines.push(''),_fLines.push('Прогнозовано уражень на '+_fPts+' '+_bal(_fPts)+'.');
+    if(_pushVerifyLines(_fLines,_fRecs))_fLines.push('');
     _pushCostLines(_fLines,_fPts,_fRecs);
+    _pushCountLine(_fLines,_fRecs);
     const _fDrnCnt={};_fRecs.forEach(r=>{if(r.drone)_fDrnCnt[r.drone]=(_fDrnCnt[r.drone]||0)+1;});
     const _fAmmoCnt={};_fRecs.forEach(r=>{if(r.ammo)_fAmmoCnt[r.ammo]=(_fAmmoCnt[r.ammo]||0)+1;});
     const _fPvrCnt=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_fAmmoCnt[am]||0)*cf,0);return tot?pvr.name+': '+tot+' кг':''}).filter(Boolean);
@@ -3936,7 +3946,9 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _fPts=Math.round(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                 const _fLines=generateArchiveReport(_fRecs,_fLabel);
                 _fLines.push(''),_fLines.push('Прогнозовано уражень на '+_fPts+' '+_bal(_fPts)+'.');
+                if(_pushVerifyLines(_fLines,_fRecs))_fLines.push('');
                 _pushCostLines(_fLines,_fPts,_fRecs);
+                _pushCountLine(_fLines,_fRecs);
                 const _fDrnCnt={};_fRecs.forEach(r=>{if(r.drone)_fDrnCnt[r.drone]=(_fDrnCnt[r.drone]||0)+1;});
                 const _fAmmoCnt={};_fRecs.forEach(r=>{if(r.ammo)_fAmmoCnt[r.ammo]=(_fAmmoCnt[r.ammo]||0)+1;});
                 const _fPvrList=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_fAmmoCnt[am]||0)*cf,0);return tot?pvr.name+' — '+tot+' кг':'';}).filter(Boolean);
@@ -4033,7 +4045,9 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 // підсумки
                 const _zSumLines=generateArchiveReport(_zRecs,_zLabel);
                 _zSumLines.push(''),_zSumLines.push('Прогнозовано уражень на '+_zPts+' '+_bal(_zPts)+'.');
+                if(_pushVerifyLines(_zSumLines,_zRecs))_zSumLines.push('');
                 _pushCostLines(_zSumLines,_zPts,_zRecs);
+                _pushCountLine(_zSumLines,_zRecs);
                 const _zSumBlock='<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ПЕРІОД</h3><button onclick="copyZvityPeriodReport()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div><div class="report-box">'+_zSumLines.join('\n')+'</div></div>';
                 _zvResult=_zGroups+_zReports+_zSumBlock;
             }
@@ -4112,7 +4126,9 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             const _zvT=Math.round(_zvR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
             const _zvL=generateArchiveReport(_zvR,_zvP);
             _zvL.push(''),_zvL.push('Прогнозовано уражень на '+_zvT+' '+_bal(_zvT)+'.');
+            if(_pushVerifyLines(_zvL,_zvR))_zvL.push('');
             _pushCostLines(_zvL,_zvT,_zvR);
+            _pushCountLine(_zvL,_zvR);
             h+='<div class="p-4 zvity-wrap">'
              +'<div class="crate p-4">'
              +'<div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
