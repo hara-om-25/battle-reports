@@ -727,7 +727,8 @@ async function reconcileSync() {
     const _k = s => { const [d, m, y] = (s || '').split(' ')[0].replace(',', '').split('.'); return (y || '') + (m || '').padStart(2, '0') + (d || '').padStart(2, '0'); };
     merged.sort((a, b) => _k(a.datetime) < _k(b.datetime) ? -1 : _k(a.datetime) > _k(b.datetime) ? 1 : 0);
     state.records = merged;
-    await syncRecordsToAPI();
+    // аркуш уже прочитано вище — передаємо його обсяг, щоб не питати вдруге
+    await syncRecordsToAPI(remote.length);
     // Списки, змінені офлайн, теж мають поїхати в таблицю
     if (_listsDirty()) await _uploadLists();
     state.queue = [];
@@ -2406,11 +2407,12 @@ async function runVerification(file) {
                 col.push([lv.join(', '), pv.join(', ')]);
             }
             if (await _widenSheet(grid, name, 13)) sheetsWidened++;
-            // спершу стираємо L і M на весь аркуш, і аж потім пишемо. Запис
-            // покриває лише рядки, які повернув apiGet, а нижче могли лишитись
-            // рядки від попередніх прогонів — вони й роздували підсумки
-            await apiClear(name + '!L2:M');
+            // Спершу запис, і аж потім стирається хвіст нижче нього. Хвіст
+            // прибрати треба — там могли лишитись рядки від попередніх
+            // прогонів, і саме вони роздували підсумки. Але робити це до
+            // запису не можна: обірвана дорога лишала б аркуш без вердиктів
             await apiUpdate(name + '!L2:M' + rows.length, col, true);
+            await apiClear(name + '!L' + (rows.length + 1) + ':M');
             sheetsTouched++;
         }
     } catch (e) {
@@ -2598,14 +2600,17 @@ async function loadDataFromAPI() {
 
 // Записати списки в таблицю. Кидає помилку — викликач вирішує, що з нею робити.
 async function _uploadLists() {
-    await apiClear('СПИСКИ!A2:C');
     const maxLen = Math.max(state.drones.length, state.ammo.length, state.results.length);
-    if (maxLen > 0) {
+    // спершу запис, стирається лише хвіст нижче записаного — аркуш не буває
+    // порожнім, і обірваний запис нічого не забирає
+    if (maxLen === 0) { await apiClear('СПИСКИ!A2:C'); }
+    else {
         const rows = [];
         for (let i = 0; i < maxLen; i++) {
             rows.push([state.drones[i] || '', state.results[i] || '', state.ammo[i] || '']);
         }
         await apiUpdate(`СПИСКИ!A2:C${maxLen + 1}`, rows);
+        await apiClear(`СПИСКИ!A${maxLen + 2}:C`);
     }
     _markListsSynced();
     saveLocal();
@@ -2970,8 +2975,28 @@ function _fullDT(r) {
     return (y || '0000').padStart(4, '0') + (m || '00').padStart(2, '0') + (d || '00').padStart(2, '0') + hh + mm + ss;
 }
 
-async function syncRecordsToAPI() {
+// Запобіжник проти затирання повної таблиці недоладним залишком: перед
+// записом рахуємо, скільки рядків зараз в аркуші. Записати менше, ніж там є,
+// можна лише настільки, наскільки це пояснюють видалення з черги. Усе інше —
+// ознака, що в пам'яті не ті дані, і тоді краще не писати зовсім
+async function _guardShrink(n, remoteCount) {
+    if (remoteCount === undefined) {
+        try { remoteCount = ((await apiGet('ГОЛОВНА!A2:A')) || []).length; }
+        catch (e) { return; }                 // не дізнались — не заважаємо
+    }
+    const del = (state.queue || []).filter(o => o.op === 'del').length;
+    const lost = remoteCount - del - n;
+    if (lost < 3) return;
+    throw new Error('ЗАПИС ЗУПИНЕНО\n\nВ таблиці ' + remoteCount + ' '
+        + _vyl(remoteCount) + ', а застосунок зібрався записати ' + n + '.\n'
+        + 'Різниця в ' + lost + ' — це схоже на втрату, а не на вашу правку.\n\n'
+        + 'У таблицю нічого не записано. Перезавантажте застосунок і подивіться, '
+        + 'чи всі вильоти на місці.');
+}
+
+async function syncRecordsToAPI(remoteCount) {
     state.records.forEach(r => { if (!r.uid) r.uid = _contentUid(r); });
+    await _guardShrink(state.records.length, remoteCount);
     // Спершу писали, стираючи весь аркуш, і аж потім заливали рядки назад.
     // Якщо між цими кроками застосунок помирав — зв'язок, протермінований
     // токен, закрите вікно — ГОЛОВНА лишалась порожньою, і дані зникали.
