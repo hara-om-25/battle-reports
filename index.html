@@ -2986,7 +2986,9 @@ async function _guardShrink(n, remoteCount) {
     }
     const del = (state.queue || []).filter(o => o.op === 'del').length;
     const lost = remoteCount - del - n;
-    if (lost < 3) return;
+    // жодного рядка губити не можна: зупиняємось на будь-якій нестачі, якої
+    // не пояснюють видалення з черги
+    if (lost < 1) return;
     throw new Error('ЗАПИС ЗУПИНЕНО\n\nВ таблиці ' + remoteCount + ' '
         + _vyl(remoteCount) + ', а застосунок зібрався записати ' + n + '.\n'
         + 'Різниця в ' + lost + ' — це схоже на втрату, а не на вашу правку.\n\n'
