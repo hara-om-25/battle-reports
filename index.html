@@ -422,6 +422,9 @@
       transition: opacity 0.15s, transform 0.15s;
     }
     #toTopBtn.show { opacity: 1; pointer-events: auto; transform: none; }
+    /* натиснуту кнопку треба вдавити — але «#toTopBtn.show» сильніше за
+       «.btn-stencil.active», тож зсув повторюємо тут */
+    #toTopBtn.show.active { transform: translateY(2px); }
     </style>
 </head>
 <body>
@@ -854,9 +857,17 @@ function _initToTop() {
     if (document.getElementById('toTopBtn')) return;
     const b = document.createElement('button');
     b.id = 'toTopBtn';
-    b.className = 'btn-stencil';
+    b.className = 'btn-stencil btn-black';
     b.textContent = 'ВГОРУ';
     b.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    // те саме натискання, що й на решті кнопок застосунку
+    const dn = () => b.classList.add('active'), up = () => b.classList.remove('active');
+    b.addEventListener('mousedown', dn);
+    b.addEventListener('mouseup', up);
+    b.addEventListener('mouseleave', up);
+    b.addEventListener('touchstart', dn, { passive: true });
+    b.addEventListener('touchend', up);
+    b.addEventListener('touchcancel', up);
     document.body.appendChild(b);
     const upd = () => b.classList.toggle('show',
         (window.pageYOffset || document.documentElement.scrollTop || 0) > 300);
