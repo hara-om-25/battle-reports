@@ -2157,9 +2157,9 @@ async function runVerification(file) {
     if (!file) return;
     closeModal();
     if (!state.online || !navigator.onLine) { state.online = false; render(); _offlineMsg(); return; }
-    // Відкривати конкретний архів не потрібно: аркуші беруться за датами
-    // в самому файлі. Але список аркушів має бути завантажений
-    if (!(state.archiveSheets || []).length) { showAlert('Архівів не знайдено.\n\nВідкрийте АРХІВ і дочекайтесь переліку періодів.'); return; }
+    // Звіряємо лише з відкритим архівом: у файлі можуть бути періоди інших
+    // аркушів, і розкидати їх по всіх аркушах не треба
+    if (!state.selArchive) { showAlert('Спершу відкрийте архів, з яким звіряти.'); return; }
 
     let XL;
     try {
@@ -2214,23 +2214,12 @@ async function runVerification(file) {
     }
     if (!items.length) { showAlert('У файлі не знайдено жодного рядка з координатами й датою.'); return; }
 
-    // Звіряємо з усіма архівами, чий період перетинається з датами у файлі.
-    // Раніше брався лише відкритий архів, і це підводило: «за період» показує
-    // один діапазон, а в пам'яті лишається інший, останній відкритий аркуш —
-    // звірявся саме він, мовчки. Тепер те, що на екрані, ні на що не впливає
-    const _fDates = items.filter(i => i.verdict).map(i => i.date).sort();
-    const _fFrom = _fDates[0], _fTo = _fDates[_fDates.length - 1];
-    const _sheets = (state.archiveSheets || []).filter(nm => {
-        const p = _sheetPeriod(nm);
-        // аркуш без періоду в назві не відкидаємо: там кожен рядок зі своєю датою
-        return !p || (p.from <= _fTo && p.to >= _fFrom);
-    });
-    if (!_sheets.length) { state.archiveLoading = false; render(); showAlert('Немає архівів за період цього файлу.'); return; }
-    // ціль вважається в періоді, якщо її накриває хоч один із цих аркушів
-    const inPeriod = items.filter(it => it.verdict && _sheets.some(nm => {
-        const p = _sheetPeriod(nm);
-        return !p || (it.date >= p.from && it.date <= p.to);
-    })).length;
+    // Звіряємо тільки з відкритим архівом. У файлі можуть бути періоди інших
+    // аркушів — вони підуть у «поза періодом», і їх видно переліком
+    const _sheets = [state.selArchive];
+    const _pSel = _sheetPeriod(state.selArchive);
+    const inPeriod = items.filter(it => it.verdict
+        && (!_pSel || (it.date >= _pSel.from && it.date <= _pSel.to))).length;
 
     state.archiveLoading = true; render();
     const matched = new Set(), ambiguous = new Set();
@@ -2476,10 +2465,7 @@ async function runVerification(file) {
     state.vLeft = [];
     items.forEach((it, idx) => {
         if (!it.verdict || matched.has(idx)) return;
-        const inP = _sheets.some(nm => {
-            const p = _sheetPeriod(nm);
-            return !p || (it.date >= p.from && it.date <= p.to);
-        });
+        const inP = !_pSel || (it.date >= _pSel.from && it.date <= _pSel.to);
         state.vLeft.push({
             dt: it.dt, tgt: it.tgt.name, coord: it.rawCoord, res: it.res,
             verdict: it.verdict, pts: it.pts,
@@ -2487,14 +2473,13 @@ async function runVerification(file) {
         });
     });
     showAlert('✅ ЗВІРЯННЯ ЗАВЕРШЕНО\n\n'
-        + 'Архівів звірено: ' + sheetsTouched + ' з ' + _sheets.length + '\n'
-        + _sheets.join(', ') + '\n\n'
+        + 'Аркуш: ' + state.selArchive + '\n\n'
         + 'Цілей у файлі: ' + withVerdict + '\n'
-        + 'З них у періодах цих архівів: ' + inPeriod + '\n'
+        + 'З них у періоді аркуша: ' + inPeriod + '\n'
         + 'Записано: ' + matched.size + '\n'
         + 'Не знайдено: ' + notFound + '\n'
         + 'Неоднозначних (кілька збігів): ' + ambiguous.size + '\n'
-        + 'Поза періодами архівів: ' + (withVerdict - inPeriod)
+        + 'Поза періодом аркуша: ' + (withVerdict - inPeriod)
         // рядок, де оцінка й бали не сходяться, мовчки не зникає
         + (oddRows ? '\n\nСуперечливих рядків у файлі: ' + oddRows
                    + '\n(оцінка й бали не сходяться — не застосовані)' : '')
