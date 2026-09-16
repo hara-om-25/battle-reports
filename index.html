@@ -1859,6 +1859,10 @@ function _markPacks(recs) {
         const st = r.v && r.v.state;
         // дублюючий сам пари не дає, відхилений теж — за ним балів немає
         if (!st || st === 'pack' || st === 'no') return;
+        // без дати пари не буває: у старих архівах колонка B порожня, і тоді
+        // день випадає з ключа, а весь аркуш злипається в одні «сутки». Два
+        // вильоти по сусідній координаті з різних місяців ставали дублюючими
+        if (!getDateOnly(r.datetime)) return;
         const k = _packKeyRec(r);
         (owners[k] = owners[k] || []).push({ rec: r, names: _packNames(r) });
     });
@@ -1868,6 +1872,8 @@ function _markPacks(recs) {
         // нуль балів — це не удар: «НЕвлучання» чи збитий дрон. Скасовувати
         // там нема чого, отже й дублювати нема чого
         if (!(parseFloat(r.points) || 0)) return;
+        // немає дати — довести, що це той самий удар, нічим
+        if (!getDateOnly(r.datetime)) return;
         const names = _packNames(r);
         if (!names.length) return;
         const own = (owners[_packKeyRec(r)] || [])
