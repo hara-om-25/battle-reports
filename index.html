@@ -406,6 +406,22 @@
       text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
       font-size: 0.65em;
     }
+    /* Кнопка «вгору» — висить над сторінкою, зʼявляється, коли є куди
+       прокручувати назад. Модальні вікна йдуть на z-index 9999, тож вона
+       лишається під ними */
+    #toTopBtn {
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 900;
+      padding: 8px 14px;
+      font-size: 0.85em;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(8px);
+      transition: opacity 0.15s, transform 0.15s;
+    }
+    #toTopBtn.show { opacity: 1; pointer-events: auto; transform: none; }
     </style>
 </head>
 <body>
@@ -831,7 +847,26 @@ function resumeOffline() {
     render();
 }
 
+// Кнопка повернення на початок сторінки. Живе поза #app, тож перемальовування
+// її не чіпає. Показуємо лише коли прокручено вниз — інакше вона просто
+// затуляла б куток
+function _initToTop() {
+    if (document.getElementById('toTopBtn')) return;
+    const b = document.createElement('button');
+    b.id = 'toTopBtn';
+    b.className = 'btn-stencil';
+    b.textContent = 'ВГОРУ';
+    b.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    document.body.appendChild(b);
+    const upd = () => b.classList.toggle('show',
+        (window.pageYOffset || document.documentElement.scrollTop || 0) > 300);
+    window.addEventListener('scroll', upd, { passive: true });
+    window.addEventListener('resize', upd, { passive: true });
+    upd();
+}
+
 window.onload = () => {
+    _initToTop();
     loadLocal();
     const savedToken = localStorage.getItem('token');
     const savedEmail = localStorage.getItem('email');
