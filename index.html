@@ -340,10 +340,11 @@
       .lists-bar .lists-edit { width: auto !important; flex: 1 1 auto; min-width: 120px; }
     }
     .zvity-wrap { max-width: 80%; margin: 0 auto; }
-    /* АРХІВ бере всю ширину: рядки доповіді довгі — «Вантажний автомобільний
+    /* АРХІВ ширший за ЗВІТИ: рядки доповіді довгі — «Вантажний автомобільний
        транспорт пошкоджено - 19 шт (верифіковано 10, відхилено 6, дублюючих 1,
        не звірено 2);» — і при 80% переносились на другий рядок */
-    .arch-wrap { max-width: 100%; margin: 0 auto; padding-left: 8px; padding-right: 8px; }
+    .arch-wrap { max-width: 90%; margin: 0 auto; }
+    @media (max-width: 640px) { .arch-wrap { max-width: 100%; } }
     @media (max-width: 640px) { .zvity-wrap { max-width: 100%; } }
     /* На СПИСКАХ бічний відступ рівно вдвічі менший, ніж на ЗВІТАХ:
        10% + 16px там проти 5% + 8px тут */
