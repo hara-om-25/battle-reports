@@ -874,9 +874,32 @@ function _initToTop() {
     document.body.appendChild(b);
     const upd = () => b.classList.toggle('show',
         (window.pageYOffset || document.documentElement.scrollTop || 0) > 300);
+
+    // Просвіт ліворуч від кнопки (до краю вмісту), праворуч (до краю екрана)
+    // і знизу має бути однаковий. Ширина поля збоку від вмісту на кожній
+    // сторінці своя — СПИСКИ лишають по 5%, ЗВІТИ по 10% — тож міряємо її
+    // щоразу, а не задаємо пікселями
+    const place = () => {
+        const vw = document.documentElement.clientWidth;
+        let right = 0;
+        document.querySelectorAll('#app .crate, #app .lists-cols').forEach(el => {
+            const r = el.getBoundingClientRect();
+            if (r.width && r.right > right) right = r.right;
+        });
+        const band = right ? vw - right : 14;
+        // не влізла в поле збоку — просто тримаємось краю екрана
+        const gap = Math.max(14, Math.round((band - b.offsetWidth) / 2));
+        b.style.right = gap + 'px';
+        // тінь домальовує 4 px під кнопкою, і саме вони видно як нижній край
+        b.style.bottom = (gap + 4) + 'px';
+    };
+    const both = () => { upd(); place(); };
     window.addEventListener('scroll', upd, { passive: true });
-    window.addEventListener('resize', upd, { passive: true });
-    upd();
+    window.addEventListener('resize', both, { passive: true });
+    // сторінка перемальовується цілком — після кожного разу міряємо наново
+    const app = document.getElementById('app');
+    if (app && window.MutationObserver) new MutationObserver(place).observe(app, { childList: true, subtree: true });
+    both();
 }
 
 window.onload = () => {
