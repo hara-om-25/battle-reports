@@ -2071,7 +2071,7 @@ async function runVerification(file) {
         return;
     }
 
-    let items;
+    let items, oddRows = 0;
     try {
         const wb = XL.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: true });
         const rows = XL.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
@@ -2081,13 +2081,18 @@ async function runVerification(file) {
             // рядок шапки сюди не потрапить: у нього немає ні координат, ні дати
             if (!coord || !date) return;
             const word = _vNorm(r[6]).toLowerCase();
-            // Ознака підтвердження — число в колонці балів. Прочерк або порожньо
-            // означає відхилено; слово у вердикті лишається запасним визначником
+            // Вердикт читається з двох клітинок одразу, і вони мають збігатися:
+            // «Підтверджено» і число більше нуля — ціль верифіковано;
+            // «Відхилено» і прочерк — відхилено. Рядок, де слово й бали
+            // суперечать одне одному, не застосовуємо взагалі: одній клітинці
+            // вірити на слово тут не можна
             const pts = _vNorm(r[7]).replace(/,/g, '.');
-            const hasPts = pts !== '' && !isNaN(parseFloat(pts));
+            const num = parseFloat(pts);
+            const hasPts = pts !== '' && !isNaN(num) && num > 0;
             let verdict = '';
-            if (hasPts) verdict = 'Підтверджено';
-            else if (word === 'відхилено' || word === 'підтверджено') verdict = 'Відхилено';
+            if (word === 'підтверджено' && hasPts) verdict = 'Підтверджено';
+            else if (word === 'відхилено' && !hasPts) verdict = 'Відхилено';
+            else if (word || pts) oddRows++;
             items.push({
                 coord: coord, date: date, min: _vMinutes(r[0]),
                 tgt: _vFileTarget(r[1], r[2]),
@@ -2348,6 +2353,9 @@ async function runVerification(file) {
         + 'Не знайдено: ' + notFound + '\n'
         + 'Неоднозначних (кілька збігів): ' + ambiguous.size + '\n'
         + 'Поза періодом аркуша: ' + (withVerdict - inPeriod)
+        // рядок, де оцінка й бали не сходяться, мовчки не зникає
+        + (oddRows ? '\n\nСуперечливих рядків у файлі: ' + oddRows
+                   + '\n(оцінка й бали не сходяться — не застосовані)' : '')
         + (sheetsWidened ? '\n\nДодано колонки L і M' : ''));
 }
 
