@@ -1744,11 +1744,14 @@ async function goToArchive() {
 function _vNorm(x) { return String(x === null || x === undefined ? '' : x).trim(); }
 
 // У клітинці координат буває дописане зайве: «37U CP 71227 60561, 155».
-// Тому спершу відрізаємо все після коми й лишаємо сам MGRS — рівно так, як
-// це робить cleanCoords() у решті застосунку
+// Пробіли в самій координаті теж бувають розставлені абияк:
+// «37U  D Q 3312 5 26562» — це те саме, що «37U DQ 33125 26562».
+// Тому прибираємо геть усі розділювачі й лишаємо форму MGRS:
+// зона (1-2 цифри), квадрат (3 літери), до десяти цифр. Решта — зайве.
 function _vCoord(x) {
-    const s = _vNorm(x).split(',')[0].trim().split(/\s+/).slice(0, 4).join(' ');
-    return s.toUpperCase().replace(/[^0-9A-ZА-ЯІЇЄҐ]/g, '');
+    const s = _vNorm(x).split(',')[0].toUpperCase().replace(/[^0-9A-ZА-ЯІЇЄҐ]/g, '');
+    const m = s.match(/^(\d{1,2}[A-ZА-ЯІЇЄҐ]{3})(\d{1,10})/);
+    return m ? m[1] + m[2] : s;
 }
 
 function _vDate(x) {
