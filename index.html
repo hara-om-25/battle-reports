@@ -1397,17 +1397,23 @@ function _parseMainRows(rows) {
 // верифікатор її підтвердив — байдуже, чи виліт підписаний ВЕРИФІКОВАНО,
 // ЗАМІНЕНО чи ЧАСТКОВО. Відхиленою — якщо він її не визнав. «Не звірено» це
 // цілі вильоту, якого звіряння не зачепило зовсім
+// Кожна ціль потрапляє рівно в один кошик, тож лічильники завжди дають
+// у сумі кількість у рядку
 function _tgtStat(r, j) {
     const st = r.v && r.v.state;
-    if (!st) return (parseFloat(r.points) || 0) ? 'unv' : '';
-    const v = r.v.list && r.v.list[j];
-    return v === 'ok' ? 'ok' : v === 'no' ? 'no' : '';
+    const v = (r.v && r.v.list && r.v.list[j]) || '';
+    if (v === 'ok') return 'ok';
+    if (v === 'no') return 'no';
+    // виліт скасовано як дублюючий: його цілі верифікатор не розглядав окремо
+    if (st === 'pack') return 'dup';
+    return 'unv';
 }
 function _statTail(o) {
     if (!o) return '';
     const p = [];
     if (o.ok) p.push('верифіковано ' + o.ok);
     if (o.no) p.push('відхилено ' + o.no);
+    if (o.dup) p.push('дублюючих ' + o.dup);
     if (o.unv) p.push('не звірено ' + o.unv);
     return p.length ? ' (' + p.join(', ') + ')' : '';
 }
@@ -1419,7 +1425,7 @@ function generateArchiveReport(recs, periodLabel) {
     const osSum300 = recs.reduce((s, r) => s + (parseInt(r.qty300) || 0), 0);
     // без звіряння лічильники не показуємо зовсім
     const anyV = recs.some(r => r.v && r.v.state);
-    const _mk = () => ({ ok: 0, no: 0, unv: 0 });
+    const _mk = () => ({ ok: 0, no: 0, dup: 0, unv: 0 });
     const os200 = _mk(), os300 = _mk();
     if (anyV) recs.forEach(r => {
         const oi = r.target.split(', ').findIndex(t => t.trim().toLowerCase().startsWith('ос'));
