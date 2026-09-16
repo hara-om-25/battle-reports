@@ -2157,9 +2157,9 @@ async function runVerification(file) {
     if (!file) return;
     closeModal();
     if (!state.online || !navigator.onLine) { state.online = false; render(); _offlineMsg(); return; }
-    // Відкривати конкретний архів не потрібно: аркуші беруться за датами
-    // в самому файлі. Але список аркушів має бути завантажений
-    if (!(state.archiveSheets || []).length) { showAlert('Архівів не знайдено.\n\nВідкрийте АРХІВ і дочекайтесь переліку періодів.'); return; }
+    // Звіряємо лише з відкритим архівом: у файлі можуть бути періоди інших
+    // аркушів, і розкидати їх по всіх аркушах не треба
+    if (!state.selArchive) { showAlert('Спершу відкрийте архів, з яким звіряти.'); return; }
 
     let XL;
     try {
@@ -2214,23 +2214,12 @@ async function runVerification(file) {
     }
     if (!items.length) { showAlert('У файлі не знайдено жодного рядка з координатами й датою.'); return; }
 
-    // Звіряємо з усіма архівами, чий період перетинається з датами у файлі.
-    // Раніше брався лише відкритий архів, і це підводило: «за період» показує
-    // один діапазон, а в пам'яті лишається інший, останній відкритий аркуш —
-    // звірявся саме він, мовчки. Тепер те, що на екрані, ні на що не впливає
-    const _fDates = items.filter(i => i.verdict).map(i => i.date).sort();
-    const _fFrom = _fDates[0], _fTo = _fDates[_fDates.length - 1];
-    const _sheets = (state.archiveSheets || []).filter(nm => {
-        const p = _sheetPeriod(nm);
-        // аркуш без періоду в назві не відкидаємо: там кожен рядок зі своєю датою
-        return !p || (p.from <= _fTo && p.to >= _fFrom);
-    });
-    if (!_sheets.length) { state.archiveLoading = false; render(); showAlert('Немає архівів за період цього файлу.'); return; }
-    // ціль вважається в періоді, якщо її накриває хоч один із цих аркушів
-    const inPeriod = items.filter(it => it.verdict && _sheets.some(nm => {
-        const p = _sheetPeriod(nm);
-        return !p || (it.date >= p.from && it.date <= p.to);
-    })).length;
+    // Звіряємо тільки з відкритим архівом. У файлі можуть бути періоди інших
+    // аркушів — вони підуть у «поза періодом», і їх видно переліком
+    const _sheets = [state.selArchive];
+    const _pSel = _sheetPeriod(state.selArchive);
+    const inPeriod = items.filter(it => it.verdict
+        && (!_pSel || (it.date >= _pSel.from && it.date <= _pSel.to))).length;
 
     state.archiveLoading = true; render();
     const matched = new Set(), ambiguous = new Set();
@@ -2476,10 +2465,7 @@ async function runVerification(file) {
     state.vLeft = [];
     items.forEach((it, idx) => {
         if (!it.verdict || matched.has(idx)) return;
-        const inP = _sheets.some(nm => {
-            const p = _sheetPeriod(nm);
-            return !p || (it.date >= p.from && it.date <= p.to);
-        });
+        const inP = !_pSel || (it.date >= _pSel.from && it.date <= _pSel.to);
         state.vLeft.push({
             dt: it.dt, tgt: it.tgt.name, coord: it.rawCoord, res: it.res,
             verdict: it.verdict, pts: it.pts,
@@ -2487,14 +2473,13 @@ async function runVerification(file) {
         });
     });
     showAlert('✅ ЗВІРЯННЯ ЗАВЕРШЕНО\n\n'
-        + 'Архівів звірено: ' + sheetsTouched + ' з ' + _sheets.length + '\n'
-        + _sheets.join(', ') + '\n\n'
+        + 'Аркуш: ' + state.selArchive + '\n\n'
         + 'Цілей у файлі: ' + withVerdict + '\n'
-        + 'З них у періодах цих архівів: ' + inPeriod + '\n'
+        + 'З них у періоді аркуша: ' + inPeriod + '\n'
         + 'Записано: ' + matched.size + '\n'
         + 'Не знайдено: ' + notFound + '\n'
         + 'Неоднозначних (кілька збігів): ' + ambiguous.size + '\n'
-        + 'Поза періодами архівів: ' + (withVerdict - inPeriod)
+        + 'Поза періодом аркуша: ' + (withVerdict - inPeriod)
         // рядок, де оцінка й бали не сходяться, мовчки не зникає
         + (oddRows ? '\n\nСуперечливих рядків у файлі: ' + oddRows
                    + '\n(оцінка й бали не сходяться — не застосовані)' : '')
@@ -4138,7 +4123,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 +'</div><div class="report-box">'+esc(_lines.join('\n'))+'</div></div>';
         })();
         h+=`<div class="p-4 space-y-4 arch-wrap">
-            <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><div style="display:flex;align-items:center;gap:12px">${state.online?'<button onclick="showVerifyModal()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-blue" style="font-size:0.78em;padding:5px 10px">ВЕРИФІКАЦІЯ</button>':''}${(()=>{if(!state.records.length||!state.online)return'';const _f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};const _sd=[...new Set(state.records.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_f(a)<_f(b)?-1:1);const[_d1,_m1,_y1]=_sd[0].split('.'),[_d2,_m2,_y2]=_sd[_sd.length-1].split('.');const _n=(_sd[0]===_sd[_sd.length-1])?_sd[0]:(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1:(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1:_sd[0]+' — '+_sd[_sd.length-1];return'<button onclick="archiveMainSheet()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">АРХІВУВАТИ '+_n+'</button>';})()}<span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em;${state.online?'':'display:none'}">за період</span></div></div>
+            <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><div style="display:flex;align-items:center;gap:12px">${state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="showVerifyModal()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-blue" style="font-size:0.78em;padding:5px 10px">ВЕРИФІКАЦІЯ</button>':''}${(()=>{if(!state.records.length||!state.online)return'';const _f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};const _sd=[...new Set(state.records.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_f(a)<_f(b)?-1:1);const[_d1,_m1,_y1]=_sd[0].split('.'),[_d2,_m2,_y2]=_sd[_sd.length-1].split('.');const _n=(_sd[0]===_sd[_sd.length-1])?_sd[0]:(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1:(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1:_sd[0]+' — '+_sd[_sd.length-1];return'<button onclick="archiveMainSheet()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">АРХІВУВАТИ '+_n+'</button>';})()}<span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em;${state.online?'':'display:none'}">за період</span></div></div>
             ${!state.filterPeriodOpen?`<div class="crate p-4"><div class="flex flex-wrap gap-2">${state.archiveLoading&&!state.selArchive?'<p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p>':_arBtns}</div></div>`:''}
             ${!state.online?'<div class="crate p-4"><p class="stencil text-center py-3" style="color:#c05a3e">Відображення архівних даних неможливе за відсутності з\'єднання</p></div>':''}
             ${state.online?_periodPickerHtml:''}
