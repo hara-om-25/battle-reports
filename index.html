@@ -882,7 +882,8 @@ function _initToTop() {
     const place = () => {
         const vw = document.documentElement.clientWidth;
         let right = 0;
-        document.querySelectorAll('#app .crate, #app .lists-cols').forEach(el => {
+        // шапка — теж «crate», але вона на всю ширину й міряти по ній нічого
+        document.querySelectorAll('#app .crate:not(nav), #app .lists-cols').forEach(el => {
             const r = el.getBoundingClientRect();
             if (r.width && r.right > right) right = r.right;
         });
