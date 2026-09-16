@@ -2972,8 +2972,13 @@ function _fullDT(r) {
 
 async function syncRecordsToAPI() {
     state.records.forEach(r => { if (!r.uid) r.uid = _contentUid(r); });
-    await apiClear('ГОЛОВНА!A2:K');
-    if (state.records.length > 0) {
+    // Спершу писали, стираючи весь аркуш, і аж потім заливали рядки назад.
+    // Якщо між цими кроками застосунок помирав — зв'язок, протермінований
+    // токен, закрите вікно — ГОЛОВНА лишалась порожньою, і дані зникали.
+    // Тепер спершу запис, а стирається лише хвіст нижче записаного: аркуш
+    // ні на мить не буває порожнім
+    if (state.records.length === 0) { await apiClear('ГОЛОВНА!A2:K'); return; }
+    {
         // Рядки в таблиці завжди йдуть хронологічно за датою й часом вильоту — найновіші внизу.
         // Це переставляє рядок і тоді, коли в РЕДАГУВАННІ змінили час: він переїде на своє місце.
         const _sorted = [...state.records].sort((a, b) => {
@@ -2987,6 +2992,8 @@ async function syncRecordsToAPI() {
             r.points, r.uid
         ]);
         await apiUpdate(`ГОЛОВНА!A2:K${rows.length + 1}`, rows);
+        // рядки, що лишилися від довшого попереднього запису
+        await apiClear(`ГОЛОВНА!A${rows.length + 2}:K`);
     }
 }
 
