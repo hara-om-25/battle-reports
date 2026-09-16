@@ -3996,19 +3996,20 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 // Скільки вильотів взагалі без балів, скільки отримали вердикт,
                 // і скільки не потрапили ні туди, ні туди — саме вони й дають
                 // розрив між загальною сумою балів і «верифіковано + скасовано»
-                const _vrZero=state.archiveRecs.filter(r=>!(parseFloat(r.points)||0)).length;
-                const _vrJudged=state.archiveRecs.filter(r=>r.v&&r.v.state).length;
-                const _vrLeft=state.archiveRecs.filter(r=>(parseFloat(r.points)||0)&&!(r.v&&r.v.state)).length;
-                const _vrBy=st=>state.archiveRecs.filter(r=>r.v&&r.v.state===st).length;
-                const _vrRow=(label,n)=>_row(label,n,' '+_vyl(n));
-                const _vrRows=_vrRow('З нульовою ефективністю',_vrZero)
-                    +_vrRow('Подавалось на верифікацію',_vrJudged)
-                    +_vrRow('Верифіковано повністю',_vrBy('ok'))
-                    +_vrRow('Частково верифіковано',_vrBy('part'))
-                    +_vrRow('Верифіковано з заміною',_vrBy('repl'))
-                    +_vrRow('Відхилено',_vrBy('no'))
-                    +_vrRow('Дублюючих',_vrBy('pack'))
-                    +_vrRow('Не звірено',_vrLeft);
+                // однаковий для одного архіву й для всіх виїздів разом
+                const _vrRowsFor=rs=>{
+                    const by=st=>rs.filter(r=>r.v&&r.v.state===st).length;
+                    const row=(label,n)=>_row(label,n,' '+_vyl(n));
+                    return row('З нульовою ефективністю',rs.filter(r=>!(parseFloat(r.points)||0)).length)
+                        +row('Подавалось на верифікацію',rs.filter(r=>r.v&&r.v.state).length)
+                        +row('Верифіковано повністю',by('ok'))
+                        +row('Частково верифіковано',by('part'))
+                        +row('Верифіковано з заміною',by('repl'))
+                        +row('Відхилено',by('no'))
+                        +row('Дублюючих',by('pack'))
+                        +row('Не звірено',rs.filter(r=>(parseFloat(r.points)||0)&&!(r.v&&r.v.state)).length);
+                };
+                const _vrRows=_vrRowsFor(state.archiveRecs);
                 const _statsBlock=state.archiveRecs.length>0?`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}</div><div class="space-y-3" style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_resRows)}${_sec('ВЕРИФІКАЦІЯ',_vrRows)}</div></div>`:'';
                 const _shRptLines=(()=>{if(!state.archiveRecs.length)return[];const _l=generateArchiveReport(state.archiveRecs,state.selArchive+'р.');_l.push(''),_l.push('Прогнозовано уражень на '+_arTotal+' '+_bal(_arTotal)+'.');if(_pushVerifyLines(_l,state.archiveRecs))_l.push('');_pushCostLines(_l,_arTotal,state.archiveRecs);return _l;})();
                 const _shRptBlock=state.archiveRecs.length>0?`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ${esc(state.selArchive)}</h3><span class="stencil" style="color:var(--khaki)">Уражено орієнтовно на <span style="color:var(--text)">${_arTotal}</span> ${_bal(_arTotal)}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyArchiveSheetReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_shRptLines.join('\n')}</div></div>`:'';
@@ -4033,7 +4034,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _allAmmoRows=Object.entries(_allAmmoCnt).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_row(esc(a),c,' шт')).join('');
                 const _allPvrRows=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_allAmmoCnt[am]||0)*cf,0);return tot?_row(esc(pvr.name),tot+' кг'):'';}).filter(Boolean).join('');
                 const _allResRows=Object.entries(_allResCnt).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,' '+_plu(c,'раз','рази','разів'))).join('');
-                const _allStatsBlock=`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_allDrnRows)}${_sec('БОЄПРИПАСИ',_allAmmoRows)}${_sec('ПВР',_allPvrRows)}</div><div class="space-y-3" style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_allResRows)}</div></div>`;
+                const _allStatsBlock=`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_allDrnRows)}${_sec('БОЄПРИПАСИ',_allAmmoRows)}${_sec('ПВР',_allPvrRows)}</div><div class="space-y-3" style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_allResRows)}${_sec('ВЕРИФІКАЦІЯ',_vrRowsFor(_allRecs))}</div></div>`;
                 _allSection=_allRptBlock+'<h2 class="stencil-shadow text-xl px-2" style="color:var(--yellow)">ЗАГАЛЬНА СТАТИСТИКА</h2>'+_allStatsBlock;
             }
         }
