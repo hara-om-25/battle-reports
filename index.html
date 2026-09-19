@@ -2026,11 +2026,23 @@ function _vFileTarget(typeRaw, idRaw) {
     return { type: type, num: num, name: _vName(base + (num ? ' ' + num : '')) };
 }
 
-// Боєприпас для звіряння. У файлі його пишуть із уточненням у дужках, а то
-// й кількома назвами через кому. Беремо те, що до дужки, і з нього першу
-// назву — саме так, як воно записане в нашому стовпці «Боєприпас».
-// Кома всередині дужок при цьому не заважає: дужку відрізаємо першою
-function _vAmmo(x) { return _vName(_vNorm(x).split('(')[0].split(',')[0]); }
+// Боєприпас із файлу. У дужках верифікатор пише кількість, а на кілька дронів
+// повторює запис: «УЯ-95-1.5 (1 шт.) УЯ-95-1.5 (1 шт.)». Дужки не обриваємо
+// рядок, а просто викидаємо — тоді видно і назву, і скільки їх було
+function _vAmmoList(x) {
+    return _vNorm(x).replace(/\([^)]*\)/g, '\n').split(/[\n,;]+/).map(_vName).filter(Boolean);
+}
+function _vAmmo(x) { return _vAmmoList(x)[0] || ''; }
+// Скільки заходів покриває рядок: спершу за «N шт.» у дужках — їх може бути
+// дві поспіль на одну назву, — а як їх немає, то за кількістю самих назв
+function _vAmmoQty(x) {
+    const m = _vNorm(x).match(/\(\s*\d+\s*шт/gi);
+    if (m) return Math.max(1, m.reduce((s, t) => s + (parseInt(t.replace(/\D/g, ''), 10) || 0), 0));
+    return Math.max(1, _vAmmoList(x).length);
+}
+// Назви одного боєприпасу у файлі й у нас пишуть по-різному: «УЯ-95-1.5»
+// проти «УЯ 95-1.5». Для порівняння лишаємо самі літери й цифри
+function _vAmmoKey(x) { return _vName(x).replace(/[^0-9A-ZА-ЯІЇЄҐ]/g, ''); }
 
 // Сила результату: знищено — найсильніший. Ту саму ціль на тій самій
 // координаті б'ють по кілька разів, і верифікатор зараховує один удар, той
@@ -2263,7 +2275,9 @@ async function runVerification(file) {
                 tgt: _vFileTarget(r[1], r[2]),
                 res: _vNorm(r[5]),
                 // боєприпас є тільки у файлах нового вигляду
-                ammo: _wi === 7 ? _vAmmo(r[6]) : '',
+                ammo: _wi === 7 ? _vAmmoKey(_vAmmo(r[6])) : '',
+                // скільки наших заходів покриває цей рядок файлу
+                ammoQty: _wi === 7 ? _vAmmoQty(r[6]) : 1,
                 // скільки одиниць покриває рядок: верифікатор може замінити
                 // чотири «Антени» на дві «Антени вел» одним рядком
                 qty: Math.max(1, parseInt(_vNorm(r[3]), 10) || 1),
@@ -2391,7 +2405,7 @@ async function runVerification(file) {
                     // будь-якого боку нікого не карає: нема з чим звіряти.
                     // У нашому стовпці H дужок не буває, там назва й так чиста
                     // — обрізати нічого, досить звести до одного вигляду
-                    const _oa = _vName(row[7]);
+                    const _oa = _vAmmoKey(row[7]);
                     const _am = (it.ammo && _oa && _oa !== it.ammo) ? 1 : 0;
                     hits.push([i - 1, j, d, fold, fuzzy ? 1 : 0, _am, _rm, _vStrong(_or)]);
                 }
@@ -2453,6 +2467,17 @@ async function runVerification(file) {
                         } else {
                             c.repl.push([it.tgt.name, it.pts, it.res, it.qty]);
                         }
+                    }
+                    // Боєприпас верифікатор пише на кожен дрон окремо, тож
+                    // два записи БК у рядку — це два наші заходи на ту саму
+                    // ціль, хоч рядок у файлі й один. Відхилив він удар —
+                    // відхилені всі заходи, і ті, що не дісталися рядка
+                    if (it.verdict !== 'Підтверджено' && it.ammoQty > 1) {
+                        hits.slice(1, it.ammoQty).forEach(h => {
+                            const x = cell[h[0]];
+                            if (x.v.some(Boolean) || x.repl.length) return;
+                            x.v.forEach((v, k) => { if (!v) x.v[k] = 'Відхилено'; });
+                        });
                     }
                     touched = true;
                     matched.add(idx);
