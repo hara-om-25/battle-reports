@@ -4367,9 +4367,19 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 if(Object.keys(_fDrnCnt).length){_fLines.push('');_fLines.push('ДРОНИ ('+Object.values(_fDrnCnt).reduce((s,c)=>s+c,0)+' шт):');Object.entries(_fDrnCnt).sort((a,b)=>b[1]-a[1]).forEach(([d,c])=>_fLines.push(d+' — '+c+' шт'));}
                 if(Object.keys(_fAmmoCnt).length){_fLines.push('');_fLines.push('БОЄПРИПАСИ ('+Object.values(_fAmmoCnt).reduce((s,c)=>s+c,0)+' шт):');Object.entries(_fAmmoCnt).sort((a,b)=>b[1]-a[1]).forEach(([a,c])=>_fLines.push(a+' — '+c+' шт'));}
                 if(_fPvrList.length){_fLines.push('');_fLines.push('ПВР:');_fPvrList.forEach(l=>_fLines.push(l));}
+                // Шапка така сама, як на аркуші й у зведенні за всі виїзди:
+                // є звірені вильоти — показуємо нарахування верифікатора
+                const _fAnyV=_fRecs.some(r=>r.v&&r.v.state);
+                const _fVSum=Math.round(_fRecs.reduce((s,r)=>
+                    s+((r.v&&r.v.state&&r.v.state!=='pack')?(r.v.sum||0):0),0));
+                const _fHdr=_fAnyV
+                    ?'Верифіковано уражень на <span style="color:var(--text)">'+_fVSum+'</span> '+_bal(_fVSum)
+                    :'Уражено орієнтовно на <span style="color:var(--text)">'+_fPts+'</span> '+_bal(_fPts);
                 _periodResultHtml='<div class="crate p-4">'
                     +'<div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
+                    +'<div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap">'
                     +'<h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ПЕРІОД</h3>'
+                    +'<span class="stencil" style="color:var(--khaki)">'+_fHdr+'</span></div>'
                     +'<button onclick="copyFilteredPeriodReport()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
                     +'</div>'
                     +'<div class="report-box">'+_fLines.join('\n')+'</div></div>';
