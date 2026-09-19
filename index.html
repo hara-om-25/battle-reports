@@ -665,19 +665,7 @@ function loadLocal() {
 function _saveVerify() {
     try {
         localStorage.setItem(LS_VERIFY, JSON.stringify({ sheets: state.vAll }));
-        return;
-    } catch (e) { /* сховище переповнене — пробуємо коротший варіант */ }
-    // Рядки «поза періодом» у кожного аркуша ті самі — це решта файлу. Коли
-    // місця не стало, вони перші йдуть за борт: без них перелік лишається
-    // робочим, а зникнути всьому було б гірше
-    try {
-        const s = {};
-        Object.keys(state.vAll).forEach(k => {
-            s[k] = { left: (state.vAll[k].left || []).filter(x => x.why !== 'поза періодом'),
-                     fix: state.vAll[k].fix || [] };
-        });
-        localStorage.setItem(LS_VERIFY, JSON.stringify({ sheets: s }));
-    } catch (e) { /* і так не влізло — лишаємось без збереження */ }
+    } catch (e) { /* сховище переповнене — ігноруємо */ }
 }
 // Переліки відкритого архіву. Кожен аркуш тримає свої: звірили сім архівів —
 // у кожного лишилися власні підказки
@@ -2251,7 +2239,7 @@ async function runVerification(file) {
     if (!items.length) { showAlert('У файлі не знайдено жодного рядка з координатами й датою.'); return; }
 
     // Звіряємо тільки з відкритим архівом. У файлі можуть бути періоди інших
-    // аркушів — вони підуть у «поза періодом», і їх видно переліком
+    // аркушів — їх до цього архіву не приплітаємо, лише рахуємо числом
     const _sheets = [state.selArchive];
     const _pSel = _sheetPeriod(state.selArchive);
     const inPeriod = items.filter(it => it.verdict
@@ -2546,11 +2534,14 @@ async function runVerification(file) {
     const left = [];
     items.forEach((it, idx) => {
         if (!it.verdict || matched.has(idx)) return;
-        const inP = !_pSel || (it.date >= _pSel.from && it.date <= _pSel.to);
+        // рядки поза періодом аркуша в перелік не йдуть: розбираємося з одним
+        // архівом, отже й рядки мають бути його. Скільки їх — видно числом
+        // у підсумковому вікні
+        if (_pSel && (it.date < _pSel.from || it.date > _pSel.to)) return;
         left.push({
             dt: it.dt, tgt: it.tgt.name, coord: it.rawCoord, res: it.res,
             verdict: it.verdict, pts: it.pts,
-            why: !inP ? 'поза періодом' : ambiguous.has(idx) ? 'неоднозначно' : 'не знайдено'
+            why: ambiguous.has(idx) ? 'неоднозначно' : 'не знайдено'
         });
     });
     // На один рядок таблиці лягло дві різні дати з файлу — виправити його
@@ -2613,7 +2604,7 @@ function _pushVerifyLines(lines, recs) {
 function copyVerifyLeft() {
     const L = _vlList();
     if (!L.length) return;
-    const _ord = { 'не знайдено': 0, 'неоднозначно': 1, 'поза періодом': 2 };
+    const _ord = { 'не знайдено': 0, 'неоднозначно': 1 };
     const lines = [...L].sort((a, b) => (_ord[a.why] - _ord[b.why]) || (a.dt < b.dt ? -1 : 1))
         .map(x => [x.dt, x.tgt, x.coord, x.res, x.verdict + (x.pts ? ' ' + x.pts : ''), x.why]
         .filter(Boolean).join(' | '));
@@ -4227,11 +4218,11 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         const _vlHtml=(()=>{
             const L=_vlList();
             if(!L.length)return '';
-            const _ord={'не знайдено':0,'неоднозначно':1,'поза періодом':2};
+            const _ord={'не знайдено':0,'неоднозначно':1};
             const _s=[...L].sort((a,b)=>(_ord[a.why]-_ord[b.why])||(a.dt<b.dt?-1:1));
             const _n=w=>L.filter(x=>x.why===w).length;
-            const _hdr=[['не знайдено',_n('не знайдено')],['неоднозначно',_n('неоднозначно')],
-                        ['поза періодом',_n('поза періодом')]].filter(x=>x[1]).map(x=>x[0]+' '+x[1]).join(', ');
+            const _hdr=[['не знайдено',_n('не знайдено')],['неоднозначно',_n('неоднозначно')]]
+                .filter(x=>x[1]).map(x=>x[0]+' '+x[1]).join(', ');
             const _lines=_s.map(x=>[x.dt,x.tgt,x.coord,x.res,
                 x.verdict+(x.pts?' '+x.pts:''),x.why].filter(Boolean).join(' | '));
             return '<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
