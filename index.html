@@ -2531,15 +2531,25 @@ async function runVerification(file) {
                 const _d = _vDate(row[1]) || '', _c = _vCoord(row[5]);
                 return _d + '|' + (_d ? _c.slice(0, -2) : _c) + '|' + c.names.join(',');
             };
+            // Запам'ятовуємо не лише те, що удар уже звірений, а й чим саме
+            // він скінчився: «ok» — за ним є бали, «no» — верифікатор його
+            // відхилив. Від цього залежить доля решти заходів на ту саму ціль
             const _done = {};
             for (let i = 1; i < rows.length; i++) {
                 const c = cell[i - 1];
-                if (c.v.some(Boolean) || c.repl.length) _done[_key(i)] = true;
+                if (!c.v.some(Boolean) && !c.repl.length) continue;
+                const ok = !!c.repl.length || c.v.some(v => v && v.split('|')[0] === 'Підтверджено');
+                const k = _key(i);
+                if (ok || !_done[k]) _done[k] = ok ? 'ok' : 'no';
             }
             for (let i = 1; i < rows.length; i++) {
                 const c = cell[i - 1];
                 if (c.v.some(Boolean) || c.repl.length) continue;
                 if (!String((rows[i] || [])[2] || '').trim()) continue;
+                // Верифікатор відхилив сам удар, а заходів на нього було
+                // кілька: відхилений він для всіх. Дублювати тут нічого —
+                // за дублюючим стоять бали, а тут їх немає ні в кого
+                if (_done[_key(i)] === 'no') { c.v.forEach((v, k) => { if (!v) c.v[k] = 'Відхилено'; }); continue; }
                 if (_done[_key(i)]) c.pack = true;
             }
 
