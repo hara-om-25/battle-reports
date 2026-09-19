@@ -4109,7 +4109,7 @@ function render() {
                 +row('Подавалось на верифікацію',rs.filter(r=>r.v&&r.v.state).length)
                 +row('Верифіковано повністю',by('ok'))
                 +row('Частково верифіковано',by('part'))
-                +row('Верифіковано з заміною',by('repl'))
+                +row('Верифіковано із заміною',by('repl'))
                 +row('Відхилено',by('no'))
                 +row('Дублюючих',by('pack'))
                 +row('Не звірено',rs.filter(r=>(parseFloat(r.points)||0)&&!(r.v&&r.v.state)).length);
