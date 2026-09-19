@@ -328,6 +328,11 @@
       white-space: pre-wrap;
       font-size: calc(0.9em + 1px);
     }
+    /* Координата й час у переліках звіряння: натиснув — величина цілком у
+       буфері, а не той знак, у який поцілив пальцем. Підсвічування на мить
+       показує, що спрацювало */
+    .cp { color: var(--blue-label); cursor: pointer; }
+    .cp.cp-hit { background: var(--blue-label); color: var(--bg); }
     /* Панель керування списками прилипає під основне меню, а списки їдуть під неї */
     .lists-bar { position: sticky; z-index: 30; top: 0; width: 50vw; margin-left: auto; margin-right: auto; }
     @media (max-width: 640px) { .lists-bar { width: 100%; } }
@@ -2611,14 +2616,26 @@ function copyVerifyLeft() {
     navigator.clipboard.writeText(lines.join('\n')).catch(() => {});
 }
 
+// Величина в буфер. Беремо весь напис, а не місце дотику
+function _cpTxt(el) {
+    navigator.clipboard.writeText(el.textContent).catch(() => {});
+    el.classList.add('cp-hit');
+    setTimeout(() => el.classList.remove('cp-hit'), 350);
+}
 // Підказка — це один рядок таблиці, знайдений за координатою й ціллю, і час,
 // яким цей виліт подавали на верифікацію. Виправляти руками, тож у рядку
-// найперше стоїть номер рядка аркуша
-function _vfLine(x) {
-    const p = [x.row ? 'рядок ' + x.row : '?', x.coord, x.tgt];
-    if (x.row) p.push('у таблиці: ' + (x.cur || 'порожньо'));
-    p.push('у файлі: ' + x.dt);
-    if (x.why) p.push(x.why);
+// найперше стоїть номер рядка аркуша. cp=true малює те, що беруть у буфер:
+// координату й обидві дати. У кнопці КОПІЮВАТИ розмітки немає
+function _vfLine(x, cp) {
+    const _c = t => !t ? '' : cp ? '<span class="cp" onclick="_cpTxt(this)">' + esc(t) + '</span>' : t;
+    const _e = t => cp ? esc(t) : t;
+    // хвіст на кшталт «, 97» лишається поза натисканням: шукають саме MGRS
+    const _cc = String(x.coord || '').split(',');
+    const _coord = _c(_cc[0].trim()) + (_cc.length > 1 ? _e(', ' + _cc.slice(1).join(',').trim()) : '');
+    const p = [_e(x.row ? 'рядок ' + x.row : '?'), _coord, _e(x.tgt)];
+    if (x.row) p.push(_e('у таблиці: ') + _c(x.cur || 'порожньо'));
+    p.push(_e('у файлі: ') + _c(x.dt));
+    if (x.why) p.push(_e(x.why));
     return p.filter(Boolean).join(' | ');
 }
 function _vfSorted() {
@@ -4223,13 +4240,14 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             const _n=w=>L.filter(x=>x.why===w).length;
             const _hdr=[['не знайдено',_n('не знайдено')],['неоднозначно',_n('неоднозначно')]]
                 .filter(x=>x[1]).map(x=>x[0]+' '+x[1]).join(', ');
-            const _lines=_s.map(x=>[x.dt,x.tgt,x.coord,x.res,
-                x.verdict+(x.pts?' '+x.pts:''),x.why].filter(Boolean).join(' | '));
+            const _cp=t=>t?'<span class="cp" onclick="_cpTxt(this)">'+esc(t)+'</span>':'';
+            const _lines=_s.map(x=>[_cp(x.dt),esc(x.tgt),_cp(x.coord),esc(x.res),
+                esc(x.verdict+(x.pts?' '+x.pts:'')),esc(x.why)].filter(Boolean).join(' | '));
             return '<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
                 +'<h3 class="stencil-shadow" style="color:var(--yellow)">РЯДКИ ФАЙЛУ, ЩО НЕ ЛЯГЛИ</h3>'
                 +'<span class="stencil" style="color:var(--khaki)">'+esc(_hdr)+'</span>'
                 +'<button onclick="copyVerifyLeft()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
-                +'</div><div class="report-box">'+esc(_lines.join('\n'))+'</div></div>';
+                +'</div><div class="report-box">'+_lines.join('\n')+'</div></div>';
         })();
         // Рядки, які не лягли через час: виліт знайшовся за координатою й
         // ціллю, але в таблиці стоїть не той час, яким його подавали на
@@ -4244,7 +4262,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 +'<h3 class="stencil-shadow" style="color:var(--yellow)">ЩО ПОПРАВИТИ В ТАБЛИЦІ</h3>'
                 +'<span class="stencil" style="color:var(--khaki)">'+esc(_hdr)+'</span>'
                 +'<button onclick="copyVerifyFix()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
-                +'</div><div class="report-box">'+esc(L.map(_vfLine).join('\n'))+'</div></div>';
+                +'</div><div class="report-box">'+L.map(x=>_vfLine(x,true)).join('\n')+'</div></div>';
         })();
         h+=`<div class="p-4 space-y-4 arch-wrap">
             <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><div style="display:flex;align-items:center;gap:12px">${state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="showVerifyModal()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-blue" style="font-size:0.78em;padding:5px 10px">ВЕРИФІКАЦІЯ</button>':''}${(()=>{if(!state.records.length||!state.online)return'';const _f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};const _sd=[...new Set(state.records.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_f(a)<_f(b)?-1:1);const[_d1,_m1,_y1]=_sd[0].split('.'),[_d2,_m2,_y2]=_sd[_sd.length-1].split('.');const _n=(_sd[0]===_sd[_sd.length-1])?_sd[0]:(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1:(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1:_sd[0]+' — '+_sd[_sd.length-1];return'<button onclick="archiveMainSheet()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">АРХІВУВАТИ '+_n+'</button>';})()}<span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em;${state.online?'':'display:none'}">за період</span></div></div>
