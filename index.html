@@ -1879,8 +1879,12 @@ function _verdictInfo(targetsStr, l, m, q200, q300) {
 // Місце удару: день і координата, у якої відкинуто два крайні знаки — у них
 // буває розбіжність. Цілі в ключ не входять: їх звіряємо окремо
 function _packKeyRec(r) {
-    return (r.sheet || '') + '|' + (getDateOnly(r.datetime) || '')
-         + '|' + _vCoord(r.coordinates).slice(0, -2);
+    const d = getDateOnly(r.datetime) || '';
+    const c = _vCoord(r.coordinates);
+    // З датою координата може розійтися двома останніми знаками — це та сама
+    // ціль. Без дати такої поблажки немає: доводити, що це один удар, нічим,
+    // окрім самої координати, тож вимагаємо збігу до останньої цифри
+    return (r.sheet || '') + '|' + d + '|' + (d ? c.slice(0, -2) : c);
 }
 
 function _packNames(r) {
@@ -1901,10 +1905,6 @@ function _markPacks(recs) {
         const st = r.v && r.v.state;
         // дублюючий сам пари не дає, відхилений теж — за ним балів немає
         if (!st || st === 'pack' || st === 'no') return;
-        // без дати пари не буває: у старих архівах колонка B порожня, і тоді
-        // день випадає з ключа, а весь аркуш злипається в одні «сутки». Два
-        // вильоти по сусідній координаті з різних місяців ставали дублюючими
-        if (!getDateOnly(r.datetime)) return;
         const k = _packKeyRec(r);
         (owners[k] = owners[k] || []).push({ rec: r, names: _packNames(r) });
     });
@@ -1914,8 +1914,6 @@ function _markPacks(recs) {
         // нуль балів — це не удар: «НЕвлучання» чи збитий дрон. Скасовувати
         // там нема чого, отже й дублювати нема чого
         if (!(parseFloat(r.points) || 0)) return;
-        // немає дати — довести, що це той самий удар, нічим
-        if (!getDateOnly(r.datetime)) return;
         const names = _packNames(r);
         if (!names.length) return;
         const own = (owners[_packKeyRec(r)] || [])
@@ -2019,6 +2017,12 @@ function _vFileTarget(typeRaw, idRaw) {
     const num = (/^\d+$/.test(last) && segs.some(s => _vName(s) === type)) ? last : '';
     return { type: type, num: num, name: _vName(base + (num ? ' ' + num : '')) };
 }
+
+// Сила результату: знищено — найсильніший. Ту саму ціль на тій самій
+// координаті б'ють по кілька разів, і верифікатор зараховує один удар, той
+// що знищив. Тому за інших рівних рядок файлу йде вильоту зі «знищено»,
+// а решта стають дублюючими до нього
+function _vStrong(res) { return _vName(res).indexOf('ЗНИЩ') === 0 ? 0 : 1; }
 
 // «НЕвлучання» на верифікацію не подають, отже такої цілі у файлі бути не може
 // і рядок файлу ніколи не належить їй
@@ -2351,7 +2355,7 @@ async function runVerification(file) {
                     const d = (it.min === null || rm === null) ? 0 : Math.abs(rm - it.min);
                     // назви не збіглись, хоч усе решта збіглось — верифікатор
                     // замінив ціль; запам'ятовуємо як заміну для цього рядка
-                    hits.push([i - 1, j, d, fold, fuzzy ? 1 : 0]);
+                    hits.push([i - 1, j, d, fold, fuzzy ? 1 : 0, j >= 0 ? _vStrong(c.res[j]) : 1]);
                 }
                 // кілька збігів у межах півгодини — спершу беремо той, де ціль
                 // ще вільна, і аж потім найближчий за часом. Без цього два
@@ -2360,9 +2364,13 @@ async function runVerification(file) {
                 // відстань — розрізнити нічим
                 const free = h => (h[1] >= 0 && (h[3] || !cell[h[0]].v[h[1]])) ? 0 : 1;
                 // точний збіг координати сильніший за приблизний
-                if (hits.length > 1) hits.sort((a, b) => a[4] - b[4] || free(a) - free(b) || a[2] - b[2]);
+                // остання ознака — сила результату: два вильоти по тій самій
+                // координаті з тією самою ціллю, один пошкодив, другий знищив.
+                // Рядок належить тому, що знищив, а перший піде дублюючим
+                if (hits.length > 1) hits.sort((a, b) => a[4] - b[4] || free(a) - free(b) || a[2] - b[2] || a[5] - b[5]);
                 if (hits.length === 1 || (hits.length > 1
-                    && (hits[0][4] !== hits[1][4] || free(hits[0]) !== free(hits[1]) || hits[1][2] > hits[0][2]))) {
+                    && (hits[0][4] !== hits[1][4] || free(hits[0]) !== free(hits[1])
+                        || hits[1][2] > hits[0][2] || hits[0][5] !== hits[1][5]))) {
                     const c = cell[hits[0][0]], j = hits[0][1];
                     if (j >= 0 && hits[0][3]) {
                         // ОС: складаємо бали всіх рядків і рахуємо, скільки
@@ -2477,8 +2485,10 @@ async function runVerification(file) {
                 const row = rows[i] || [], c = cell[i - 1];
                 // результат тут не рахується: пошкоджена чи знищена — це та
                 // сама ціль на тому самому місці, отже той самий удар
-                return (_vDate(row[1]) || '') + '|' + _vCoord(row[5]).slice(0, -2)
-                     + '|' + c.names.join(',');
+                // без дати — координата до останньої цифри, рівно як у
+                // _packKeyRec(): інакше цілий аркуш без дат злипався б
+                const _d = _vDate(row[1]) || '', _c = _vCoord(row[5]);
+                return _d + '|' + (_d ? _c.slice(0, -2) : _c) + '|' + c.names.join(',');
             };
             const _done = {};
             for (let i = 1; i < rows.length; i++) {
