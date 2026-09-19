@@ -331,8 +331,13 @@
     /* Координата й час у переліках звіряння: натиснув — величина цілком у
        буфері, а не той знак, у який поцілив пальцем. Підсвічування на мить
        показує, що спрацювало */
-    .cp { color: var(--blue-label); cursor: pointer; }
-    .cp.cp-hit { background: var(--blue-label); color: var(--bg); }
+    .cp { cursor: pointer; }
+    .cp-g { color: var(--green-label); }
+    .cp-r { color: var(--red-label); }
+    .cp-b { color: var(--blue-label); }
+    .cp-g.cp-hit { background: var(--green-label); color: var(--bg); }
+    .cp-r.cp-hit { background: var(--red-label); color: var(--bg); }
+    .cp-b.cp-hit { background: var(--blue-label); color: var(--bg); }
     /* Панель керування списками прилипає під основне меню, а списки їдуть під неї */
     .lists-bar { position: sticky; z-index: 30; top: 0; width: 50vw; margin-left: auto; margin-right: auto; }
     @media (max-width: 640px) { .lists-bar { width: 100%; } }
@@ -2627,14 +2632,17 @@ function _cpTxt(el) {
 // найперше стоїть номер рядка аркуша. cp=true малює те, що беруть у буфер:
 // координату й обидві дати. У кнопці КОПІЮВАТИ розмітки немає
 function _vfLine(x, cp) {
-    const _c = t => !t ? '' : cp ? '<span class="cp" onclick="_cpTxt(this)">' + esc(t) + '</span>' : t;
+    // кольори ті самі, що й у вердиктах на картках: координата зелена, як
+    // ВЕРИФІКОВАНО, наш час червоний, як ВІДХИЛЕНО, час верифікатора
+    // блакитний, як ЗАМІНЕНО
+    const _c = (t, k) => !t ? '' : cp ? '<span class="cp ' + k + '" onclick="_cpTxt(this)">' + esc(t) + '</span>' : t;
     const _e = t => cp ? esc(t) : t;
     // хвіст на кшталт «, 97» лишається поза натисканням: шукають саме MGRS
     const _cc = String(x.coord || '').split(',');
-    const _coord = _c(_cc[0].trim()) + (_cc.length > 1 ? _e(', ' + _cc.slice(1).join(',').trim()) : '');
+    const _coord = _c(_cc[0].trim(), 'cp-g') + (_cc.length > 1 ? _e(', ' + _cc.slice(1).join(',').trim()) : '');
     const p = [_e(x.row ? 'рядок ' + x.row : '?'), _coord, _e(x.tgt)];
-    if (x.row) p.push(_e('у таблиці: ') + _c(x.cur || 'порожньо'));
-    p.push(_e('у файлі: ') + _c(x.dt));
+    if (x.row) p.push(_e('у таблиці: ') + _c(x.cur || 'порожньо', 'cp-r'));
+    p.push(_e('у файлі: ') + _c(x.dt, 'cp-b'));
     if (x.why) p.push(_e(x.why));
     return p.filter(Boolean).join(' | ');
 }
@@ -4240,8 +4248,8 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             const _n=w=>L.filter(x=>x.why===w).length;
             const _hdr=[['не знайдено',_n('не знайдено')],['неоднозначно',_n('неоднозначно')]]
                 .filter(x=>x[1]).map(x=>x[0]+' '+x[1]).join(', ');
-            const _cp=t=>t?'<span class="cp" onclick="_cpTxt(this)">'+esc(t)+'</span>':'';
-            const _lines=_s.map(x=>[_cp(x.dt),esc(x.tgt),_cp(x.coord),esc(x.res),
+            const _cp=(t,k)=>t?'<span class="cp '+k+'" onclick="_cpTxt(this)">'+esc(t)+'</span>':'';
+            const _lines=_s.map(x=>[_cp(x.dt,'cp-b'),esc(x.tgt),_cp(x.coord,'cp-g'),esc(x.res),
                 esc(x.verdict+(x.pts?' '+x.pts:'')),esc(x.why)].filter(Boolean).join(' | '));
             return '<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
                 +'<h3 class="stencil-shadow" style="color:var(--yellow)">РЯДКИ ФАЙЛУ, ЩО НЕ ЛЯГЛИ</h3>'
