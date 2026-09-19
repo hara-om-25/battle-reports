@@ -4311,7 +4311,15 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _allEarliest=_allBD.length?_allBD.reduce((a,b)=>a.k<b.k?a:b).d:(_allRecs.map(r=>getDateOnly(r.datetime)).filter(Boolean).sort()[0]||'');
                 const _allTotal=Math.round(_allRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                 const _allRptLines=(()=>{const _l=generateArchiveReport(_allRecs,'Від '+_allEarliest+' дотепер');_l.push(''),_l.push('Прогнозовано уражень на '+_allTotal+' '+_bal(_allTotal)+'.');if(_pushVerifyLines(_l,_allRecs))_l.push('');_pushCostLines(_l,_allTotal,_allRecs);return _l;})();
-                const _allRptBlock=`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ВСІ ВИЇЗДИ З ${_allEarliest} ДОТЕПЕР</h3><span class="stencil" style="color:var(--khaki)">Уражено орієнтовно на <span style="color:var(--text)">${_allTotal}</span> ${_bal(_allTotal)}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyAllArchiveReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_allRptLines.join('\n')}</div></div>`;
+                // Те саме, що й на окремому аркуші: є звірені вильоти —
+                // у шапці стоїть нарахування верифікатора, а не наш прогноз
+                const _allAnyV=_allRecs.some(r=>r.v&&r.v.state);
+                const _allVSum=Math.round(_allRecs.reduce((s,r)=>
+                    s+((r.v&&r.v.state&&r.v.state!=='pack')?(r.v.sum||0):0),0));
+                const _allHdr=_allAnyV
+                    ?`Верифіковано уражень на <span style="color:var(--text)">${_allVSum}</span> ${_bal(_allVSum)}`
+                    :`Уражено орієнтовно на <span style="color:var(--text)">${_allTotal}</span> ${_bal(_allTotal)}`;
+                const _allRptBlock=`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ВСІ ВИЇЗДИ З ${_allEarliest} ДОТЕПЕР</h3><span class="stencil" style="color:var(--khaki)">${_allHdr}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyAllArchiveReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_allRptLines.join('\n')}</div></div>`;
                 const _allDrnCnt={};_allRecs.forEach(r=>{if(r.drone)_allDrnCnt[r.drone]=(_allDrnCnt[r.drone]||0)+1;});
                 const _allAmmoCnt={};_allRecs.forEach(r=>{if(r.ammo)_allAmmoCnt[r.ammo]=(_allAmmoCnt[r.ammo]||0)+1;});
                 const _allResCnt={};_allRecs.forEach(r=>{if(r.result)r.result.split(', ').forEach(x=>{x=x.trim();if(x)_allResCnt[x]=(_allResCnt[x]||0)+1;});});
