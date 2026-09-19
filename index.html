@@ -4150,7 +4150,7 @@ function render() {
                     const _vuPts=Math.round(_vuRows.reduce((s,o)=>s+(parseFloat(o.r.points)||0),0));
                     const _vuHdr=_vuRows.length+' '+_vyl(_vuRows.length)+', '+_vuPts+' '+_bal(_vuPts);
                     _vuHtml='<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
-                        +'<h3 class="stencil-shadow" style="color:var(--yellow)">ВИЛЬОТИ БЕЗ РЯДКА У ФАЙЛІ ВЕРИФІКАЦІЇ</h3>'
+                        +'<h3 class="stencil-shadow" style="color:var(--yellow)">ВИЛЬОТИ ВІДСУТНІ У ФАЙЛІ ВЕРИФІКАЦІЇ</h3>'
                         +'<span class="stencil" style="color:var(--khaki)">'+esc(_vuHdr)+'</span>'
                         +'<button onclick="copyVerifyUnv()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
                         +'</div><div class="report-box">'+_vuRows.map(o=>_vuLine(o,true)).join('\n')+'</div></div>';
