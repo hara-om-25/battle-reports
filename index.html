@@ -1776,7 +1776,9 @@ async function goToArchive() {
 
    Коли на рядок файлу претендує кілька вильотів, розрізняємо їх по черзі:
    точність координати, вільна ціль, близькість за часом, збіг боєприпасу,
-   збіг результату, сила результату (знищено сильніше за пошкоджено).      */
+   збіг результату, сила результату (знищено сильніше за пошкоджено). Коли
+   не розрізнила жодна ознака — це той самий удар, повторений кілька разів:
+   рядок бере перший за порядком карток, решта стають дублюючими.          */
 
 function _vNorm(x) { return String(x === null || x === undefined ? '' : x).trim(); }
 
@@ -2283,7 +2285,7 @@ async function runVerification(file) {
         && (!_pSel || (it.date >= _pSel.from && it.date <= _pSel.to))).length;
 
     state.archiveLoading = true; render();
-    const matched = new Set(), ambiguous = new Set(), fixes = [];
+    const matched = new Set(), fixes = [];
     let sheetsTouched = 0, sheetsWidened = 0;
     try {
         const grid = await _sheetGrid();
@@ -2404,10 +2406,12 @@ async function runVerification(file) {
                 // результат верифікатор і написав, а другий піде дублюючим
                 if (hits.length > 1) hits.sort((a, b) => a[4] - b[4] || free(a) - free(b)
                     || a[2] - b[2] || a[5] - b[5] || a[6] - b[6] || a[7] - b[7]);
-                if (hits.length === 1 || (hits.length > 1
-                    && (hits[0][4] !== hits[1][4] || free(hits[0]) !== free(hits[1])
-                        || hits[1][2] > hits[0][2] || hits[0][5] !== hits[1][5]
-                        || hits[0][6] !== hits[1][6] || hits[0][7] !== hits[1][7]))) {
+                // Претенденти не розрізнилися жодною ознакою — це той самий
+                // удар, повторений кілька разів. Рядок бере перший, решта
+                // стануть дублюючими до нього. Сортування стійке, а рядки
+                // складалися за порядком аркуша, тож «перший» тут той самий,
+                // що й перший за номером картки
+                if (hits.length) {
                     const c = cell[hits[0][0]], j = hits[0][1];
                     if (j >= 0 && hits[0][3]) {
                         // ОС: складаємо бали всіх рядків і рахуємо, скільки
@@ -2450,8 +2454,6 @@ async function runVerification(file) {
                     }
                     touched = true;
                     matched.add(idx);
-                } else if (hits.length > 1) {
-                    ambiguous.add(idx);
                 }
             });
 
@@ -2462,7 +2464,7 @@ async function runVerification(file) {
             // шукаємо виліт за самою координатою й ціллю. Нічого не пишемо:
             // з цього виходить лише перелік підказок, що саме правити руками
             items.forEach((it, idx) => {
-                if (!it.verdict || matched.has(idx) || ambiguous.has(idx)) return;
+                if (!it.verdict || matched.has(idx)) return;
                 if (_pSel && (it.date < _pSel.from || it.date > _pSel.to)) return;
                 const cand = [];
                 for (let i = 1; i < rows.length; i++) {
@@ -2585,7 +2587,7 @@ async function runVerification(file) {
     if (!state.allArchiveLoading) loadAllArchiveSheets();
 
     const withVerdict = items.filter(i => i.verdict).length;
-    const notFound = Math.max(0, inPeriod - matched.size - ambiguous.size);
+    const notFound = Math.max(0, inPeriod - matched.size);
     // Рядки файлу, які нікуди не лягли. Тримаємо їх, щоб показати переліком —
     // самих чисел «не знайдено 34» мало, треба бачити, яких саме
     const left = [];
@@ -2598,7 +2600,7 @@ async function runVerification(file) {
         left.push({
             dt: it.dt, tgt: it.tgt.name, coord: it.rawCoord, res: it.res,
             verdict: it.verdict, pts: it.pts,
-            why: ambiguous.has(idx) ? 'неоднозначно' : 'не знайдено'
+            why: 'не знайдено'
         });
     });
     // На один рядок таблиці лягло дві різні дати з файлу — виправити його
@@ -2619,7 +2621,6 @@ async function runVerification(file) {
         + 'З них у періоді аркуша: ' + inPeriod + '\n'
         + 'Записано: ' + matched.size + '\n'
         + 'Не знайдено: ' + notFound + '\n'
-        + 'Неоднозначних (кілька збігів): ' + ambiguous.size + '\n'
         + 'Поза періодом аркуша: ' + (withVerdict - inPeriod)
         + (fixes.length ? '\n\nПідказок щодо дати й часу: ' + fixes.filter(f => f.row && !f.why).length
                         + ' з ' + fixes.length : '')
@@ -2661,8 +2662,7 @@ function _pushVerifyLines(lines, recs) {
 function copyVerifyLeft() {
     const L = _vlList();
     if (!L.length) return;
-    const _ord = { 'не знайдено': 0, 'неоднозначно': 1 };
-    const lines = [...L].sort((a, b) => (_ord[a.why] - _ord[b.why]) || (a.dt < b.dt ? -1 : 1))
+    const lines = [...L].sort((a, b) => a.dt < b.dt ? -1 : 1)
         .map(x => [x.dt, x.tgt, x.coord, x.res, x.verdict + (x.pts ? ' ' + x.pts : ''), x.why]
         .filter(Boolean).join(' | '));
     navigator.clipboard.writeText(lines.join('\n')).catch(() => {});
@@ -4326,11 +4326,8 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         const _vlHtml=(()=>{
             const L=_vlList();
             if(!L.length)return '';
-            const _ord={'не знайдено':0,'неоднозначно':1};
-            const _s=[...L].sort((a,b)=>(_ord[a.why]-_ord[b.why])||(a.dt<b.dt?-1:1));
-            const _n=w=>L.filter(x=>x.why===w).length;
-            const _hdr=[['не знайдено',_n('не знайдено')],['неоднозначно',_n('неоднозначно')]]
-                .filter(x=>x[1]).map(x=>x[0]+' '+x[1]).join(', ');
+            const _s=[...L].sort((a,b)=>a.dt<b.dt?-1:1);
+            const _hdr='не знайдено '+L.length;
             const _cp=(t,k)=>t?'<span class="cp '+k+'" onclick="_cpTxt(this)">'+esc(t)+'</span>':'';
             const _lines=_s.map(x=>[_cp(x.dt,'cp-b'),esc(x.tgt),_cp(x.coord,'cp-g'),esc(x.res),
                 esc(x.verdict+(x.pts?' '+x.pts:'')),esc(x.why)].filter(Boolean).join(' | '));
