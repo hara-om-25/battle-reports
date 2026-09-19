@@ -2649,6 +2649,26 @@ function _vfLine(x, cp) {
 function _vfSorted() {
     return [..._vfList()].sort((a, b) => (a.why ? 1 : 0) - (b.why ? 1 : 0) || a.row - b.row);
 }
+// Наші вильоти, на які у файлі не виявилося жодного рядка. Список збирає
+// відмальовування архіву — там уже пораховані номери карток
+let _vuRows = [];
+function _vuLine(o, cp) {
+    const r = o.r;
+    const _c = (t, k) => !t ? '' : cp ? '<span class="cp ' + k + '" onclick="_cpTxt(this)">' + esc(t) + '</span>' : t;
+    const _e = t => cp ? esc(t) : t;
+    const _cc = String(r.coordinates || '').split(',');
+    const _coord = _c(_cc[0].trim(), 'cp-g') + (_cc.length > 1 ? _e(', ' + _cc.slice(1).join(',').trim()) : '');
+    const tg = (r.target || '').split(', '), rs = (r.result || '').split(', ');
+    const _tg = tg.map((x, j) => x + (rs[j] ? ' — ' + rs[j] : '')).filter(Boolean).join(', ');
+    const p = Math.round(parseFloat(r.points) || 0);
+    return [_e('картка ' + o.n), _coord, _e(_tg), _c(_vNorm(r.datetime), 'cp-r'),
+            _e(p + ' ' + _bal(p))].filter(Boolean).join(' | ');
+}
+function copyVerifyUnv() {
+    if (!_vuRows.length) return;
+    navigator.clipboard.writeText(_vuRows.map(o => _vuLine(o)).join('\n')).catch(() => {});
+}
+
 function copyVerifyFix() {
     const L = _vfSorted();
     if (!L.length) return;
@@ -4050,7 +4070,7 @@ function render() {
         // Назва архіву й перелік вильотів ідуть окремо від підсумків:
         // між назвою і ПІДСУМКАМИ стають блоки звіряння, щоб не гортати
         // по них через увесь архів
-        let _arTop='', _arFlights='';
+        let _arTop='', _arFlights='', _vuHtml='';
         if(state.selArchive){
             if(state.archiveLoading){
                 _arContent='<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Завантаження...</p></div>';
@@ -4072,6 +4092,20 @@ function render() {
                 // Пару вже знайшов _markPacks — тут лишається дізнатись, під
                 // яким номером той виліт малюється
                 const _packNum=x=>(x.v&&x.v.packOf)?_arOrder.indexOf(x.v.packOf)+1:0;
+                // Дзеркало до переліків звіряння: тут не рядок файлу не ліг,
+                // а рядка на наш виліт у файлі немає зовсім. Ті самі картки,
+                // що малюються з білою рамкою й написом НЕ ЗВІРЕНО
+                _vuRows=_anyV?_arOrder.map((r,i)=>({r:r,n:i+1}))
+                    .filter(o=>!(o.r.v&&o.r.v.state)&&(parseFloat(o.r.points)||0)):[];
+                if(_vuRows.length){
+                    const _vuPts=Math.round(_vuRows.reduce((s,o)=>s+(parseFloat(o.r.points)||0),0));
+                    const _vuHdr=_vuRows.length+' '+_vyl(_vuRows.length)+', '+_vuPts+' '+_bal(_vuPts);
+                    _vuHtml='<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
+                        +'<h3 class="stencil-shadow" style="color:var(--yellow)">НАШІ ВИЛЬОТИ БЕЗ РЯДКА У ФАЙЛІ</h3>'
+                        +'<span class="stencil" style="color:var(--khaki)">'+esc(_vuHdr)+'</span>'
+                        +'<button onclick="copyVerifyUnv()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
+                        +'</div><div class="report-box">'+_vuRows.map(o=>_vuLine(o,true)).join('\n')+'</div></div>';
+                }
                 const _arGroups=_arDates.map(d=>{
                     const dayR=_byTime(state.archiveRecs.filter(r=>getDateOnly(r.datetime)===d));
                     const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
@@ -4282,6 +4316,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             ${state.online&&!state.filterPeriodOpen?_arTop:''}
             ${state.online?_vlHtml:''}
             ${state.online?_vfHtml:''}
+            ${state.online&&!state.filterPeriodOpen?_vuHtml:''}
             ${state.online?(state.filterPeriodOpen?(state.filterPeriodShown?_periodResultHtml:''):(state.selArchive?_arContent:_allSection)):''}
             ${state.online&&!state.filterPeriodOpen?_arFlights:''}
         </div>`;
