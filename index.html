@@ -463,6 +463,9 @@ let state = {
     // підказки, у яких рядках таблиці треба поправити дату й час, щоб рядок
     // файлу ліг: виліт знайдено за координатою й ціллю, але час у нас інший
     vFix: [],
+    // аркуш, на якому робили те звіряння: обидва переліки показуємо лише
+    // тоді, коли відкритий саме він
+    vSheet: '',
     page: 'login', user: null, token: null, loaded: false,
     scoreTable: {}, drones: [], ammo: [], results: [], records: [],
     report: 1, counts: {},
@@ -475,6 +478,9 @@ let tokenClient = null;
 
 /* ============ ОФЛАЙН-ЯДРО ============ */
 const LS_DATA = 'br_offline_data', LS_QUEUE = 'br_offline_queue';
+// Результат останнього звіряння: два переліки й аркуш, на якому його робили.
+// Лежить окремо від даних вильотів — це не дані, а підсумок однієї дії
+const LS_VERIFY = 'br_verify_left';
 // Власник застосунку. Для нього перемикання таблиць не впирається в аркуш
 // «start»: він має потрапляти в будь-який файл, навіть якщо в поточній
 // таблиці того аркуша немає або він порожній
@@ -652,6 +658,19 @@ function loadLocal() {
         }
         state.queue = JSON.parse(localStorage.getItem(LS_QUEUE) || '[]');
     } catch (e) { state.queue = []; }
+    try {
+        const v = JSON.parse(localStorage.getItem(LS_VERIFY) || 'null');
+        if (v) { state.vSheet = v.sheet || ''; state.vLeft = v.left || []; state.vFix = v.fix || []; }
+    } catch (e) { /* зіпсований запис — просто лишаємось без переліків */ }
+}
+
+// Переліки прив'язані до аркуша: відкрив інший архів — показувати їх не можна
+function _saveVerify() {
+    try {
+        localStorage.setItem(LS_VERIFY, JSON.stringify({
+            sheet: state.vSheet, left: state.vLeft, fix: state.vFix
+        }));
+    } catch (e) { /* сховище переповнене — ігноруємо */ }
 }
 
 // Згортання черги: add+edit=add, add+del=нічого, edit+del=del
@@ -2532,6 +2551,8 @@ async function runVerification(file) {
         }
     });
     state.vFix = fixes;
+    state.vSheet = state.selArchive || '';
+    _saveVerify();
     showAlert('✅ ЗВІРЯННЯ ЗАВЕРШЕНО\n\n'
         + 'Аркуш: ' + state.selArchive + '\n\n'
         + 'Цілей у файлі: ' + withVerdict + '\n'
@@ -4193,7 +4214,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         // переліком: самих чисел у підсумковому вікні мало, треба бачити, які саме
         const _vlHtml=(()=>{
             const L=state.vLeft||[];
-            if(!L.length)return '';
+            if(!L.length||state.vSheet!==state.selArchive)return '';
             const _ord={'не знайдено':0,'неоднозначно':1,'поза періодом':2};
             const _s=[...L].sort((a,b)=>(_ord[a.why]-_ord[b.why])||(a.dt<b.dt?-1:1));
             const _n=w=>L.filter(x=>x.why===w).length;
@@ -4212,7 +4233,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         // верифікацію. Тут лише підказка, таблицю застосунок не чіпає
         const _vfHtml=(()=>{
             const L=_vfSorted();
-            if(!L.length)return '';
+            if(!L.length||state.vSheet!==state.selArchive)return '';
             const _ok=L.filter(x=>!x.why).length;
             const _hdr=[_ok?'однозначних '+_ok:'',(L.length-_ok)?'неоднозначних '+(L.length-_ok):'']
                 .filter(Boolean).join(', ');
