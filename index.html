@@ -2750,16 +2750,20 @@ function _vuLine(o, cp) {
     return [_e('картка ' + o.n), _coord, _e(_tg), _c(_vNorm(r.datetime), 'cp-r'),
             _e(p + ' ' + _bal(p))].filter(Boolean).join(' | ');
 }
-// Вильоти з порожнім типом дрона. Підсумок їх мовчки проминає, і через це
-// «ДРОНИ» та «БОЄПРИПАСИ» розходяться в кількості
+// Вильоти з порожнім дроном або боєприпасом. Підсумок таких мовчки проминає,
+// і через це «ДРОНИ» та «БОЄПРИПАСИ» дають різні числа. Різниця між ними —
+// це не одна купка, а різниця двох, тож показуємо обидві
 let _vdRows = [];
 function _vdLine(o, cp) {
     const _c = (t, k) => !t ? '' : cp ? '<span class="cp ' + k + '" onclick="_cpTxt(this)">' + esc(t) + '</span>' : t;
     const _e = t => cp ? esc(t) : t;
     const _cc = String(o.coordinates || '').split(',');
     const _coord = _c(_cc[0].trim(), 'cp-g') + (_cc.length > 1 ? _e(', ' + _cc.slice(1).join(',').trim()) : '');
+    const what = !o.drone && !o.ammo ? 'немає дрона й боєприпасу'
+        : !o.drone ? 'немає дрона, боєприпас ' + o.ammo
+        : 'немає боєприпасу, дрон ' + o.drone;
     return [_e((o.sheet || '') + (o.srow ? ', рядок ' + o.srow : '')), _coord,
-            _e(_vNorm(o.datetime)), _e(o.ammo || 'боєприпасу теж немає')].filter(Boolean).join(' | ');
+            _e(_vNorm(o.datetime)), _e(what)].filter(Boolean).join(' | ');
 }
 function copyNoDrone() {
     if (!_vdRows.length) return;
@@ -4409,11 +4413,14 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         // припадає один дрон і один боєприпас
         const _vdHtml=(()=>{
             if(!state.allArchiveLoaded)return '';
-            _vdRows=[...state.allArchiveRecs,...state.records].filter(r=>!r.drone);
+            _vdRows=[...state.allArchiveRecs,...state.records].filter(r=>!r.drone||!r.ammo);
             if(!_vdRows.length)return '';
+            const _nd=_vdRows.filter(r=>!r.drone).length,_na=_vdRows.filter(r=>!r.ammo).length;
+            const _vdHdr=[_nd?'без дрона '+_nd:'',_na?'без боєприпасу '+_na:''].filter(Boolean).join(', ')
+                +(_nd!==_na?' — різниця '+Math.abs(_nd-_na):'');
             return '<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
-                +'<h3 class="stencil-shadow" style="color:var(--yellow)">ВИЛЬОТИ БЕЗ ТИПУ ДРОНА</h3>'
-                +'<span class="stencil" style="color:var(--khaki)">'+esc(_vdRows.length+' '+_vyl(_vdRows.length))+'</span>'
+                +'<h3 class="stencil-shadow" style="color:var(--yellow)">ВИЛЬОТИ З ПОРОЖНІМИ КЛІТИНКАМИ</h3>'
+                +'<span class="stencil" style="color:var(--khaki)">'+esc(_vdHdr)+'</span>'
                 +'<button onclick="copyNoDrone()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
                 +'</div><div class="report-box">'+_vdRows.map(o=>_vdLine(o,true)).join('\n')+'</div></div>';
         })();
