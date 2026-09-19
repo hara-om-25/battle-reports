@@ -335,6 +335,9 @@
     .cp-g { color: var(--green-label); }
     .cp-r { color: var(--red-label); }
     .cp-b { color: var(--blue-label); }
+    /* назви в переліку порожніх клітинок: боєприпас помаранчевий, дрон жовтий */
+    .nm-ammo { color: #e08a2e; }
+    .nm-drone { color: var(--yellow); }
     .cp-g.cp-hit { background: var(--green-label); color: var(--bg); }
     .cp-r.cp-hit { background: var(--red-label); color: var(--bg); }
     .cp-b.cp-hit { background: var(--blue-label); color: var(--bg); }
@@ -2759,11 +2762,14 @@ function _vdLine(o, cp) {
     const _e = t => cp ? esc(t) : t;
     const _cc = String(o.coordinates || '').split(',');
     const _coord = _c(_cc[0].trim(), 'cp-g') + (_cc.length > 1 ? _e(', ' + _cc.slice(1).join(',').trim()) : '');
-    const what = !o.drone && !o.ammo ? 'немає дрона й боєприпасу'
-        : !o.drone ? 'немає дрона, боєприпас ' + o.ammo
-        : 'немає боєприпасу, дрон ' + o.drone;
+    // назву того, що таки заповнене, підсвічуємо: боєприпас помаранчевим,
+    // дрон жовтим — щоб з переліку одразу було видно, чого саме бракує
+    const _nm = (t, k) => cp ? '<span class="' + k + '">' + esc(t) + '</span>' : t;
+    const what = !o.drone && !o.ammo ? _e('немає дрона й боєприпасу')
+        : !o.drone ? _e('немає дрона, боєприпас ') + _nm(o.ammo, 'nm-ammo')
+        : _e('немає боєприпасу, дрон ') + _nm(o.drone, 'nm-drone');
     return [_e((o.sheet || '') + (o.srow ? ', рядок ' + o.srow : '')), _coord,
-            _e(_vNorm(o.datetime)), _e(what)].filter(Boolean).join(' | ');
+            _e(_vNorm(o.datetime)), what].filter(Boolean).join(' | ');
 }
 function copyNoDrone() {
     if (!_vdRows.length) return;
