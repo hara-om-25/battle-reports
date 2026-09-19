@@ -459,13 +459,11 @@ let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 let state = {
     // рядки файлу верифікації, які не лягли в жоден виліт — результат
     // останнього звіряння, показується блоком під підсумками
-    vLeft: [],
-    // підказки, у яких рядках таблиці треба поправити дату й час, щоб рядок
-    // файлу ліг: виліт знайдено за координатою й ціллю, але час у нас інший
-    vFix: [],
-    // аркуш, на якому робили те звіряння: обидва переліки показуємо лише
-    // тоді, коли відкритий саме він
-    vSheet: '',
+    // результат звіряння по кожному архіву окремо: {аркуш: {left, fix}}, де
+    // left — рядки файлу, що не лягли, а fix — підказки, у яких рядках
+    // таблиці поправити дату й час. Показуємо ті, що належать відкритому
+    // архіву, тож пройтися можна по всіх аркушах, і кожен лишиться при своєму
+    vAll: {},
     page: 'login', user: null, token: null, loaded: false,
     scoreTable: {}, drones: [], ammo: [], results: [], records: [],
     report: 1, counts: {},
@@ -660,18 +658,31 @@ function loadLocal() {
     } catch (e) { state.queue = []; }
     try {
         const v = JSON.parse(localStorage.getItem(LS_VERIFY) || 'null');
-        if (v) { state.vSheet = v.sheet || ''; state.vLeft = v.left || []; state.vFix = v.fix || []; }
+        if (v && v.sheets) state.vAll = v.sheets;
     } catch (e) { /* зіпсований запис — просто лишаємось без переліків */ }
 }
 
-// Переліки прив'язані до аркуша: відкрив інший архів — показувати їх не можна
 function _saveVerify() {
     try {
-        localStorage.setItem(LS_VERIFY, JSON.stringify({
-            sheet: state.vSheet, left: state.vLeft, fix: state.vFix
-        }));
-    } catch (e) { /* сховище переповнене — ігноруємо */ }
+        localStorage.setItem(LS_VERIFY, JSON.stringify({ sheets: state.vAll }));
+        return;
+    } catch (e) { /* сховище переповнене — пробуємо коротший варіант */ }
+    // Рядки «поза періодом» у кожного аркуша ті самі — це решта файлу. Коли
+    // місця не стало, вони перші йдуть за борт: без них перелік лишається
+    // робочим, а зникнути всьому було б гірше
+    try {
+        const s = {};
+        Object.keys(state.vAll).forEach(k => {
+            s[k] = { left: (state.vAll[k].left || []).filter(x => x.why !== 'поза періодом'),
+                     fix: state.vAll[k].fix || [] };
+        });
+        localStorage.setItem(LS_VERIFY, JSON.stringify({ sheets: s }));
+    } catch (e) { /* і так не влізло — лишаємось без збереження */ }
 }
+// Переліки відкритого архіву. Кожен аркуш тримає свої: звірили сім архівів —
+// у кожного лишилися власні підказки
+function _vlList() { return ((state.vAll || {})[state.selArchive] || {}).left || []; }
+function _vfList() { return ((state.vAll || {})[state.selArchive] || {}).fix || []; }
 
 // Згортання черги: add+edit=add, add+del=нічого, edit+del=del
 function queueOp(op, uid, rec, chg) {
@@ -2532,11 +2543,11 @@ async function runVerification(file) {
     const notFound = Math.max(0, inPeriod - matched.size - ambiguous.size);
     // Рядки файлу, які нікуди не лягли. Тримаємо їх, щоб показати переліком —
     // самих чисел «не знайдено 34» мало, треба бачити, яких саме
-    state.vLeft = [];
+    const left = [];
     items.forEach((it, idx) => {
         if (!it.verdict || matched.has(idx)) return;
         const inP = !_pSel || (it.date >= _pSel.from && it.date <= _pSel.to);
-        state.vLeft.push({
+        left.push({
             dt: it.dt, tgt: it.tgt.name, coord: it.rawCoord, res: it.res,
             verdict: it.verdict, pts: it.pts,
             why: !inP ? 'поза періодом' : ambiguous.has(idx) ? 'неоднозначно' : 'не знайдено'
@@ -2550,9 +2561,10 @@ async function runVerification(file) {
             f.why = 'на цей рядок претендує кілька дат';
         }
     });
-    state.vFix = fixes;
-    state.vSheet = state.selArchive || '';
-    _saveVerify();
+    if (state.selArchive) {
+        state.vAll[state.selArchive] = { left: left, fix: fixes };
+        _saveVerify();
+    }
     showAlert('✅ ЗВІРЯННЯ ЗАВЕРШЕНО\n\n'
         + 'Аркуш: ' + state.selArchive + '\n\n'
         + 'Цілей у файлі: ' + withVerdict + '\n'
@@ -2599,7 +2611,7 @@ function _pushVerifyLines(lines, recs) {
 
 // Перелік рядків файлу, що не лягли — у буфер, щоб було з чим іти до верифікатора
 function copyVerifyLeft() {
-    const L = state.vLeft || [];
+    const L = _vlList();
     if (!L.length) return;
     const _ord = { 'не знайдено': 0, 'неоднозначно': 1, 'поза періодом': 2 };
     const lines = [...L].sort((a, b) => (_ord[a.why] - _ord[b.why]) || (a.dt < b.dt ? -1 : 1))
@@ -2619,7 +2631,7 @@ function _vfLine(x) {
     return p.filter(Boolean).join(' | ');
 }
 function _vfSorted() {
-    return [...(state.vFix || [])].sort((a, b) => (a.why ? 1 : 0) - (b.why ? 1 : 0) || a.row - b.row);
+    return [..._vfList()].sort((a, b) => (a.why ? 1 : 0) - (b.why ? 1 : 0) || a.row - b.row);
 }
 function copyVerifyFix() {
     const L = _vfSorted();
@@ -4213,8 +4225,8 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         // Рядки файлу верифікації, які не лягли в жоден виліт. Показуємо
         // переліком: самих чисел у підсумковому вікні мало, треба бачити, які саме
         const _vlHtml=(()=>{
-            const L=state.vLeft||[];
-            if(!L.length||state.vSheet!==state.selArchive)return '';
+            const L=_vlList();
+            if(!L.length)return '';
             const _ord={'не знайдено':0,'неоднозначно':1,'поза періодом':2};
             const _s=[...L].sort((a,b)=>(_ord[a.why]-_ord[b.why])||(a.dt<b.dt?-1:1));
             const _n=w=>L.filter(x=>x.why===w).length;
@@ -4233,7 +4245,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         // верифікацію. Тут лише підказка, таблицю застосунок не чіпає
         const _vfHtml=(()=>{
             const L=_vfSorted();
-            if(!L.length||state.vSheet!==state.selArchive)return '';
+            if(!L.length)return '';
             const _ok=L.filter(x=>!x.why).length;
             const _hdr=[_ok?'однозначних '+_ok:'',(L.length-_ok)?'неоднозначних '+(L.length-_ok):'']
                 .filter(Boolean).join(', ');
