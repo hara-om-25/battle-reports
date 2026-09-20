@@ -4540,7 +4540,9 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         // «ДРОНИ» і «БОЄПРИПАСИ» дають різні числа, хоч на кожен виліт
         // припадає один дрон і один боєприпас
         const _vdHtml=(()=>{
-            if(!state.allArchiveLoaded)return '';
+            // тільки на загальній сторінці АРХІВ: перелік стосується всіх
+            // аркушів разом, тож в окремому архіві йому робити нічого
+            if(!state.allArchiveLoaded||state.selArchive||state.filterPeriodOpen)return '';
             _vdRows=[...state.allArchiveRecs,...state.records].filter(r=>!r.drone||!r.ammo);
             if(!_vdRows.length)return '';
             const _nd=_vdRows.filter(r=>!r.drone).length,_na=_vdRows.filter(r=>!r.ammo).length;
