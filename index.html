@@ -347,8 +347,9 @@
     .st-y.on { background: #e08a2e; }
     .st-b.on { background: var(--blue-label); }
     .st-r.on { background: var(--red-label); }
+    .st-n.on { background: var(--green-label); }
     .st-y.on, .st-y.on span, .st-b.on, .st-b.on span,
-    .st-r.on, .st-r.on span { color: var(--bg) !important; }
+    .st-r.on, .st-r.on span, .st-n.on, .st-n.on span { color: var(--bg) !important; }
     .st-g.on { background: #4a4a40; }
     .st-g.on, .st-g.on span { color: var(--text) !important; }
     .cp-y.cp-hit { background: var(--yellow); color: var(--bg); }
@@ -4287,7 +4288,7 @@ function render() {
             const zero=r=>!(parseFloat(r.points)||0)&&!(r.v&&r.v.state);
             return row('З нульовою ефективністю',rs.filter(zero).length,'zero','y')
                 +row('Подавалось на верифікацію',rs.filter(r=>!zero(r)).length,'subm','y')
-                +row('Верифіковано повністю',by('ok'),'ok','b')
+                +row('Верифіковано повністю',by('ok'),'ok','n')
                 +row('Частково верифіковано',by('part'),'part','b')
                 +row('Верифіковано із заміною',by('repl'),'repl','b')
                 +row('Відхилено',by('no'),'no','r')
