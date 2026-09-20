@@ -4473,9 +4473,9 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             ${state.online?_vlHtml:''}
             ${state.online?_vfHtml:''}
             ${state.online&&!state.filterPeriodOpen?_vuHtml:''}
-            ${state.online?_vdHtml:''}
             ${state.online?(state.filterPeriodOpen?(state.filterPeriodShown?_periodResultHtml:''):(state.selArchive?_arContent:_allSection)):''}
             ${state.online&&!state.filterPeriodOpen?_arFlights:''}
+            ${state.online?_vdHtml:''}
         </div>`;
         }
     }
