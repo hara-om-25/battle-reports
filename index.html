@@ -4234,8 +4234,13 @@ function render() {
         const _vrRowsFor=rs=>{
             const by=st=>rs.filter(r=>r.v&&r.v.state===st).length;
             const row=(label,n)=>_row(label,n,' '+_vyl(n));
-            return row('З нульовою ефективністю',rs.filter(r=>!(parseFloat(r.points)||0)).length)
-                +row('Подавалось на верифікацію',rs.filter(r=>r.v&&r.v.state).length)
+            // Виліт або нічого не дав, або пішов на верифікацію — третього
+            // немає, тож ці два числа мають давати в сумі всі вильоти.
+            // Нульовим вважаємо той, що не має ні балів, ні вердикту:
+            // верифікатор буває нараховує бали там, де ми поставили нуль
+            const zero=r=>!(parseFloat(r.points)||0)&&!(r.v&&r.v.state);
+            return row('З нульовою ефективністю',rs.filter(zero).length)
+                +row('Подавалось на верифікацію',rs.filter(r=>!zero(r)).length)
                 +row('Верифіковано повністю',by('ok'))
                 +row('Частково верифіковано',by('part'))
                 +row('Верифіковано із заміною',by('repl'))
