@@ -344,15 +344,18 @@
        Увімкнений підсвічується заднім фоном у кольорі своєї групи.
        Ширина по тексту, щоб смуга не тяглася через увесь стовпець */
     .st-row { cursor: pointer; width: fit-content; padding: 0 4px; margin-left: -4px; border-radius: 2px; }
-    /* Фон беремо темніший за самі кольори написів на картках: суцільна
-       пляма тієї самої фарби читається куди яскравіше, ніж тонкі штрихи
-       літер, і підсвітка перебивала б сам напис. Текст на ній світлий */
-    .st-y.on { background: #7a6a0e; }
-    .st-b.on { background: #2f5c8a; }
-    .st-r.on { background: #8e3232; }
-    .st-n.on { background: #36702f; }
+    /* Суцільна пляма читається яскравіше, ніж тонкі штрихи літер тієї самої
+       фарби, тож фон беремо приглушений — світліший за тло, але помітно
+       тьмяніший за самі написи на картках. Літери на ньому темні */
+    .st-y.on { background: #a8922e; }
+    .st-b.on { background: #5480b0; }
+    .st-r.on { background: #b55252; }
+    .st-n.on { background: #4f8f4d; }
+    .st-y.on, .st-y.on span, .st-b.on, .st-b.on span,
+    .st-r.on, .st-r.on span, .st-n.on, .st-n.on span { color: var(--bg) !important; }
+    /* дрони, боєприпаси й результати — темно-сірий зі світлим текстом */
     .st-g.on { background: #3f3f38; }
-    .st-row.on, .st-row.on span { color: var(--text) !important; }
+    .st-g.on, .st-g.on span { color: var(--text) !important; }
     .cp-y.cp-hit { background: var(--yellow); color: var(--bg); }
     .cp-g.cp-hit { background: var(--green-label); color: var(--bg); }
     .cp-r.cp-hit { background: var(--red-label); color: var(--bg); }
