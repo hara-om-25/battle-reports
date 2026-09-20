@@ -340,6 +340,13 @@
     .cp-o { color: #e08a2e; }
     .cp-y { color: var(--yellow); }
     .cp-o.cp-hit { background: #e08a2e; color: var(--bg); }
+    /* Рядки статистики натискаються й фільтрують перелік вильотів.
+       Увімкнений рядок світиться кольором своєї групи */
+    .st-row { cursor: pointer; }
+    .st-y.on, .st-y.on span { color: var(--yellow) !important; }
+    .st-b.on, .st-b.on span { color: var(--blue-label) !important; }
+    .st-r.on, .st-r.on span { color: var(--red-label) !important; }
+    .st-g.on, .st-g.on span { color: #b9b7a4 !important; }
     .cp-y.cp-hit { background: var(--yellow); color: var(--bg); }
     .cp-g.cp-hit { background: var(--green-label); color: var(--bg); }
     .cp-r.cp-hit { background: var(--red-label); color: var(--bg); }
@@ -475,6 +482,9 @@ let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 let state = {
     // рядки файлу верифікації, які не лягли в жоден виліт — результат
     // останнього звіряння, показується блоком під підсумками
+    // натиснутий рядок статистики: {k: вид, v: значення}. Перелік вильотів
+    // показує лише те, що під нього підпадає
+    arFilter: null,
     // результат звіряння по кожному архіву окремо: {аркуш: {left, fix}}, де
     // left — рядки файлу, що не лягли, а fix — підказки, у яких рядках
     // таблиці поправити дату й час. Показуємо ті, що належать відкритому
@@ -2841,6 +2851,29 @@ function copyNoDrone() {
     navigator.clipboard.writeText(_vdRows.map(o => _vdLine(o)).join('\n')).catch(() => {});
 }
 
+// Фільтр переліку вильотів за натиснутим рядком статистики
+function toggleArFilter(el) {
+    const k = el.dataset.k, v = el.dataset.v;
+    const f = state.arFilter;
+    state.arFilter = (f && f.k === k && f.v === v) ? null : { k: k, v: v };
+    render();
+}
+function _arMatch(r) {
+    const f = state.arFilter;
+    if (!f) return true;
+    const st = r.v && r.v.state, pts = parseFloat(r.points) || 0;
+    if (f.k === 'v') {
+        if (f.v === 'zero') return !pts && !st;
+        if (f.v === 'subm') return !!(pts || st);
+        if (f.v === 'unv') return !!pts && !st;
+        return st === f.v;
+    }
+    if (f.k === 'drone') return (r.drone || '') === f.v;
+    if (f.k === 'ammo') return (r.ammo || '') === f.v;
+    if (f.k === 'result') return String(r.result || '').split(',').map(x => x.trim()).indexOf(f.v) >= 0;
+    return true;
+}
+
 function copyVerifyUnv() {
     if (!_vuRows.length) return;
     navigator.clipboard.writeText(_vuRows.map(o => _vuLine(o)).join('\n')).catch(() => {});
@@ -2854,6 +2887,7 @@ function copyVerifyFix() {
 
 async function loadArchiveSheet(name) {
     state.selArchive = name;
+    state.arFilter = null;
     state.archiveLoading = true;
     render();
     try {
@@ -4230,23 +4264,31 @@ function render() {
     if(state.page==='archive') {
         const _arBtns=state.archiveSheets.map(s=>{const _dl=/^\d/.test(s)?s:(s.match(/\d{1,2}[-.\/]\d{1,2}[-.\/]\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';if(!state.online)return `<button disabled class="btn-stencil btn-archive" style="opacity:0.45;cursor:not-allowed">${esc(_dl)}</button>`;return `<button onclick="loadArchiveSheet('${esc(s)}')" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil btn-archive ${_act}">${esc(_dl)}</button>`;}).join('')||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p>';
         const _row=(label,val,suf='')=>`<p class="stencil" style="color:var(--text);margin:1px 0">${label} <span style="color:var(--yellow)">— ${val}${suf}</span></p>`;
+        // Те саме, але натискається: рядок вмикає фільтр переліку вильотів,
+        // а сам світиться кольором своєї групи. k — вид фільтра, v — значення,
+        // c — колір: y жовтий, b блакитний, r червоний, g сірий
+        const _rowF=(label,val,suf,k,v,c)=>{
+            const on=state.arFilter&&state.arFilter.k===k&&state.arFilter.v===v;
+            return `<p class="stencil st-row st-${c}${on?' on':''}" data-k="${esc(k)}" data-v="${esc(v)}" onclick="toggleArFilter(this)" style="color:var(--text);margin:1px 0">${label} <span style="color:var(--yellow)">— ${val}${suf}</span></p>`;
+        };
         // однаковий для одного архіву й для всіх виїздів разом
-        const _vrRowsFor=rs=>{
+        const _vrRowsFor=(rs,clickable)=>{
             const by=st=>rs.filter(r=>r.v&&r.v.state===st).length;
-            const row=(label,n)=>_row(label,n,' '+_vyl(n));
+            // фільтрувати нема чого, коли переліку вильотів під боком немає
+            const row=(label,n,k,c)=>clickable?_rowF(label,n,' '+_vyl(n),'v',k,c):_row(label,n,' '+_vyl(n));
             // Виліт або нічого не дав, або пішов на верифікацію — третього
             // немає, тож ці два числа мають давати в сумі всі вильоти.
             // Нульовим вважаємо той, що не має ні балів, ні вердикту:
             // верифікатор буває нараховує бали там, де ми поставили нуль
             const zero=r=>!(parseFloat(r.points)||0)&&!(r.v&&r.v.state);
-            return row('З нульовою ефективністю',rs.filter(zero).length)
-                +row('Подавалось на верифікацію',rs.filter(r=>!zero(r)).length)
-                +row('Верифіковано повністю',by('ok'))
-                +row('Частково верифіковано',by('part'))
-                +row('Верифіковано із заміною',by('repl'))
-                +row('Відхилено',by('no'))
-                +row('Дублюючих',by('pack'))
-                +row('Не звірено',rs.filter(r=>(parseFloat(r.points)||0)&&!(r.v&&r.v.state)).length);
+            return row('З нульовою ефективністю',rs.filter(zero).length,'zero','y')
+                +row('Подавалось на верифікацію',rs.filter(r=>!zero(r)).length,'subm','y')
+                +row('Верифіковано повністю',by('ok'),'ok','b')
+                +row('Частково верифіковано',by('part'),'part','b')
+                +row('Верифіковано із заміною',by('repl'),'repl','b')
+                +row('Відхилено',by('no'),'no','r')
+                +row('Дублюючих',by('pack'),'pack','r')
+                +row('Не звірено',rs.filter(r=>(parseFloat(r.points)||0)&&!(r.v&&r.v.state)).length,'unv','r');
         };
         const _sec=(title,rows)=>rows?`<div><p class="stencil" style="color:var(--khaki);font-size:calc(0.85em + 2px);letter-spacing:0.08em;margin-bottom:4px">${title}</p>${rows}</div>`:'';
         let _arContent='';
@@ -4266,7 +4308,6 @@ function render() {
                 const _sep='<span style="color:var(--yellow)">, </span>';
                 const _dash='<span style="color:var(--yellow)"> \u2014 </span>';
                 const _ysep='<span style="color:var(--yellow)"> | </span>';
-                let _arNum=0;
                 // Номери карток рахуються в тому ж порядку, що й малюються.
                 // Заздалегідь проходимо цей порядок, щоб знати номер вильоту,
                 // на користь якого скасовано однаковий із ним
@@ -4290,10 +4331,14 @@ function render() {
                         +'</div><div class="report-box">'+_vuRows.map(o=>_vuLine(o,true)).join('\n')+'</div></div>';
                 }
                 const _arGroups=_arDates.map(d=>{
-                    const dayR=_byTime(state.archiveRecs.filter(r=>getDateOnly(r.datetime)===d));
+                    // Під фільтром лишаються тільки потрібні картки, але номер
+                    // у кожної той самий, що й без фільтра: він береться з
+                    // повного порядку, а не з лічильника відмальованих
+                    const dayR=_byTime(state.archiveRecs.filter(r=>getDateOnly(r.datetime)===d)).filter(_arMatch);
+                    if(!dayR.length)return '';
                     const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                     const cards=dayR.map(r=>{
-                        const n=++_arNum;
+                        const n=_arOrder.indexOf(r)+1;
                         const tgts=r.target?r.target.split(', '):[];
                         const ress=r.result?r.result.split(', '):[];
                         // Нашу ціль замінили чужою — показуємо це просто в переліку:
@@ -4375,14 +4420,14 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _drnCnt={};state.archiveRecs.forEach(r=>{if(r.drone)_drnCnt[r.drone]=(_drnCnt[r.drone]||0)+1;});
                 const _ammoCnt={};state.archiveRecs.forEach(r=>{if(r.ammo)_ammoCnt[r.ammo]=(_ammoCnt[r.ammo]||0)+1;});
                 const _resCnt={};state.archiveRecs.forEach(r=>{if(r.result)r.result.split(', ').forEach(x=>{x=x.trim();if(x)_resCnt[x]=(_resCnt[x]||0)+1;});});
-                const _drnRows=Object.entries(_drnCnt).sort((a,b)=>b[1]-a[1]).map(([d,c])=>_row(esc(d),c,' шт')).join('');
-                const _ammoRows=Object.entries(_ammoCnt).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_row(esc(a),c,' шт')).join('');
+                const _drnRows=Object.entries(_drnCnt).sort((a,b)=>b[1]-a[1]).map(([d,c])=>_rowF(esc(d),c,' шт','drone',d,'g')).join('');
+                const _ammoRows=Object.entries(_ammoCnt).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_rowF(esc(a),c,' шт','ammo',a,'g')).join('');
                 const _pvrRows=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_ammoCnt[am]||0)*cf,0);return tot?_row(esc(pvr.name),tot+' кг'):'';}).filter(Boolean).join('');
-                const _resRows=Object.entries(_resCnt).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,' '+_plu(c,'раз','рази','разів'))).join('');
+                const _resRows=Object.entries(_resCnt).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_rowF(esc(r),c,' '+_plu(c,'раз','рази','разів'),'result',r,'g')).join('');
                 // Скільки вильотів взагалі без балів, скільки отримали вердикт,
                 // і скільки не потрапили ні туди, ні туди — саме вони й дають
                 // розрив між загальною сумою балів і «верифіковано + скасовано»
-                const _vrRows=_vrRowsFor(state.archiveRecs);
+                const _vrRows=_vrRowsFor(state.archiveRecs,true);
                 const _statsBlock=state.archiveRecs.length>0?`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}</div><div class="space-y-3" style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_resRows)}${_sec('ВЕРИФІКАЦІЯ',_vrRows)}</div></div>`:'';
                 const _shRptLines=(()=>{if(!state.archiveRecs.length)return[];const _l=generateArchiveReport(state.archiveRecs,state.selArchive+'р.');_l.push(''),_l.push('Прогнозовано уражень на '+_arTotal+' '+_bal(_arTotal)+'.');if(_pushVerifyLines(_l,state.archiveRecs))_l.push('');_pushCostLines(_l,_arTotal,state.archiveRecs);return _l;})();
                 // Аркуш звірений — у заголовку підсумків показуємо не наш
@@ -4397,7 +4442,10 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _shRptBlock=state.archiveRecs.length>0?`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ${esc(state.selArchive)}</h3><span class="stencil" style="color:var(--khaki)">${_shHdr}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyArchiveSheetReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_shRptLines.join('\n')}</div></div>`:'';
                 _arTop=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px"><h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">${esc(state.selArchive)}</h1>${_arHeader}</div>`;
                 _arContent=`${_shRptBlock}<h2 class="stencil-shadow text-xl px-2" style="color:var(--yellow)">СТАТИСТИКА</h2>${_statsBlock}`;
-                _arFlights=`<h2 class="stencil-shadow text-xl px-2" style="color:var(--yellow)">ВИЛЬОТИ</h2>${_arGroups||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає записів</p></div>'}`;
+                const _shown=state.archiveRecs.filter(_arMatch).length;
+                // під фільтром одразу видно, скільки карток лишилося з усіх
+                const _flHdr='ВИЛЬОТИ'+(state.arFilter?` <span class="stencil" style="color:var(--khaki);font-size:0.7em">показано ${_shown} з ${state.archiveRecs.length}</span>`:'');
+                _arFlights=`<h2 class="stencil-shadow text-xl px-2" style="color:var(--yellow)">${_flHdr}</h2>${_arGroups||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає записів</p></div>'}`;
             }
         }
         let _allSection='';
