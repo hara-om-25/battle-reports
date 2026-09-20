@@ -1801,6 +1801,31 @@ function _vCoord(x) {
     return m ? m[1] + m[2] : s;
 }
 
+// Координата без останніх n цифр кожної половини. Просто відрізати хвіст
+// рядка не можна: половини стоять поспіль, і хвіст з'їдає саму лише північ
+function _vCoordCut(c, n) {
+    const m = String(c || '').match(/^(\d{1,2}[A-ZА-ЯІЇЄҐ]{3})(\d+)$/);
+    if (!m) return String(c || '');
+    const d = m[2], h = d.length >> 1;
+    if (!h || d.length !== h * 2 || n >= h) return m[1];
+    return m[1] + d.slice(0, h - n) + '|' + d.slice(h, h + h - n);
+}
+// Схід і північ у метрах. П'ять цифр на половину — метри, чотири — десятки
+function _vXY(c) {
+    const m = String(c || '').match(/^(\d{1,2}[A-ZА-ЯІЇЄҐ]{3})(\d+)$/);
+    if (!m) return null;
+    const d = m[2], h = d.length >> 1;
+    if (!h || d.length !== h * 2) return null;
+    const k = Math.pow(10, 5 - h);
+    return { sq: m[1], x: parseInt(d.slice(0, h), 10) * k, y: parseInt(d.slice(h), 10) * k };
+}
+// Відстань між двома координатами в метрах. Різні квадрати не порівнюємо
+function _vDist(a, b) {
+    const p = _vXY(a), q = _vXY(b);
+    if (!p || !q || p.sq !== q.sq) return Infinity;
+    return Math.sqrt((p.x - q.x) * (p.x - q.x) + (p.y - q.y) * (p.y - q.y));
+}
+
 function _vDate(x) {
     if (x instanceof Date && !isNaN(x)) {
         return String(x.getFullYear())
@@ -1915,14 +1940,21 @@ function _packNames(r) {
 // Позначка ПАКЕТ лежить і в колонці L, але покладатися на неї не можна: вона
 // з'являється там лише після звіряння. Тому пару шукаємо заново на самих
 // записах, щойно архів завантажено, а ту позначку маємо за підказку
+// Чи є в записі справжній час, а не сама лише дата
+function _hasTime(r) { return /\d{1,2}:\d{2}/.test(String((r && r.datetime) || '')); }
+
 function _markPacks(recs) {
-    const owners = {};
+    const owners = {}, near = [];
     recs.forEach(r => {
         const st = r.v && r.v.state;
         // дублюючий сам пари не дає, відхилений теж — за ним балів немає
         if (!st || st === 'pack' || st === 'no') return;
         const k = _packKeyRec(r);
-        (owners[k] = owners[k] || []).push({ rec: r, names: _packNames(r) });
+        const names = _packNames(r);
+        (owners[k] = owners[k] || []).push({ rec: r, names: names });
+        if (_hasTime(r) && getDateOnly(r.datetime)) {
+            near.push({ rec: r, names: names, min: _recMinutes(r), day: getDateOnly(r.datetime) });
+        }
     });
     recs.forEach(r => {
         if (!r.v || (r.v.state && r.v.state !== 'pack')) return;
@@ -1932,8 +1964,19 @@ function _markPacks(recs) {
         if (!(parseFloat(r.points) || 0)) return;
         const names = _packNames(r);
         if (!names.length) return;
-        const own = (owners[_packKeyRec(r)] || [])
+        let own = (owners[_packKeyRec(r)] || [])
             .find(o => names.every(n => o.names.indexOf(n) >= 0));
+        // Рухома ціль: координата щоразу інша, тож ключем її не впіймати.
+        // Беремо той самий день, той самий перелік цілей і близькість —
+        // десять хвилин і чотириста метрів
+        if (!own && _hasTime(r) && getDateOnly(r.datetime)) {
+            const day = getDateOnly(r.datetime), mn = _recMinutes(r), c = _vCoord(r.coordinates);
+            own = near.find(o => o.rec !== r && o.day === day
+                && o.names.length === names.length
+                && names.every(n => o.names.indexOf(n) >= 0)
+                && Math.abs(o.min - mn) <= _V_PACK_TIME
+                && _vDist(_vCoord(o.rec.coordinates), c) <= _V_PACK_DIST);
+        }
         if (own) { r.v.state = 'pack'; r.v.packOf = own.rec; }
     });
 }
@@ -2224,6 +2267,15 @@ function _vMinutes(x) {
 }
 
 const _V_TIME_TOL = 30;   // похибка часу в хвилинах, в обидва боки
+// Рухома ціль: по ній заходять кілька разів, і координата щоразу інша.
+// Коли у файлі в колонці БК стоїть кілька одиниць, верифікатор сам каже,
+// що заходів було кілька — тоді розкид дозволяємо більший
+const _V_BK_TIME = 90;    // похибка часу в хвилинах, коли БК кілька
+const _V_BK_CUT = 3;      // скільки останніх цифр кожної половини не звіряємо
+// А коли підказки у файлі немає, пару шукаємо по близькості: та сама ціль,
+// той самий день, поряд у часі й у просторі
+const _V_PACK_TIME = 10;  // хвилин між заходами
+const _V_PACK_DIST = 400; // метрів між координатами
 
 async function runVerification(file) {
     if (!file) return;
@@ -2361,7 +2413,14 @@ async function runVerification(file) {
                     let fuzzy = false;
                     if (rc !== it.coord) {
                         if (rc.length !== it.coord.length) continue;
-                        if (rc.slice(0, -2) !== it.coord.slice(0, -2)) continue;
+                        if (rc.slice(0, -2) !== it.coord.slice(0, -2)) {
+                            // Кілька БК у рядку — кілька заходів на одну ціль,
+                            // а вона могла рухатися. Тоді координаті дозволено
+                            // розійтися трьома останніми цифрами кожної
+                            // половини, і збіг самої цілі стає обов'язковим
+                            if (!(it.ammoQty > 1
+                                && _vCoordCut(rc, _V_BK_CUT) === _vCoordCut(it.coord, _V_BK_CUT))) continue;
+                        }
                         fuzzy = true;
                     }
                     const sd = _vDate(row[1]);
@@ -2369,7 +2428,8 @@ async function runVerification(file) {
                     else if (!period || it.date < period.from || it.date > period.to) continue;
                     const rm = _vMinutes(row[1]);
                     // час звіряємо з похибкою; якщо часу немає — не заважає
-                    if (it.min !== null && rm !== null && Math.abs(rm - it.min) > _V_TIME_TOL) continue;
+                    const _tol = it.ammoQty > 1 ? _V_BK_TIME : _V_TIME_TOL;
+                    if (it.min !== null && rm !== null && Math.abs(rm - it.min) > _tol) continue;
                     const c = cell[i - 1];
                     // усі цілі вильоту — НЕвлучання: його на верифікацію не
                     // подавали, отже рядок файлу належить комусь іншому
@@ -2479,12 +2539,14 @@ async function runVerification(file) {
                     // Боєприпас верифікатор пише на кожен дрон окремо, тож
                     // два записи БК у рядку — це два наші заходи на ту саму
                     // ціль, хоч рядок у файлі й один. Відхилив він удар —
-                    // відхилені всі заходи, і ті, що не дісталися рядка
-                    if (it.verdict !== 'Підтверджено' && it.ammoQty > 1) {
+                    // відхилені всі заходи; зарахував — решта дублюючі,
+                    // бо бали за ціль він дає один раз
+                    if (it.ammoQty > 1) {
                         hits.slice(1, it.ammoQty).forEach(h => {
                             const x = cell[h[0]];
                             if (x.v.some(Boolean) || x.repl.length) return;
-                            x.v.forEach((v, k) => { if (!v) x.v[k] = 'Відхилено'; });
+                            if (it.verdict === 'Підтверджено') x.pack = true;
+                            else x.v.forEach((v, k) => { if (!v) x.v[k] = 'Відхилено'; });
                         });
                     }
                     touched = true;
@@ -2577,7 +2639,7 @@ async function runVerification(file) {
             }
             for (let i = 1; i < rows.length; i++) {
                 const c = cell[i - 1];
-                if (c.v.some(Boolean) || c.repl.length) continue;
+                if (c.v.some(Boolean) || c.repl.length || c.pack) continue;
                 if (!String((rows[i] || [])[2] || '').trim()) continue;
                 // Верифікатор відхилив сам удар, а заходів на нього було
                 // кілька: відхилений він для всіх. Дублювати тут нічого —
