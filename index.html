@@ -341,12 +341,16 @@
     .cp-y { color: var(--yellow); }
     .cp-o.cp-hit { background: #e08a2e; color: var(--bg); }
     /* Рядки статистики натискаються й фільтрують перелік вильотів.
-       Увімкнений рядок світиться кольором своєї групи */
-    .st-row { cursor: pointer; }
-    .st-y.on, .st-y.on span { color: var(--yellow) !important; }
-    .st-b.on, .st-b.on span { color: var(--blue-label) !important; }
-    .st-r.on, .st-r.on span { color: var(--red-label) !important; }
-    .st-g.on, .st-g.on span { color: #b9b7a4 !important; }
+       Увімкнений підсвічується заднім фоном у кольорі своєї групи.
+       Ширина по тексту, щоб смуга не тяглася через увесь стовпець */
+    .st-row { cursor: pointer; width: fit-content; padding: 0 4px; margin-left: -4px; border-radius: 2px; }
+    .st-y.on { background: #e08a2e; }
+    .st-b.on { background: var(--blue-label); }
+    .st-r.on { background: var(--red-label); }
+    .st-y.on, .st-y.on span, .st-b.on, .st-b.on span,
+    .st-r.on, .st-r.on span { color: var(--bg) !important; }
+    .st-g.on { background: #4a4a40; }
+    .st-g.on, .st-g.on span { color: var(--text) !important; }
     .cp-y.cp-hit { background: var(--yellow); color: var(--bg); }
     .cp-g.cp-hit { background: var(--green-label); color: var(--bg); }
     .cp-r.cp-hit { background: var(--red-label); color: var(--bg); }
