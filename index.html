@@ -2841,7 +2841,10 @@ function _vuLine(o, cp) {
     const tg = (r.target || '').split(', '), rs = (r.result || '').split(', ');
     const _tg = tg.map((x, j) => x + (rs[j] ? ' — ' + rs[j] : '')).filter(Boolean).join(', ');
     const p = Math.round(parseFloat(r.points) || 0);
-    return [_e('картка ' + o.n), _coord, _e(_tg), _c(_vNorm(r.datetime), 'cp-r'),
+    // Найперше — номер рядка аркуша, як і в сусідніх переліках: саме за ним
+    // шукають запис у таблиці. Номер картки поруч, щоб знайти його й на екрані
+    const head = (r.srow ? 'рядок ' + r.srow : '') + (o.n ? (r.srow ? ' (картка ' : 'картка ') + o.n + (r.srow ? ')' : '') : '');
+    return [_e(head), _coord, _e(_tg), _c(_vNorm(r.datetime), 'cp-r'),
             _e(p + ' ' + _bal(p))].filter(Boolean).join(' | ');
 }
 // Вильоти з порожнім дроном або боєприпасом. Підсумок таких мовчки проминає,
