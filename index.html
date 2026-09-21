@@ -1642,7 +1642,7 @@ function _pushCostLines(lines, totalPts, recs) {
 function copyArchiveSheetReport() {
     const recs = state.archiveRecs;
     if (!recs.length) return;
-    const _pts=Math.round(recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+    const _pts=_pt(recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     const lines = generateArchiveReport(recs, state.selArchive+'р.');
     lines.push(''),lines.push('Прогнозовано уражень на '+_pts+' '+_bal(_pts)+'.');
     if(_pushVerifyLines(lines,recs))lines.push('');
@@ -1655,7 +1655,7 @@ function copyAllArchiveReport() {
     if (!recs.length) return;
     const _bd=state.archiveSheets.map(s=>{let m=s.match(/^(\d{1,2})-(\d{1,2})\.(\d{1,2})\.(\d{4})/);if(m)return{k:m[4]+m[3].padStart(2,'0')+m[1].padStart(2,'0'),d:m[1].padStart(2,'0')+'.'+m[3].padStart(2,'0')+'.'+m[4]};m=s.match(/^(\d{1,2})\.(\d{1,2})-(\d{1,2})\.(\d{1,2})\.(\d{4})/);if(m)return{k:m[5]+m[2].padStart(2,'0')+m[1].padStart(2,'0'),d:m[1].padStart(2,'0')+'.'+m[2].padStart(2,'0')+'.'+m[5]};return null;}).filter(Boolean);
     const earliest=_bd.length?_bd.reduce((a,b)=>a.k<b.k?a:b).d:(recs.map(r=>getDateOnly(r.datetime)).filter(Boolean).sort()[0]||'');
-    const _pts=Math.round(recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+    const _pts=_pt(recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     const lines = generateArchiveReport(recs, 'Від ' + earliest + ' дотепер');
     lines.push(''),lines.push('Прогнозовано уражень на '+_pts+' '+_bal(_pts)+'.');
     if(_pushVerifyLines(lines,recs))lines.push('');
@@ -2203,6 +2203,10 @@ function _plu(n, one, few, many, frac) {
     if (o >= 2 && o <= 4) return few;
     return many;
 }
+// Бали на екран. Округлювати до цілого не можна: ціна «ФС пошкоджено» — пів
+// бала, і 5,5 перетворювалося на 6. Лишаємо два знаки, зайві нулі прибираємо
+function _pt(n) { return Math.round((parseFloat(n) || 0) * 100) / 100; }
+
 function _bal(n) { return _plu(n, 'бал', 'бали', 'балів', 'бала'); }
 // «виліт» чергує і з и: один виліт, два вильоти, п'ять вильотів
 function _vyl(n) { return _plu(n, 'виліт', 'вильоти', 'вильотів'); }
@@ -2782,10 +2786,10 @@ function _pushVerifyLines(lines, recs) {
     if (!ok && !no) return false;
     // бали йдуть одним блоком із прогнозом: скільки мали, скільки з того
     // верифікатор визнав, що дописав, що зняв і чого не торкнувся
-    lines.push('Верифіковано уражень на ' + Math.round(sum) + ' ' + _bal(Math.round(sum)) + '.');
-    if (Math.round(add)) lines.push('Додано верифікатором ' + Math.round(add) + ' ' + _bal(Math.round(add)) + '.');
-    if (Math.round(canc)) lines.push('Скасовано ' + Math.round(canc) + ' ' + _bal(Math.round(canc)) + '.');
-    if (Math.round(unv)) lines.push('Не звірено уражень на ' + Math.round(unv) + ' ' + _bal(Math.round(unv)) + '.');
+    lines.push('Верифіковано уражень на ' + _pt(sum) + ' ' + _bal(_pt(sum)) + '.');
+    if (_pt(add)) lines.push('Додано верифікатором ' + _pt(add) + ' ' + _bal(_pt(add)) + '.');
+    if (_pt(canc)) lines.push('Скасовано ' + _pt(canc) + ' ' + _bal(_pt(canc)) + '.');
+    if (_pt(unv)) lines.push('Не звірено уражень на ' + _pt(unv) + ' ' + _bal(_pt(unv)) + '.');
     return true;
 }
 
@@ -2840,7 +2844,7 @@ function _vuLine(o, cp) {
     const _coord = _c(_cc[0].trim(), 'cp-g') + (_cc.length > 1 ? _e(', ' + _cc.slice(1).join(',').trim()) : '');
     const tg = (r.target || '').split(', '), rs = (r.result || '').split(', ');
     const _tg = tg.map((x, j) => x + (rs[j] ? ' — ' + rs[j] : '')).filter(Boolean).join(', ');
-    const p = Math.round(parseFloat(r.points) || 0);
+    const p = _pt(r.points);
     // Найперше — номер рядка аркуша, як і в сусідніх переліках: саме за ним
     // шукають запис у таблиці. Номер вильоту поруч, щоб знайти його й на екрані
     const head = (r.srow ? 'рядок ' + r.srow : '') + (o.n ? (r.srow ? ' (виліт ' : 'виліт ') + o.n + (r.srow ? ')' : '') : '');
@@ -3891,7 +3895,7 @@ function generateReport(dayRecs) {
     lines.push('');
     const date = getDateOnly(dayRecs[0].datetime);
     const reportTitle = state.reportTitle || 'ТГ невідомий';
-    const totalPoints = Math.round(dayRecs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));
+    const totalPoints = _pt(dayRecs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));
     lines.push(date+'р.,Тг., "'+reportTitle+'" здійснено '+dayRecs.length+' вильотів, уражено.');
     const hasOs = dayRecs.some(r => r.target.split(', ').some(t => t.trim().toLowerCase().startsWith('ос')));
     const osSum200 = dayRecs.reduce((s, r) => s + (parseInt(r.qty200) || 0), 0);
@@ -4008,7 +4012,7 @@ function copyZvityPeriodReport() {
     const _recDT2=r=>{const p=(r.datetime||'').replace(',','').trim().split(/\s+/);const[d,m,y]=(p[0]||'').split('.');const t=(p[1]||'').substring(0,5)||'00:00';return (y||'').padStart(4,'0')+'-'+(m||'').padStart(2,'0')+'-'+(d||'').padStart(2,'0')+'T'+t;};
     const _fRecs=state.records.filter(r=>_recDT2(r)>=state.zvityFilterFrom&&_recDT2(r)<=state.zvityFilterTo);
     if(!_fRecs.length){showAlert('Вильотів за цей період не знайдено');return;}
-    const _fPts=Math.round(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+    const _fPts=_pt(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     const _zFmt=s=>{const[dt,tm]=s.split('T');const[y,m,d]=dt.split('-');return (tm?tm+' ':'')+d+'.'+m+'.'+y;};
     const _fLabelFrom=_zFmt(state.zvityFilterFrom);
     const _fLabelTo=_zFmt(state.zvityFilterTo);
@@ -4027,7 +4031,7 @@ function copyZvityAllReport() {
     const _zd=[...new Set(_recs.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_toYMD(a).localeCompare(_toYMD(b)));
     const[d1,m1,y1]=_zd[0].split('.'),[d2,m2,y2]=_zd[_zd.length-1].split('.');
     const _p=(_zd[0]===_zd[_zd.length-1])?_zd[0]+'р.':(m1===m2&&y1===y2)?d1+'-'+d2+'.'+m1+'.'+y1+'р.':(y1===y2)?d1+'.'+m1+'-'+d2+'.'+m2+'.'+y1+'р.':_zd[0]+'р. — '+_zd[_zd.length-1]+'р.';
-    const _zvT2=Math.round(_recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+    const _zvT2=_pt(_recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     const lines=generateArchiveReport(_recs,_p);
     lines.push(''),lines.push('Прогнозовано уражень на '+_zvT2+' '+_bal(_zvT2)+'.');
     if(_pushVerifyLines(lines,_recs))lines.push('');
@@ -4042,7 +4046,7 @@ function copyFilteredPeriodReport() {
     const _fFrom=state.filterFrom.replace(/-/g,''), _fTo=state.filterTo.replace(/-/g,'');
     const _fRecs=[...state.allArchiveRecs,...state.records].filter(r=>_recInPeriod(r,_fFrom,_fTo));
     if(!_fRecs.length){showAlert('Вильотів за цей період не знайдено');return;}
-    const _fPts=Math.round(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+    const _fPts=_pt(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     const _fLabelFrom=state.filterFrom.split('-').reverse().join('.');
     const _fLabelTo=state.filterTo.split('-').reverse().join('.');
     const _fLabel=_fLabelFrom+' — '+_fLabelTo+'р.';
@@ -4170,8 +4174,8 @@ function render() {
     
     const todayDate = getDateOnly(new Date().toLocaleString('uk-UA'));
     const todayCount = state.records.filter(r=>r.reportNum===state.report && getDateOnly(r.datetime)===todayDate).length;
-    const todayPoints = Math.round(state.records.filter(r=>r.reportNum===state.report && getDateOnly(r.datetime)===todayDate).reduce((s,r)=>s+(parseFloat(r.points)||0),0));
-    const reportTotalPoints = Math.round(state.records.filter(r=>r.reportNum===state.report).reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+    const todayPoints = _pt(state.records.filter(r=>r.reportNum===state.report && getDateOnly(r.datetime)===todayDate).reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+    const reportTotalPoints = _pt(state.records.filter(r=>r.reportNum===state.report).reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     
     let h = `<nav class="crate p-3 m-4 sticky top-4 z-40">
         <div class="flex justify-between items-center flex-wrap gap-2">
@@ -4204,7 +4208,7 @@ function render() {
                 <div style="flex:1;display:flex;justify-content:flex-end"><button onclick="newReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">НОВИЙ ЗВІТ</button></div>
             </div>
             <div class="mb-4 stencil" style="font-size:calc(1.15em - 1px); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap">
-                <span style="color:var(--khaki)">ЗА ЗВІТНИЙ ПЕРІОД ЗДІЙСНЕНО <span style="color:var(--yellow)">${state.records.filter(r=>r.reportNum===state.report).length}</span> ${_plu(state.records.filter(r=>r.reportNum===state.report).length,'ВИЛІТ','ВИЛЬОТИ','ВИЛЬОТІВ')}, ОРІЄНТОВНО НА <span style="color:var(--yellow)">${Math.round(state.records.filter(r=>r.reportNum===state.report).reduce((s,r)=>s+r.points,0))}</span> ${_bal(Math.round(state.records.filter(r=>r.reportNum===state.report).reduce((s,r)=>s+r.points,0))).toUpperCase()}</span>
+                <span style="color:var(--khaki)">ЗА ЗВІТНИЙ ПЕРІОД ЗДІЙСНЕНО <span style="color:var(--yellow)">${state.records.filter(r=>r.reportNum===state.report).length}</span> ${_plu(state.records.filter(r=>r.reportNum===state.report).length,'ВИЛІТ','ВИЛЬОТИ','ВИЛЬОТІВ')}, ОРІЄНТОВНО НА <span style="color:var(--yellow)">${_pt(state.records.filter(r=>r.reportNum===state.report).reduce((s,r)=>s+r.points,0))}</span> ${_bal(_pt(state.records.filter(r=>r.reportNum===state.report).reduce((s,r)=>s+r.points,0))).toUpperCase()}</span>
             </div>
             
             <div class="mb-2" style="border-top: 1px dashed var(--khaki); padding-top: 8px; margin-top: 8px">
@@ -4330,7 +4334,7 @@ function render() {
                 _arContent='<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Завантаження...</p></div>';
             } else {
                 const _arDates=[...new Set(state.archiveRecs.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>{const f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};return f(a)<f(b)?-1:1;});
-                const _arTotal=Math.round(state.archiveRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+                const _arTotal=_pt(state.archiveRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                 // чи звірявся цей аркуш узагалі: доки жоден виліт не дістав
                 // вердикту, немає підстав позначати решту як не звірені
                 const _anyV=state.archiveRecs.some(x=>x.v&&x.v.state);
@@ -4351,7 +4355,7 @@ function render() {
                 _vuRows=_anyV?_arOrder.map((r,i)=>({r:r,n:i+1}))
                     .filter(o=>!(o.r.v&&o.r.v.state)&&(parseFloat(o.r.points)||0)):[];
                 if(_vuRows.length){
-                    const _vuPts=Math.round(_vuRows.reduce((s,o)=>s+(parseFloat(o.r.points)||0),0));
+                    const _vuPts=_pt(_vuRows.reduce((s,o)=>s+(parseFloat(o.r.points)||0),0));
                     const _vuHdr=_vuRows.length+' '+_vyl(_vuRows.length)+', '+_vuPts+' '+_bal(_vuPts);
                     _vuHtml='<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
                         +'<h3 class="stencil-shadow" style="color:var(--yellow)">ВИЛЬОТИ ВІДСУТНІ У ФАЙЛІ ВЕРИФІКАЦІЇ</h3>'
@@ -4365,7 +4369,7 @@ function render() {
                     // повного порядку, а не з лічильника відмальованих
                     const dayR=_byTime(state.archiveRecs.filter(r=>getDateOnly(r.datetime)===d)).filter(_arMatch);
                     if(!dayR.length)return '';
-                    const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+                    const dayPts=_pt(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                     const cards=dayR.map(r=>{
                         const n=_arOrder.indexOf(r)+1;
                         const tgts=r.target?r.target.split(', '):[];
@@ -4431,13 +4435,13 @@ return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`
                         const _unv=(_anyV&&!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
                         return `<div class="record-card text-sm${_unv}" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')}${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;// виліт із балами, якого звіряння не зачепило: у залік не йде нічого, а власні
 // бали лишаються в дужках, щоб було видно, скільки саме не підтверджено
-if(!_st)return (_anyV&&(parseFloat(r.points)||0))?`<p class="stencil" style="color:var(--red-label)">0 балів <span style="color:var(--yellow)">(не звірено ${Math.round(parseFloat(r.points)||0)} ${_bal(r.points)})</span></p>`:`<p class="stencil" style="color:var(--yellow)">${r.points} ${_bal(r.points)}</p>`;if(_st==='pack'){const _p=Math.round(parseFloat(r.points)||0);return `<p class="stencil" style="color:var(--red-label)">0 балів${_p?` <span style="color:var(--yellow)">(скасовано ${_p} ${_bal(_p)})</span>`:''}</p>`;}const _sum=Math.round(r.v.sum);
+if(!_st)return (_anyV&&(parseFloat(r.points)||0))?`<p class="stencil" style="color:var(--red-label)">0 балів <span style="color:var(--yellow)">(не звірено ${_pt(r.points)} ${_bal(r.points)})</span></p>`:`<p class="stencil" style="color:var(--yellow)">${r.points} ${_bal(r.points)}</p>`;if(_st==='pack'){const _p=_pt(r.points);return `<p class="stencil" style="color:var(--red-label)">0 балів${_p?` <span style="color:var(--yellow)">(скасовано ${_p} ${_bal(_p)})</span>`:''}</p>`;}const _sum=_pt(r.v.sum);
 // скасоване — це різниця між нарахованим за виліт і тим, що верифікатор дав
 // власним цілям вильоту. Дописані ним понад виліт бали скасування не зменшують
 // різниця між нарахованим за виліт і тим, що дав верифікатор. Одне число:
 // або скасовано, або додано, обох одразу не буває
-const _c=Math.max(0,Math.round((parseFloat(r.points)||0)-r.v.sum));
-const _a=Math.max(0,Math.round(r.v.sum-(parseFloat(r.points)||0)));
+const _c=Math.max(0,_pt((parseFloat(r.points)||0)-r.v.sum));
+const _a=Math.max(0,_pt(r.v.sum-(parseFloat(r.points)||0)));
 const _clr=_st==='repl'?'var(--blue-label)':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)';return `<p class="stencil" style="color:${_clr}">${_st==='no'?0:_sum} ${_bal(_st==='no'?0:_sum)}${_c?` <span style="color:var(--yellow)">(скасовано ${_c} ${_bal(_c)})</span>`:''}${_a?` <span style="color:var(--yellow)">(додано ${_a} ${_bal(_a)})</span>`:''}</p>`;})()}${(()=>{const _st=r.v&&r.v.state;
 // виліт із балами, який не дістав жодного вердикту — саме такі й губляться
 if(!_st) return (_anyV&&(parseFloat(r.points)||0))?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:var(--red-label)">НЕ ЗВІРЕНО</span>`:'';
@@ -4463,7 +4467,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 // прогноз, а те, що нарахував верифікатор. Це та сама сума,
                 // що й у рядку «Верифіковано уражень на», і надбавка
                 // верифікатора вже в ній: окремо її додавати не можна
-                const _shVSum=Math.round(state.archiveRecs.reduce((s,r)=>
+                const _shVSum=_pt(state.archiveRecs.reduce((s,r)=>
                     s+((r.v&&r.v.state&&r.v.state!=='pack')?(r.v.sum||0):0),0));
                 const _shHdr=_anyV
                     ?`Верифіковано уражень на <span style="color:var(--text)">${_shVSum}</span> ${_bal(_shVSum)}`
@@ -4485,12 +4489,12 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _allRecs=state.allArchiveRecs;
                 const _allBD=state.archiveSheets.map(s=>{let m=s.match(/^(\d{1,2})-(\d{1,2})\.(\d{1,2})\.(\d{4})/);if(m)return{k:m[4]+m[3].padStart(2,'0')+m[1].padStart(2,'0'),d:m[1].padStart(2,'0')+'.'+m[3].padStart(2,'0')+'.'+m[4]};m=s.match(/^(\d{1,2})\.(\d{1,2})-(\d{1,2})\.(\d{1,2})\.(\d{4})/);if(m)return{k:m[5]+m[2].padStart(2,'0')+m[1].padStart(2,'0'),d:m[1].padStart(2,'0')+'.'+m[2].padStart(2,'0')+'.'+m[5]};return null;}).filter(Boolean);
                 const _allEarliest=_allBD.length?_allBD.reduce((a,b)=>a.k<b.k?a:b).d:(_allRecs.map(r=>getDateOnly(r.datetime)).filter(Boolean).sort()[0]||'');
-                const _allTotal=Math.round(_allRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+                const _allTotal=_pt(_allRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                 const _allRptLines=(()=>{const _l=generateArchiveReport(_allRecs,'Від '+_allEarliest+' дотепер');_l.push(''),_l.push('Прогнозовано уражень на '+_allTotal+' '+_bal(_allTotal)+'.');if(_pushVerifyLines(_l,_allRecs))_l.push('');_pushCostLines(_l,_allTotal,_allRecs);return _l;})();
                 // Те саме, що й на окремому аркуші: є звірені вильоти —
                 // у шапці стоїть нарахування верифікатора, а не наш прогноз
                 const _allAnyV=_allRecs.some(r=>r.v&&r.v.state);
-                const _allVSum=Math.round(_allRecs.reduce((s,r)=>
+                const _allVSum=_pt(_allRecs.reduce((s,r)=>
                     s+((r.v&&r.v.state&&r.v.state!=='pack')?(r.v.sum||0):0),0));
                 const _allHdr=_allAnyV
                     ?`Верифіковано уражень на <span style="color:var(--text)">${_allVSum}</span> ${_bal(_allVSum)}`
@@ -4532,7 +4536,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             } else if(!_fRecs.length){
                 _periodResultHtml='<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Вильотів за цей період не знайдено</p></div>';
             } else {
-                const _fPts=Math.round(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+                const _fPts=_pt(_fRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                 const _fLines=generateArchiveReport(_fRecs,_fLabel);
                 _fLines.push(''),_fLines.push('Прогнозовано уражень на '+_fPts+' '+_bal(_fPts)+'.');
                 if(_pushVerifyLines(_fLines,_fRecs))_fLines.push('');
@@ -4546,7 +4550,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 // Шапка така сама, як на аркуші й у зведенні за всі виїзди:
                 // є звірені вильоти — показуємо нарахування верифікатора
                 const _fAnyV=_fRecs.some(r=>r.v&&r.v.state);
-                const _fVSum=Math.round(_fRecs.reduce((s,r)=>
+                const _fVSum=_pt(_fRecs.reduce((s,r)=>
                     s+((r.v&&r.v.state&&r.v.state!=='pack')?(r.v.sum||0):0),0));
                 const _fHdr=_fAnyV
                     ?'Верифіковано уражень на <span style="color:var(--text)">'+_fVSum+'</span> '+_bal(_fVSum)
@@ -4630,13 +4634,13 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         const _vyRecs=state.records.filter(r=>r.reportNum===state.report);
         const _vyGh=_ghostRecords().filter(r=>r.reportNum===state.report);
         const _vyDates=[...new Set(_vyRecs.concat(_vyGh).map(r=>getDateOnly(r.datetime)))].sort((a,b)=>{const f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};return f(a)<f(b)?-1:1;});
-        const _vyTotal=Math.round(_vyRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+        const _vyTotal=_pt(_vyRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
         let _vyNum=0;
         const _vyGroups=_vyDates.map(d=>{
             const dayR=_byTime(_vyRecs.filter(r=>getDateOnly(r.datetime)===d));
             const dayAll=_byTime(dayR.concat(_vyGh.filter(r=>getDateOnly(r.datetime)===d)));
             const cards=dayAll.map(r=>r._ghost?formatRecord(r,''):formatRecord(r,++_vyNum)).join('');
-            const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+            const dayPts=_pt(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
             return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
         }).join('');
         h+=`<div class="p-4 space-y-4 zvity-wrap">
@@ -4678,14 +4682,14 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             if(!_zRecs.length){
                 _zvResult='<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Вильотів за цей період не знайдено</p></div>';
             } else {
-                const _zPts=Math.round(_zRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+                const _zPts=_pt(_zRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                 // вильоти grouped by day
                 const _zToYMD=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};
                 const _zDates=[...new Set(_zRecs.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>_zToYMD(a)>_zToYMD(b)?-1:1);
                 const _zTotal=_zRecs.length;let _zN=0;
                 const _zGroups=_zDates.map(d=>{
                     const dayR=_byTimeDesc(_zRecs.filter(r=>getDateOnly(r.datetime)===d));
-                    const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+                    const dayPts=_pt(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                     const cards=_byTimeDesc(dayR.concat(_ghostRecords().filter(g=>getDateOnly(g.datetime)===d))).map(r=>r._ghost?formatRecord(r,''):formatRecord(r,_zTotal-_zN++)).join('');
                     return '<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">'+d+'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--yellow)">'+dayR.length+'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--yellow)">'+dayPts+'</span></span></div><div class="space-y-2">'+cards+'</div></div>';
                 }).join('');
@@ -4720,7 +4724,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             ${(()=>{
   const _recs=state.selDate?dayRecs:(state.selReport?state.records.filter(r=>r.reportNum===state.selReport):state.records);
   if(!_recs.length)return '<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає вильотів</p></div>';
-  const _total=Math.round(_recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+  const _total=_pt(_recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
   let _n=_recs.length;
   const _toYMD=s=>s.split('.').reverse().join('');
   const _zvGh=_ghostRecords().filter(g=>!state.selReport||g.reportNum===state.selReport);
@@ -4729,7 +4733,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
     const dayR=_byTimeDesc(_recs.filter(r=>getDateOnly(r.datetime)===d));
     const dayAll=_byTimeDesc(dayR.concat(_zvGh.filter(g=>getDateOnly(g.datetime)===d)));
     const cards=dayAll.map(r=>r._ghost?formatRecord(r,''):formatRecord(r,_n--)).join('');
-    const dayPts=Math.round(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+    const dayPts=_pt(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     return '<div class="crate p-4">'
       +(state.selDate?'':'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">'+d+'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--yellow)">'+dayR.length+'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--yellow)">'+dayPts+'</span></span></div>')
       +'<div class="space-y-2">'+cards+'</div></div>';
@@ -4753,7 +4757,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
                     <div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap">
                         <h3 class="stencil-shadow" style="color: var(--yellow)">ДОПОВІДЬ НА ${state.selDate}</h3>
-                        <span class="stencil" style="color:var(--khaki)">Уражено орієнтовно на <span style="color:var(--text)">${Math.round(dayRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0))}</span> ${_bal(Math.round(dayRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0)))}</span>
+                        <span class="stencil" style="color:var(--khaki)">Уражено орієнтовно на <span style="color:var(--text)">${_pt(dayRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0))}</span> ${_bal(_pt(dayRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0)))}</span>
                     </div>
                     <div class="flex gap-2 flex-wrap">
                         <button onclick="copyReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button>
@@ -4775,7 +4779,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         if(_zvD.length){
             const[_d1,_m1,_y1]=_zvD[0].split('.'),[_d2,_m2,_y2]=_zvD[_zvD.length-1].split('.');
             const _zvP=(_zvD[0]===_zvD[_zvD.length-1])?_zvD[0]+'р.':(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1+'р.':(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1+'р.':_zvD[0]+'р. — '+_zvD[_zvD.length-1]+'р.';
-            const _zvT=Math.round(_zvR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+            const _zvT=_pt(_zvR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
             const _zvL=generateArchiveReport(_zvR,_zvP);
             _zvL.push(''),_zvL.push('Прогнозовано уражень на '+_zvT+' '+_bal(_zvT)+'.');
             if(_pushVerifyLines(_zvL,_zvR))_zvL.push('');
