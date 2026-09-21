@@ -2842,8 +2842,8 @@ function _vuLine(o, cp) {
     const _tg = tg.map((x, j) => x + (rs[j] ? ' — ' + rs[j] : '')).filter(Boolean).join(', ');
     const p = Math.round(parseFloat(r.points) || 0);
     // Найперше — номер рядка аркуша, як і в сусідніх переліках: саме за ним
-    // шукають запис у таблиці. Номер картки поруч, щоб знайти його й на екрані
-    const head = (r.srow ? 'рядок ' + r.srow : '') + (o.n ? (r.srow ? ' (картка ' : 'картка ') + o.n + (r.srow ? ')' : '') : '');
+    // шукають запис у таблиці. Номер вильоту поруч, щоб знайти його й на екрані
+    const head = (r.srow ? 'рядок ' + r.srow : '') + (o.n ? (r.srow ? ' (виліт ' : 'виліт ') + o.n + (r.srow ? ')' : '') : '');
     return [_e(head), _coord, _e(_tg), _c(_vNorm(r.datetime), 'cp-r'),
             _e(p + ' ' + _bal(p))].filter(Boolean).join(' | ');
 }
