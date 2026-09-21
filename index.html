@@ -1532,7 +1532,7 @@ function _parseMainRows(rows) {
                 drone: (row[6] || '').trim(),
                 ammo: (row[7] || '').trim(),
                 result: row[8] || '',
-                points: parseFloat(row[9]) || 0,
+                points: _num(row[9]),
                 // номер рядка аркуша: за ним шукають запис у таблиці руками
                 sheet: 'ГОЛОВНА', srow: i + 1
             };
@@ -1718,7 +1718,7 @@ async function loadAllArchiveSheets() {
                         drone: (row[6]||'').trim(),
                         ammo: (row[7]||'').trim(),
                         result: row[8]||'',
-                        points: parseFloat(row[9])||0,
+                        points: _num(row[9]),
                         v: _verdictInfo(row[2]||'', row[11], row[12], row[3], row[4]),
                         sheet: name, srow: i + 1
                     });
@@ -2922,7 +2922,7 @@ async function loadArchiveSheet(name) {
                     drone: (row[6]||''  ).trim(),
                     ammo: (row[7]||''  ).trim(),
                     result: row[8]||''  ,
-                    points: parseFloat(row[9])||0,
+                    points: _num(row[9]),
                     v: _verdictInfo(row[2]||'', row[11], row[12], row[3], row[4]),
                     sheet: name, srow: i + 1
                 });
@@ -2947,8 +2947,8 @@ async function loadDataFromAPI() {
         for (let i = 1; i < scoreRows.length; i++) {
             if (scoreRows[i] && scoreRows[i][0]) {
                 state.scoreTable[scoreRows[i][0]] = {
-                    znyshcheno: parseFloat(scoreRows[i][1]) || 0,
-                    poshkodzheno: parseFloat(scoreRows[i][2]) || 0,
+                    znyshcheno: _num(scoreRows[i][1]),
+                    poshkodzheno: _num(scoreRows[i][2]),
                     fullName: scoreRows[i][3] || scoreRows[i][0]
                 };
             }
@@ -3057,6 +3057,16 @@ async function syncListsToAPI() {
 }
 
 function cleanCoords(coord) { if(!coord) return ''; return coord.split(',')[0].split(' ').slice(0,4).join(' ').trim(); }
+
+// Число з клітинки таблиці. Google віддає значення вже відформатованими, і
+// за української локалі дробові приходять з комою: «0,5». parseFloat на такому
+// зупиняється на комі й дає 0, тому кому зводимо до крапки, а пробіли-розділювачі
+// тисяч прибираємо
+function _num(x) {
+    const v = parseFloat(String(x === null || x === undefined ? '' : x)
+        .replace(/[\s\u00a0\u202f]/g, '').replace(',', '.'));
+    return isNaN(v) ? 0 : v;
+}
 
 function esc(s) { if(s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
