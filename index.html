@@ -4033,11 +4033,23 @@ async function saveEditRecord() {
             else { showAlert('Не вдалося зберегти: ' + e.message); await loadArchiveSheet(er.arch.sheet); }
             return;
         }
+        // Перемальовуємо з пам'яті. Рядок ми щойно записали самі й знаємо про
+        // нього все, тож перечитувати аркуш — а тим паче всі вісім заради
+        // зведення — немає з чого: це секунди чекання на порожньому місці
+        _markPacks(state.archiveRecs);
+        const _twin = (state.allArchiveRecs || [])
+            .find(x => x.sheet === er.arch.sheet && x.srow === er.arch.srow);
+        if (_twin) {
+            ['datetime', 'target', 'result', 'coordinates', 'qty200', 'qty300',
+             'drone', 'ammo', 'points', 'uid'].forEach(k => { _twin[k] = r[k]; });
+            _markPacks(state.allArchiveRecs);
+        } else {
+            // у зведенні цього запису немає — хай перечитається, коли знадобиться
+            state.allArchiveLoaded = false; state.allArchiveRecs = [];
+        }
         state.editRecord = null;
         closeModal();
-        state.allArchiveLoaded = false; state.allArchiveRecs = [];
-        await loadArchiveSheet(er.arch.sheet);
-        if (!state.allArchiveLoading) loadAllArchiveSheets();
+        render();
         return;
     }
     state.editRecord = null;
