@@ -1719,6 +1719,7 @@ async function loadAllArchiveSheets() {
                         ammo: (row[7]||'').trim(),
                         result: row[8]||'',
                         points: _num(row[9]),
+                        uid: (row[10]||'').trim(),
                         v: _verdictInfo(row[2]||'', row[11], row[12], row[3], row[4]),
                         sheet: name, srow: i + 1
                     });
@@ -3018,6 +3019,7 @@ async function loadArchiveSheet(name) {
                     ammo: (row[7]||''  ).trim(),
                     result: row[8]||''  ,
                     points: _num(row[9]),
+                    uid: (row[10]||''  ).trim(),
                     v: _verdictInfo(row[2]||'', row[11], row[12], row[3], row[4]),
                     sheet: name, srow: i + 1
                 });
@@ -3589,8 +3591,18 @@ function saveEditModalState() {
     if (m) er.memo = m.value;
 }
 
-function showEditRecordModal(idx) {
-    const r = state.records[idx];
+// Редагування архівного вильота. Запис лежить не в ГОЛОВНІЙ, а в аркуші
+// архіву, тож і правка піде прямо в його рядок — черги офлайн тут немає
+function showEditArchiveRecord(srow) {
+    if (!srow || !state.online) return;
+    const r = (state.archiveRecs || []).find(x => x.srow === srow);
+    if (!r) return;
+    showEditRecordModal(-1, r);
+    if (state.editRecord) state.editRecord.arch = { sheet: r.sheet || state.selArchive, srow: srow, rec: r };
+}
+
+function showEditRecordModal(idx, arch) {
+    const r = arch || state.records[idx];
     if (!r) return;
     const tNames = r.target ? r.target.split(', ') : [];
     const tResults = r.result ? r.result.split(', ') : [];
@@ -3620,6 +3632,14 @@ function showEditRecordModal(idx) {
     renderEditRecordModal();
 }
 
+// Сусідні вильоти, за якими підбирається наступний вільний номер цілі.
+// Для архівного запису це вильоти того самого аркуша, а не ГОЛОВНОЇ
+function _erPeers() {
+    const er = state.editRecord;
+    if (er && er.arch) return (state.archiveRecs || []).filter(r => r !== er.arch.rec);
+    return state.records.filter((r, i) => r.reportNum === state.report && i !== (er ? er.idx : -1));
+}
+
 function selectEditTarget(n){
     if(!state.editRecord)return;
     state.editRecord.selTargetName=(state.editRecord.selTargetName===n?'':n);
@@ -3639,7 +3659,7 @@ const tgtList = er.targets.length > 0
     const _erTgtList=(()=>{
         if(!er.newTarget)return'';
         const ab=er.newTarget,s={};
-        state.records.filter(r=>r.reportNum===state.report).forEach(r=>{ (r.target||'').split(', ').forEach(t=>{ const p=t.trim().split(' '),l=p[p.length-1]; if(/^\d+$/.test(l)&&p.slice(0,-1).join(' ').toUpperCase()===ab.toUpperCase())s[t.trim()]=true; }); });
+        _erPeers().forEach(r=>{ (r.target||'').split(', ').forEach(t=>{ const p=t.trim().split(' '),l=p[p.length-1]; if(/^\d+$/.test(l)&&p.slice(0,-1).join(' ').toUpperCase()===ab.toUpperCase())s[t.trim()]=true; }); });
         er.targets.forEach(t=>{ const p=t.name.trim().split(' '),l=p[p.length-1]; if(/^\d+$/.test(l)&&p.slice(0,-1).join(' ').toUpperCase()===ab.toUpperCase())s[t.name.trim()]=true; });
         const nm=Object.keys(s).sort((a,b)=>parseInt(b.split(' ').pop())-parseInt(a.split(' ').pop()));
         if(!nm.length)return'';
@@ -3885,7 +3905,7 @@ function addEditTarget() {
         let maxN = 0;
         const _gA = s => { const _p=s.split(' '),_l=_p[_p.length-1],_r=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):s,_u=_r.toUpperCase(); return (Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})()).toUpperCase(); };
         const _gN = s => { const _p=s.split(' '),_l=_p[_p.length-1]; return /^\d+$/.test(_l)?parseInt(_l):0; };
-        state.records.filter((r,i)=>r.reportNum===state.report&&i!==er.idx).forEach(r=>{
+        _erPeers().forEach(r=>{
             (r.target||'').split(', ').forEach(t=>{ if(_gA(t.trim())===abbr.toUpperCase())maxN=Math.max(maxN,_gN(t.trim())); });
         });
         er.targets.forEach(t=>{ if(_gA(t.name.trim())===abbr.toUpperCase())maxN=Math.max(maxN,_gN(t.name.trim())); });
@@ -3904,7 +3924,7 @@ function changeEditTargetCil(i, newAbbr) {
     const _gA = s => { const _p=s.trim().split(' '),_l=_p[_p.length-1],_r=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):s.trim(),_u=_r.toUpperCase(); return (Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})()).toUpperCase(); };
     const _gN = s => { const _p=s.trim().split(' '),_l=_p[_p.length-1]; return /^\d+$/.test(_l)?parseInt(_l):0; };
     let maxN = 0;
-    state.records.filter((r,ri)=>r.reportNum===state.report&&ri!==er.idx).forEach(r=>{
+    _erPeers().forEach(r=>{
         (r.target||'').split(', ').forEach(t=>{if(_gA(t)===newAbbr.toUpperCase())maxN=Math.max(maxN,_gN(t));});
     });
     er.targets.filter((_,ti)=>ti!==i).forEach(t=>{if(_gA(t.name)===newAbbr.toUpperCase())maxN=Math.max(maxN,_gN(t.name));});
@@ -3932,7 +3952,7 @@ async function saveEditRecord() {
     if (!er) return;
     saveEditModalState();
     if (_osQtyMissing(er.targets, er.qty200, er.qty300)) { showAlert('Додайте кількість ОС'); return; }
-    const r = state.records[er.idx];
+    const r = er.arch ? er.arch.rec : state.records[er.idx];
     const _before = Object.assign({}, r);   // щоб знати, які саме поля змінились
     r.target = er.targets.map(t => t.name).join(', ');
     r.result = er.targets.map(t => t.result).join(', ');
@@ -3956,6 +3976,28 @@ async function saveEditRecord() {
     }
     if (!r.uid) r.uid = _contentUid(r);
     _setNote(r.uid, er.memo || '', er.flag);   // нотатка й позначка — лише локально
+    // Архівний виліт: пишемо прямо в його рядок аркуша, стовпці A-J.
+    // K, L і M не чіпаємо — там uid і вердикти верифікатора
+    if (er.arch) {
+        const row = [[r.reportNum || '', r.datetime || '', r.target || '', r.qty200 || 0,
+                      r.qty300 || 0, r.coordinates || '', r.drone || '', r.ammo || '',
+                      r.result || '', r.points || 0]];
+        const _rng = er.arch.sheet + '!A' + er.arch.srow + ':J' + er.arch.srow;
+        try { await apiUpdate(_rng, row, true); }
+        catch (e) {
+            // запис не пройшов, а поля в пам'яті вже змінені — перечитуємо
+            // аркуш, щоб на екрані не лишилося того, чого немає в таблиці
+            if (_isNetErr(e)) { state.online = false; _offlineMsg(); }
+            else { showAlert('Не вдалося зберегти: ' + e.message); await loadArchiveSheet(er.arch.sheet); }
+            return;
+        }
+        state.editRecord = null;
+        closeModal();
+        state.allArchiveLoaded = false; state.allArchiveRecs = [];
+        await loadArchiveSheet(er.arch.sheet);
+        if (!state.allArchiveLoading) loadAllArchiveSheets();
+        return;
+    }
     state.editRecord = null;
     closeModal(); render();
     await pushChange('edit', r.uid, Object.assign({}, r), _diffRecFields(_before, r));
@@ -4523,7 +4565,7 @@ return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`
                         const meta=[esc(_vNorm(r.datetime)),esc(r.coordinates),esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
                         const _unv=(_anyV&&!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
-                        return `<div class="record-card text-sm${_unv}" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')}${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;// виліт із балами, якого звіряння не зачепило: у залік не йде нічого, а власні
+                        return `<div class="record-card text-sm${_unv}" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0})" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')}${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;// виліт із балами, якого звіряння не зачепило: у залік не йде нічого, а власні
 // бали лишаються в дужках, щоб було видно, скільки саме не підтверджено
 if(!_st)return (_anyV&&(parseFloat(r.points)||0))?`<p class="stencil" style="color:var(--red-label)">0 балів <span style="color:var(--yellow)">(не звірено ${_pt(r.points)} ${_bal(r.points)})</span></p>`:`<p class="stencil" style="color:var(--yellow)">${r.points} ${_bal(r.points)}</p>`;if(_st==='pack'){const _p=_pt(r.points);return `<p class="stencil" style="color:var(--red-label)">0 балів${_p?` <span style="color:var(--yellow)">(скасовано ${_p} ${_bal(_p)})</span>`:''}</p>`;}const _sum=_pt(r.v.sum);
 // скасоване — це різниця між нарахованим за виліт і тим, що верифікатор дав
