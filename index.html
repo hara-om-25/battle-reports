@@ -3837,9 +3837,10 @@ function _syncEditRowHeights() {
     }
 }
 
-// Напис MEMO має стояти на одному рівні з написом БОЄПРИПАС у правій колонці.
-// Скільки саме опускати MEMO — залежить від того, скільки цілей у вильоті,
-// тож відстань міряємо щоразу, а не задаємо в стилях.
+// Порожнє MEMO стоїть на одному рівні з БОЄПРИПАСОМ, а від нових рядків
+// росте вгору: низ поля лишається на місці, підіймається його верх. Скільки
+// опускати MEMO — залежить від того, скільки цілей у вильоті й наскільки
+// поле вже виросло, тож міряємо щоразу, а не задаємо в стилях.
 function _alignMemoToAmmo() {
     const memo = document.querySelector('.edit-memo');
     const lbl = document.getElementById('er_ammo_lbl');
@@ -3849,8 +3850,13 @@ function _alignMemoToAmmo() {
     memo.style.marginTop = '';
     // на вузькому екрані колонки стають одна під одною — рівняти нема з чим
     if (window.matchMedia('(max-width: 760px)').matches) return;
-    const d = lbl.getBoundingClientRect().top - own.getBoundingClientRect().top;
-    // якщо цілей багато, MEMO вже нижче за БОЄПРИПАС — піднімати його нікуди
+    // наскільки поле вже виросло понад один рядок — на стільки ж вище й стає
+    const ta = document.getElementById('er_memo');
+    const ref = document.getElementById('er_coord');
+    const grown = (ta && ref && ref.clientHeight > 20)
+        ? Math.max(0, ta.offsetHeight - ref.clientHeight) : 0;
+    const d = lbl.getBoundingClientRect().top - own.getBoundingClientRect().top - grown;
+    // якщо цілей багато або текст довгий, місця вгорі вже немає — далі вниз
     if (d > 0.5) memo.style.marginTop = d + 'px';
 }
 
@@ -3966,6 +3972,8 @@ function _memoGrow() {
     const h = Math.min(Math.max(el.scrollHeight, base), _MEMO_MAX);
     el.style.height = h + 'px';
     el.style.overflowY = el.scrollHeight > _MEMO_MAX ? 'auto' : 'hidden';
+    // поле щойно змінило висоту — переставляємо його так, щоб низ не з'їхав
+    _alignMemoToAmmo();
 }
 
 // Кнопка потрібна лише поки поле порожнє: почали писати заново — ховаємо,
