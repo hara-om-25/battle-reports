@@ -2140,9 +2140,11 @@ function _vType(x) { return _vName(String(x === null || x === undefined ? '' : x
 function _osParts(r, tgts) {
     const dash = '<span style="color:var(--yellow)"> — </span>';
     const os = r.v && r.v.os;
-    // 200 і 300 належать цілі ОС. Коли верифікатор саму ціль не визнав,
-    // вони перекреслені разом з нею — лічильників він для неї не подав
-    const rej = !!(r.v && r.v.list) && (tgts || []).some((t, j) => _vType(t) === 'ОС' && r.v.list[j] === 'no');
+    // 200 і 300 належать цілі ОС. Перекреслюємо їх тільки тоді, коли
+    // верифікатор не визнав жодної ОС вильоту: якщо хоч одна жива, люди
+    // на позиції теж живі, і гасити позначку через сусідню — неправда
+    const _osJ = (tgts || []).map((t, j) => _vType(t) === 'ОС' ? j : -1).filter(j => j >= 0);
+    const rej = !!(r.v && r.v.list) && _osJ.length > 0 && _osJ.every(j => r.v.list[j] === 'no');
     const k = parseInt(r.qty200) || 0, w = parseInt(r.qty300) || 0;
     // скасована позначка малюється в тих самих тегах, а колір їй задає
     // .mark-off — один на все викреслене
@@ -2544,8 +2546,23 @@ async function runVerification(file) {
                         // дописуємо його результат до вердикту, щоб не загубити
                         const nr = it.verdict === 'Підтверджено' && it.res
                             && _vName(it.res) !== _vName(c.res[j] || '') ? '|' + it.res : '';
-                        c.v[j] = it.verdict + nr;
-                        c.p[j] = it.pts;
+                        if (it.tgt.type === 'ОС') {
+                            // ОС-цілей у вильоті кілька, тож згортання немає і
+                            // кожна зчепилася зі своїм рядком. Але 200 і 300
+                            // належать позиції загалом, тому людей однаково
+                            // лічимо, а бали складаємо, а не перезаписуємо
+                            if (it.verdict === 'Підтверджено' || !c.v[j]) c.v[j] = it.verdict + nr;
+                            const a = parseFloat(c.p[j]), b = parseFloat(it.pts);
+                            c.p[j] = (isNaN(a) && isNaN(b)) ? '' : String((isNaN(a) ? 0 : a) + (isNaN(b) ? 0 : b));
+                            if (it.verdict === 'Підтверджено') {
+                                const rs = _vNorm(it.res).toLowerCase();
+                                if (rs.indexOf('знищ') === 0) c.osK += it.qty;
+                                else if (rs.indexOf('пошкодж') === 0) c.osW += it.qty;
+                            }
+                        } else {
+                            c.v[j] = it.verdict + nr;
+                            c.p[j] = it.pts;
+                        }
                     } else if (it.verdict !== 'Підтверджено') {
                         // Верифікатор відхилив ціль, якої у вильоті немає.
                         // Заміни тут нема — він нічого не дав натомість, тож
