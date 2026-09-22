@@ -2907,6 +2907,18 @@ function copyNoDrone() {
     navigator.clipboard.writeText(_vdRows.map(o => _vdLine(o)).join('\n')).catch(() => {});
 }
 
+// Акцент на архівній картці: подвійний дотик будь-де по ній. Нотатки живуть
+// лише на цьому пристрої й тримаються за uid, а якщо його в аркуші немає —
+// за відбитком вмісту, тож позначка знайдеться й після перечитування
+function toggleArchiveFlag(srow) {
+    const r = (state.archiveRecs || []).find(x => x.srow === srow);
+    if (!r) return;
+    const n = _noteOf(r);
+    _setNote(r.uid || _contentUid(r), n.memo, !n.flag);
+    saveLocal();
+    render();
+}
+
 // Фільтр переліку вильотів за натиснутим рядком статистики
 function toggleArFilter(el) {
     const k = el.dataset.k, v = el.dataset.v;
@@ -4622,7 +4634,7 @@ return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`
                         // в буфер, а місце натиску на мить підсвічується. Хвіст
                         // координати після коми лишається поза натисканням —
                         // шукають і вставляють саме MGRS
-                        const _cpS=(t,k)=>t?`<span class="cp ${k}" onclick="_cpTxt(this)">${esc(t)}</span>`:'';
+                        const _cpS=(t,k)=>t?`<span class="cp ${k}" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()">${esc(t)}</span>`:'';
                         const _cc=String(r.coordinates||'').split(',');
                         const _coordCell=_cpS(_cc[0].trim(),'cp-hg')
                             +(_cc.length>1?esc(', '+_cc.slice(1).join(',').trim()):'');
@@ -4632,7 +4644,7 @@ return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`
                         // нотатка й акцент — такі самі, як на картках ЗВІТІВ
                         const _nte=_noteOf(r);
                         const _flg=_nte.flag?' flagged-bg':'';
-                        return `<div class="record-card text-sm${_unv}${_flg}" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0})" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')}${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;// виліт із балами, якого звіряння не зачепило: у залік не йде нічого, а власні
+                        return `<div class="record-card text-sm${_unv}${_flg}" ondblclick="toggleArchiveFlag(${r.srow||0})" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0})" ondblclick="event.stopPropagation()" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')}${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;// виліт із балами, якого звіряння не зачепило: у залік не йде нічого, а власні
 // бали лишаються в дужках, щоб було видно, скільки саме не підтверджено
 if(!_st)return (_anyV&&(parseFloat(r.points)||0))?`<p class="stencil" style="color:var(--red-label)">0 балів <span style="color:var(--yellow)">(не звірено ${_pt(r.points)} ${_bal(r.points)})</span></p>`:`<p class="stencil" style="color:var(--yellow)">${r.points} ${_bal(r.points)}</p>`;if(_st==='pack'){const _p=_pt(r.points);return `<p class="stencil" style="color:var(--red-label)">0 балів${_p?` <span style="color:var(--yellow)">(скасовано ${_p} ${_bal(_p)})</span>`:''}</p>`;}const _sum=_pt(r.v.sum);
 // скасоване — це різниця між нарахованим за виліт і тим, що верифікатор дав
