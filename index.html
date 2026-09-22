@@ -311,6 +311,9 @@
     /* Виліт із балами, якого звіряння не зачепило: у файлі верифікації йому
        нічого не знайшлося. Біла рамка — щоб такі було видно з першого погляду */
     .record-card.not-verified { border-color: #fff; }
+    /* жовтий акцент «!» ставить сам користувач, тож він сильніший за білу
+       рамку «не звірено»: правило нижче, отже виграє */
+    .record-card.flagged { border-color: var(--yellow); }
     /* обраний елемент списку — той самий вигляд, що й під курсором,
        і тримається, доки не оберуть інший */
     .list-item.picked { border-color: var(--olive-bright); background: rgba(122, 149, 64, 0.1); }
@@ -4015,10 +4018,13 @@ async function saveEditRecord() {
     // Архівний виліт: пишемо прямо в його рядок аркуша, стовпці A-J.
     // K, L і M не чіпаємо — там uid і вердикти верифікатора
     if (er.arch) {
+        // K пишемо разом з рештою: нотатка й акцент тримаються за uid, і якщо
+        // його в рядку не було, вигаданий тут ключ мусить лягти в таблицю —
+        // інакше після перечитування аркуша нотатка лишиться ні на чому
         const row = [[r.reportNum || '', r.datetime || '', r.target || '', r.qty200 || 0,
                       r.qty300 || 0, r.coordinates || '', r.drone || '', r.ammo || '',
-                      r.result || '', r.points || 0]];
-        const _rng = er.arch.sheet + '!A' + er.arch.srow + ':J' + er.arch.srow;
+                      r.result || '', r.points || 0, r.uid || '']];
+        const _rng = er.arch.sheet + '!A' + er.arch.srow + ':K' + er.arch.srow;
         try { await apiUpdate(_rng, row, true); }
         catch (e) {
             // запис не пройшов, а поля в пам'яті вже змінені — перечитуємо
@@ -4610,7 +4616,10 @@ return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`
                         const meta=[_cpS(_vNorm(r.datetime),'cp-hb'),_coordCell,esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
                         const _unv=(_anyV&&!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
-                        return `<div class="record-card text-sm${_unv}" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0})" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')}${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;// виліт із балами, якого звіряння не зачепило: у залік не йде нічого, а власні
+                        // нотатка й акцент — такі самі, як на картках ЗВІТІВ
+                        const _nte=_noteOf(r);
+                        const _flg=_nte.flag?' flagged':'';
+                        return `<div class="record-card text-sm${_unv}${_flg}" style="position:relative;padding-left:62px;${(r.v&&r.v.state)||(parseFloat(r.points)||0)?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)"><div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0})" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${n}</span></div><p class="stencil" style="color:var(--text)">${parts.join(_sep)}</p>${notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')}${meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${meta}</p>`:''}${(()=>{const _st=r.v&&r.v.state;// виліт із балами, якого звіряння не зачепило: у залік не йде нічого, а власні
 // бали лишаються в дужках, щоб було видно, скільки саме не підтверджено
 if(!_st)return (_anyV&&(parseFloat(r.points)||0))?`<p class="stencil" style="color:var(--red-label)">0 балів <span style="color:var(--yellow)">(не звірено ${_pt(r.points)} ${_bal(r.points)})</span></p>`:`<p class="stencil" style="color:var(--yellow)">${r.points} ${_bal(r.points)}</p>`;if(_st==='pack'){const _p=_pt(r.points);return `<p class="stencil" style="color:var(--red-label)">0 балів${_p?` <span style="color:var(--yellow)">(скасовано ${_p} ${_bal(_p)})</span>`:''}</p>`;}const _sum=_pt(r.v.sum);
 // скасоване — це різниця між нарахованим за виліт і тим, що верифікатор дав
@@ -4622,7 +4631,7 @@ const _a=Math.max(0,_pt(r.v.sum-(parseFloat(r.points)||0)));
 const _clr=_st==='repl'?'var(--blue-label)':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)';return `<p class="stencil" style="color:${_clr}">${_st==='no'?0:_sum} ${_bal(_st==='no'?0:_sum)}${_c?` <span style="color:var(--yellow)">(скасовано ${_c} ${_bal(_c)})</span>`:''}${_a?` <span style="color:var(--yellow)">(додано ${_a} ${_bal(_a)})</span>`:''}</p>`;})()}${(()=>{const _st=r.v&&r.v.state;
 // виліт із балами, який не дістав жодного вердикту — саме такі й губляться
 if(!_st) return (_anyV&&(parseFloat(r.points)||0))?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:var(--red-label)">НЕ ЗВІРЕНО</span>`:'';
-return `<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${(_st==='no'||_st==='pack')?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)'}">${_st==='repl'?'ЗАМІНЕНО':_st==='ok'?'ВЕРИФІКОВАНО':_st==='no'?'ВІДХИЛЕНО':_st==='pack'?'ДУБЛЮЮЧИЙ':'ЧАСТКОВО<br>ВЕРИФІКОВАНО'}</span>`;})()}</div>`;
+return `<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${(_st==='no'||_st==='pack')?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)'}">${_st==='repl'?'ЗАМІНЕНО':_st==='ok'?'ВЕРИФІКОВАНО':_st==='no'?'ВІДХИЛЕНО':_st==='pack'?'ДУБЛЮЮЧИЙ':'ЧАСТКОВО<br>ВЕРИФІКОВАНО'}</span>`;})()}${_nte.memo?`<p class="stencil" style="color:#2d5a30;font-size:0.88em;white-space:pre-wrap">${esc(_nte.memo)}</p>`:''}</div>`;
                     }).join('');
                     return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
                 }).join('');
