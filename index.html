@@ -351,6 +351,10 @@
        Увімкнений підсвічується заднім фоном у кольорі своєї групи.
        Ширина по тексту, щоб смуга не тяглася через увесь стовпець */
     .st-row { cursor: pointer; width: fit-content; padding: 0 4px; margin-left: -4px; border-radius: 2px; }
+    /* Три рядки «верифіковано» — з відступом під спільним підсумком.
+       Відступ саме падінгом: margin у рядка задано в самому тегу, а inline
+       сильніший за клас і зовнішній відступ просто не спрацював би */
+    .st-sub { padding-left: 18px; }
     /* Суцільна пляма читається яскравіше, ніж тонкі штрихи літер тієї самої
        фарби, тож фон беремо приглушений — світліший за тло, але помітно
        тьмяніший за самі написи на картках. Літери на ньому темні */
@@ -2910,6 +2914,8 @@ function _arMatch(r) {
         if (f.v === 'zero') return !pts && !st;
         if (f.v === 'subm') return !!(pts || st);
         if (f.v === 'unv') return !!pts && !st;
+        // спільний підсумок трьох рядків «верифіковано»
+        if (f.v === 'okall') return st === 'ok' || st === 'part' || st === 'repl';
         return st === f.v;
     }
     if (f.k === 'drone') return (r.drone || '') === f.v;
@@ -4456,15 +4462,15 @@ function render() {
         // Те саме, але натискається: рядок вмикає фільтр переліку вильотів,
         // а сам світиться кольором своєї групи. k — вид фільтра, v — значення,
         // c — колір: y жовтий, b блакитний, r червоний, g сірий
-        const _rowF=(label,val,suf,k,v,c)=>{
+        const _rowF=(label,val,suf,k,v,c,sub)=>{
             const on=state.arFilter&&state.arFilter.k===k&&state.arFilter.v===v;
-            return `<p class="stencil st-row st-${c}${on?' on':''}" data-k="${esc(k)}" data-v="${esc(v)}" onclick="toggleArFilter(this)" style="color:var(--text);margin:1px 0">${label} <span style="color:var(--yellow)">— ${val}${suf}</span></p>`;
+            return `<p class="stencil st-row st-${c}${on?' on':''}${sub?' st-sub':''}" data-k="${esc(k)}" data-v="${esc(v)}" onclick="toggleArFilter(this)" style="color:var(--text);margin:1px 0">${label} <span style="color:var(--yellow)">— ${val}${suf}</span></p>`;
         };
         // однаковий для одного архіву й для всіх виїздів разом
         const _vrRowsFor=(rs,clickable)=>{
             const by=st=>rs.filter(r=>r.v&&r.v.state===st).length;
             // фільтрувати нема чого, коли переліку вильотів під боком немає
-            const row=(label,n,k,c)=>clickable?_rowF(label,n,' '+_vyl(n),'v',k,c):_row(label,n,' '+_vyl(n));
+            const row=(label,n,k,c,sub)=>clickable?_rowF(label,n,' '+_vyl(n),'v',k,c,sub):_row(label,n,' '+_vyl(n));
             // Виліт або нічого не дав, або пішов на верифікацію — третього
             // немає, тож ці два числа мають давати в сумі всі вильоти.
             // Нульовим вважаємо той, що не має ні балів, ні вердикту:
@@ -4472,9 +4478,10 @@ function render() {
             const zero=r=>!(parseFloat(r.points)||0)&&!(r.v&&r.v.state);
             return row('З нульовою ефективністю',rs.filter(zero).length,'zero','y')
                 +row('Подавалось на верифікацію',rs.filter(r=>!zero(r)).length,'subm','y')
-                +row('Верифіковано повністю',by('ok'),'ok','n')
-                +row('Частково верифіковано',by('part'),'part','b')
-                +row('Верифіковано із заміною',by('repl'),'repl','b')
+                +row('Верифіковано',by('ok')+by('part')+by('repl'),'okall','n')
+                +row('Верифіковано повністю',by('ok'),'ok','n',true)
+                +row('Частково верифіковано',by('part'),'part','b',true)
+                +row('Верифіковано із заміною',by('repl'),'repl','b',true)
                 +row('Відхилено',by('no'),'no','r')
                 +row('Дублюючих',by('pack'),'pack','r')
                 +row('Не звірено',rs.filter(r=>(parseFloat(r.points)||0)&&!(r.v&&r.v.state)).length,'unv','r');
