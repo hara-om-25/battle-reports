@@ -372,10 +372,9 @@
     .st-g.on { background: #3f3f38; }
     .st-g.on, .st-g.on span { color: var(--text) !important; }
     .cp-y.cp-hit { background: var(--yellow); color: var(--bg); }
-    /* На картці вильоту колір тексту не міняємо — підсвічується лише мить
-       натискання, координата зеленим, дата й час блакитним */
-    .cp-hg.cp-hit { background: var(--green-label); color: var(--bg); }
-    .cp-hb.cp-hit { background: var(--blue-label); color: var(--bg); }
+    /* На картці вильоту колір тексту не міняємо — жовтим спалахує лише
+       мить натискання, однаково для координати й для дати з часом */
+    .cp-hl.cp-hit { background: var(--yellow); color: var(--bg); }
     .cp-g.cp-hit { background: var(--green-label); color: var(--bg); }
     .cp-r.cp-hit { background: var(--red-label); color: var(--bg); }
     .cp-b.cp-hit { background: var(--blue-label); color: var(--bg); }
@@ -4681,9 +4680,9 @@ return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`
                         // шукають і вставляють саме MGRS
                         const _cpS=(t,k)=>t?`<span class="cp ${k}" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()">${esc(t)}</span>`:'';
                         const _cc=String(r.coordinates||'').split(',');
-                        const _coordCell=_cpS(_cc[0].trim(),'cp-hg')
+                        const _coordCell=_cpS(_cc[0].trim(),'cp-hl')
                             +(_cc.length>1?esc(', '+_cc.slice(1).join(',').trim()):'');
-                        const meta=[_cpS(_vNorm(r.datetime),'cp-hb'),_coordCell,esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
+                        const meta=[_cpS(_vNorm(r.datetime),'cp-hl'),_coordCell,esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
                         const _unv=(_anyV&&!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
                         // нотатка й акцент — такі самі, як на картках ЗВІТІВ
