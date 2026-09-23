@@ -4006,6 +4006,17 @@ function _alignMemoToAmmo() {
     if (d > 0.5) memo.style.marginTop = d + 'px';
 }
 
+// Кнопка ЦІЛІ/ВИЛЬОТИ має бути такої ж висоти, як напис поруч. Міряємо
+// сам напис: у Tektur висота рядка своя, і в пікселях її не вгадати
+function _syncArListBtn() {
+    const b = document.getElementById('ar-list-btn');
+    const t = document.getElementById('ar-list-hdr');
+    if (!b || !t) return;
+    const h = t.getBoundingClientRect().height;
+    if (h > 8) b.style.height = h + 'px';
+}
+window.addEventListener('resize', _syncArListBtn);
+
 // Основне меню прилипає за 16px від верху (sticky top-4). Панель списків
 // має ставати одразу під ним, тож її відступ рахуємо з фактичної висоти меню.
 function _syncListsBarTop() {
@@ -4906,8 +4917,12 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 // під фільтром одразу видно, скільки карток лишилося з усіх
                 const _tgShown=_tgAll.filter(o=>_arMatch(o.r)).length;
                 const _flHdr=(_tgMode?'ЦІЛІ':'ВИЛЬОТИ')+(state.arFilter?` <span class="stencil" style="color:var(--khaki);font-size:0.7em">показано ${_tgMode?_tgShown+' з '+_tgAll.length:_shown+' з '+state.archiveRecs.length}</span>`:'');
-                const _tgBtn=`<button onclick="toggleArTargets()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black" style="font-size:0.78em;padding:5px 10px">${_tgMode?'ВИЛЬОТИ':'ЦІЛІ'}</button>`;
-                _arFlights=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px"><h2 class="stencil-shadow text-xl" style="color:var(--yellow)">${_flHdr}</h2>${_tgBtn}</div>${(_tgMode?_tgGroups:_arGroups)||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає записів</p></div>'}`;
+                // Кнопка кольору й вигляду головного меню, а літери в ній —
+                // такі самі, як у заголовку поруч. Висоту знімаємо із самого
+                // заголовка вже на сторінці: шрифт Tektur має свої метрики,
+                // і жорсткі пікселі тут не збігаються
+                const _tgBtn=`<button id="ar-list-btn" onclick="toggleArTargets()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn stencil-shadow text-xl">${_tgMode?'ВИЛЬОТИ':'ЦІЛІ'}</button>`;
+                _arFlights=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px"><h2 id="ar-list-hdr" class="stencil-shadow text-xl" style="color:var(--yellow)">${_flHdr}</h2>${_tgBtn}</div>${(_tgMode?_tgGroups:_arGroups)||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає записів</p></div>'}`;
             }
         }
         let _allSection='';
@@ -5228,6 +5243,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
     app.innerHTML = h;
     _syncListsBarTop();
     _sizeListCols();
+    _syncArListBtn();
 }
     </script>
 <script>
