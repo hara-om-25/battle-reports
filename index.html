@@ -784,7 +784,11 @@ function _isNetErr(e) {
 async function pushChange(op, uid, rec, chg) {
     if (!state.online || !navigator.onLine) { queueOp(op, uid, rec, chg); saveLocal(); return; }
     try {
-        await syncRecordsToAPI();
+        // Запис уже прибрано зі state.records, а в таблиці він ще стоїть.
+        // Охоронець порівнює ці два числа й без попередження вважав би таке
+        // видалення втратою рядка, тож кажемо йому, скільки саме рядків
+        // зникає з нашої волі просто зараз
+        await syncRecordsToAPI(undefined, op === 'del' ? 1 : 0);
         saveLocal();
     } catch (e) {
         if (_isNetErr(e)) { state.online = false; queueOp(op, uid, rec, chg); }
@@ -3734,12 +3738,13 @@ function _fullDT(r) {
 // записом рахуємо, скільки рядків зараз в аркуші. Записати менше, ніж там є,
 // можна лише настільки, наскільки це пояснюють видалення з черги. Усе інше —
 // ознака, що в пам'яті не ті дані, і тоді краще не писати зовсім
-async function _guardShrink(n, remoteCount) {
+async function _guardShrink(n, remoteCount, nowDel) {
     if (remoteCount === undefined) {
         try { remoteCount = ((await apiGet('ГОЛОВНА!A2:A')) || []).length; }
         catch (e) { return; }                 // не дізнались — не заважаємо
     }
-    const del = (state.queue || []).filter(o => o.op === 'del').length;
+    // видалення з черги (офлайн) плюс те, яке відбувається цієї миті
+    const del = (state.queue || []).filter(o => o.op === 'del').length + (nowDel || 0);
     const lost = remoteCount - del - n;
     // жодного рядка губити не можна: зупиняємось на будь-якій нестачі, якої
     // не пояснюють видалення з черги
@@ -3751,9 +3756,9 @@ async function _guardShrink(n, remoteCount) {
         + 'чи всі вильоти на місці.');
 }
 
-async function syncRecordsToAPI(remoteCount) {
+async function syncRecordsToAPI(remoteCount, nowDel) {
     state.records.forEach(r => { if (!r.uid) r.uid = _contentUid(r); });
-    await _guardShrink(state.records.length, remoteCount);
+    await _guardShrink(state.records.length, remoteCount, nowDel);
     // Спершу писали, стираючи весь аркуш, і аж потім заливали рядки назад.
     // Якщо між цими кроками застосунок помирав — зв'язок, протермінований
     // токен, закрите вікно — ГОЛОВНА лишалась порожньою, і дані зникали.
@@ -4241,6 +4246,7 @@ async function saveEditRecord() {
     }
     if (!r.uid) r.uid = _contentUid(r);
     _setNote(_noteKey(r, er.noteJ), er.memo || '', er.flag);   // нотатка й позначка — лише локально
+    saveLocal();   // інакше стерте MEMO живе тільки до перезавантаження й вертається
     // Архівний виліт: пишемо прямо в його рядок аркуша, стовпці A-I та K.
     // Стовпець J не чіпаємо взагалі — там формула аркуша, яка рахує бали
     // сама, за цінами того періоду. Записати туди число означало б убити
