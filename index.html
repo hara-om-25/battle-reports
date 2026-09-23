@@ -1022,13 +1022,18 @@ async function manualPull() {
 
 // Немає інтернету і вийшли з акаунту, але на пристрої лишились дані —
 // даємо продовжити роботу офлайн, щоб людина не опинилась у глухому куті.
-function _offlineOwner() {
-    if (navigator.onLine) return '';
+// Чий пристрій: власник збережених даних. Записів у ГОЛОВНІЙ може й не
+// бути — після архівування вона порожня, — але це не привід не пускати
+// людину до її ж архівів, списків і нотаток
+function _savedOwner() {
     try {
         const d = JSON.parse(localStorage.getItem(LS_DATA) || 'null');
-        if (d && d.owner && (d.records || []).length) return d.owner;
+        if (d && d.owner) return d.owner;
     } catch (e) {}
-    return '';
+    return localStorage.getItem('email') || '';
+}
+function _offlineOwner() {
+    return navigator.onLine ? '' : _savedOwner();
 }
 function _offlineResumeBtn() {
     const o = _offlineOwner();
@@ -1038,7 +1043,7 @@ function _offlineResumeBtn() {
         + '<button onclick="resumeOffline()" class="btn-stencil w-full" style="margin-top:8px;font-size:0.85em">ПРОДОВЖИТИ ОФЛАЙН<br><span style="font-size:0.85em;opacity:0.75">' + esc(o) + '</span></button>';
 }
 function resumeOffline() {
-    const o = _offlineOwner();
+    const o = _savedOwner();
     if (!o) return;
     state.user = o;
     state.token = localStorage.getItem('token');
@@ -1336,7 +1341,22 @@ function login() {
     const _h = localStorage.getItem('email') || '';
     if (!tokenClient) {
         if (typeof google !== 'undefined' && google.accounts) initAuth();
-        if (!tokenClient) { showAlert('Google-авторизація ще завантажується.\n\nЗачекайте секунду й спробуйте ще раз.'); return; }
+        // Сторінка Google не завантажилась — найчастіше через те, що мережа
+        // є лише на вигляд. Пропонуємо зайти офлайн, а не радимо чекати
+        if (!tokenClient) {
+            const _o = _savedOwner();
+            if (_o) {
+                showConfirm('НЕМАЄ ЗВ\'ЯЗКУ З GOOGLE',
+                    'Авторизація не завантажилась — схоже, інтернету немає.\n\n'
+                    + 'Відкрити дані цього пристрою офлайн?\n\n'
+                    + _o + '\n\nЗміни підуть у чергу й потраплять у таблицю, '
+                    + 'коли зв\'язок повернеться. Тоді перезавантажте сторінку.',
+                    resumeOffline);
+                return;
+            }
+            showAlert('Google-авторизація ще завантажується.\n\nЗачекайте секунду й спробуйте ще раз.');
+            return;
+        }
     }
     window._authRetries = 0;
     requestToken(_h ? {hint:_h} : {});
