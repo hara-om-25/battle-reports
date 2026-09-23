@@ -4915,7 +4915,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         // з переліку цілей видно, звідки ціль узялася.
                         // Звідки й чим — окремим рядком нижче
                         const _rn=_repNo.get(r)||{rep:0,num:0};
-                        const _meta=[_rn.rep?'ЗВІТ №'+_rn.rep:'',_rn.num?'ВИЛІТ №'+_rn.num:'',
+                        const _meta=[_rn.rep?'Звіт №'+_rn.rep:'',_rn.num?'Виліт №'+_rn.num:'',
                             _cpS(_vNorm(r.datetime),'cp-hl')].filter(Boolean).join(_ysep);
                         const _meta2=[_cpS(_cc[0].trim(),'cp-hl')+(_cc.length>1?esc(', '+_cc.slice(1).join(',').trim()):''),
                             esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
