@@ -554,6 +554,8 @@ let tokenClient = null;
 
 /* ============ ОФЛАЙН-ЯДРО ============ */
 const LS_DATA = 'br_offline_data', LS_QUEUE = 'br_offline_queue';
+// архівні аркуші, збережені на пристрої: {назва: рядки аркуша як є}
+const LS_ARCH = 'br_offline_arch';
 // Результат останнього звіряння: два переліки й аркуш, на якому його робили.
 // Лежить окремо від даних вильотів — це не дані, а підсумок однієї дії
 const LS_VERIFY = 'br_verify_left';
@@ -1848,27 +1850,14 @@ async function loadAllArchiveSheets() {
     try {
         const allRecs = [];
         for (const name of state.archiveSheets) {
-            const rows = await apiGet(name);
-            for (let i = 1; i < rows.length; i++) {
-                const row = rows[i] || [];
-                if (row[0] || row[2] || row[5] || row[6] || row[7] || row[8]) {
-                    allRecs.push({
-                        reportNum: parseInt(row[0])||0,
-                        datetime: row[1]||'',
-                        target: row[2]||'',
-                        qty200: parseInt(row[3])||0,
-                        qty300: parseInt(row[4])||0,
-                        coordinates: row[5]||'',
-                        drone: (row[6]||'').trim(),
-                        ammo: (row[7]||'').trim(),
-                        result: row[8]||'',
-                        points: _num(row[9]),
-                        uid: (row[10]||'').trim(),
-                        v: _verdictInfo(row[2]||'', row[11], row[12], row[3], row[4]),
-                        sheet: name, srow: i + 1
-                    });
-                }
+            let rows = null;
+            if (state.online) {
+                try { rows = await apiGet(name); _archCachePut(name, rows); }
+                catch (e) { if (!_isNetErr(e)) throw e; }
             }
+            if (!rows) rows = _archCache()[name] || null;
+            if (!rows) continue;   // цього аркуша на пристрої немає — пропускаємо
+            allRecs.push.apply(allRecs, _parseArchiveRows(rows, name));
         }
         _markPacks(allRecs);
         state.allArchiveRecs = allRecs;
@@ -3370,6 +3359,54 @@ async function recalcArchivePoints() {
     });
 }
 
+// Рядок аркуша -> запис вильота. Один розбір і для окремого архіву,
+// і для зведення по всіх, і для того, що прочитано з пристрою
+function _parseArchiveRows(rows, name) {
+    const out = [];
+    for (let i = 1; i < (rows || []).length; i++) {
+        const row = rows[i] || [];
+        if (row[0] || row[2] || row[5] || row[6] || row[7] || row[8]) {
+            out.push({
+                reportNum: parseInt(row[0]) || 0,
+                datetime: row[1] || '',
+                target: row[2] || '',
+                qty200: parseInt(row[3]) || 0,
+                qty300: parseInt(row[4]) || 0,
+                coordinates: row[5] || '',
+                drone: (row[6] || '').trim(),
+                ammo: (row[7] || '').trim(),
+                result: row[8] || '',
+                points: _num(row[9]),
+                uid: (row[10] || '').trim(),
+                v: _verdictInfo(row[2] || '', row[11], row[12], row[3], row[4]),
+                sheet: name, srow: i + 1
+            });
+        }
+    }
+    return out;
+}
+
+// Архіви тримаємо на пристрої такими, якими прийшли з таблиці — рядками.
+// Так вони займають менше місця, а розбираються тим самим кодом
+function _archCache() {
+    try { return JSON.parse(localStorage.getItem(LS_ARCH) || '{}') || {}; }
+    catch (e) { return {}; }
+}
+function _archCachePut(name, rows) {
+    try {
+        const c = _archCache();
+        c[name] = rows;
+        localStorage.setItem(LS_ARCH, JSON.stringify(c));
+    } catch (e) {
+        // сховище переповнене — лишаємо тільки цей аркуш, він найпотрібніший
+        try { localStorage.setItem(LS_ARCH, JSON.stringify({ [name]: rows })); } catch (e2) {}
+    }
+}
+function _archCacheHas(name) {
+    const c = _archCache();
+    return !!(c && c[name] && c[name].length);
+}
+
 async function loadArchiveSheet(name) {
     state.selArchive = name;
     state.arFilter = null;
@@ -3377,28 +3414,15 @@ async function loadArchiveSheet(name) {
     state.archiveLoading = true;
     render();
     try {
-        const rows = await apiGet(name);
-        state.archiveRecs = [];
-        for (let i = 1; i < rows.length; i++) {
-            const row = rows[i] || [];
-            if (row[0] || row[2] || row[5] || row[6] || row[7] || row[8]) {
-                state.archiveRecs.push({
-                    reportNum: parseInt(row[0])||0,
-                    datetime: row[1]||''  ,
-                    target: row[2]||''  ,
-                    qty200: parseInt(row[3])||0,
-                    qty300: parseInt(row[4])||0,
-                    coordinates: row[5]||''  ,
-                    drone: (row[6]||''  ).trim(),
-                    ammo: (row[7]||''  ).trim(),
-                    result: row[8]||''  ,
-                    points: _num(row[9]),
-                    uid: (row[10]||''  ).trim(),
-                    v: _verdictInfo(row[2]||'', row[11], row[12], row[3], row[4]),
-                    sheet: name, srow: i + 1
-                });
-            }
+        let rows = null;
+        if (state.online) {
+            try { rows = await apiGet(name); _archCachePut(name, rows); }
+            catch (e) { if (!_isNetErr(e) || !_archCacheHas(name)) throw e; }
         }
+        // мережі немає або вона обірвалась — беремо збережене на пристрої
+        if (!rows) rows = _archCache()[name] || null;
+        if (!rows) throw new Error('Цього архіву немає на пристрої');
+        state.archiveRecs = _parseArchiveRows(rows, name);
         _markPacks(state.archiveRecs);
     } catch(e) {
         showAlert('Помилка: ' + e.message);
@@ -4882,7 +4906,7 @@ function render() {
     }
     
     if(state.page==='archive') {
-        const _arBtns=state.archiveSheets.map(s=>{const _dl=/^\d/.test(s)?s:(s.match(/\d{1,2}[-.\/]\d{1,2}[-.\/]\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';if(!state.online)return `<button disabled class="btn-stencil btn-archive" style="opacity:0.45;cursor:not-allowed">${esc(_dl)}</button>`;return `<button onclick="loadArchiveSheet('${esc(s)}')" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil btn-archive ${_act}">${esc(_dl)}</button>`;}).join('')||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p>';
+        const _arBtns=state.archiveSheets.map(s=>{const _dl=/^\d/.test(s)?s:(s.match(/\d{1,2}[-.\/]\d{1,2}[-.\/]\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';if(!state.online&&!_archCacheHas(s))return `<button disabled class="btn-stencil btn-archive" style="opacity:0.45;cursor:not-allowed">${esc(_dl)}</button>`;return `<button onclick="loadArchiveSheet('${esc(s)}')" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil btn-archive ${_act}">${esc(_dl)}</button>`;}).join('')||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p>';
         const _row=(label,val,suf='')=>`<p class="stencil" style="color:var(--text);margin:1px 0">${label} <span style="color:var(--yellow)">— ${val}${suf}</span></p>`;
         // Те саме, але натискається: рядок вмикає фільтр переліку вильотів,
         // а сам світиться кольором своєї групи. k — вид фільтра, v — значення,
@@ -5276,7 +5300,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         h+=`<div class="p-4 space-y-4 arch-wrap">
             <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><div style="display:flex;align-items:center;gap:12px">${state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="showVerifyModal()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-blue" style="font-size:0.78em;padding:5px 10px">ВЕРИФІКАЦІЯ</button>':''}${_SHOW_FSFIX&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="restoreFsPoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-orange" style="font-size:0.78em;padding:5px 10px" title="Повернути по 0,5 бала за кожен ФС «пошкоджено»">ПОВЕРНУТИ ФС</button>':''}${_SHOW_RECALC&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="recalcArchivePoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black" style="font-size:0.78em;padding:5px 10px" title="Перерахувати стовпець J за нинішніми «е балами»">ПЕРЕРАХУВАТИ БАЛИ</button>':''}${(()=>{if(!state.records.length||!state.online)return'';const _f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};const _sd=[...new Set(state.records.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_f(a)<_f(b)?-1:1);const[_d1,_m1,_y1]=_sd[0].split('.'),[_d2,_m2,_y2]=_sd[_sd.length-1].split('.');const _n=(_sd[0]===_sd[_sd.length-1])?_sd[0]:(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1:(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1:_sd[0]+' — '+_sd[_sd.length-1];return'<button onclick="archiveMainSheet()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">АРХІВУВАТИ '+_n+'</button>';})()}<span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em;${state.online?'':'display:none'}">за період</span></div></div>
             ${!state.filterPeriodOpen?`<div class="crate p-4"><div class="flex flex-wrap gap-2">${state.archiveLoading&&!state.selArchive?'<p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p>':_arBtns}</div></div>`:''}
-            ${!state.online?'<div class="crate p-4"><p class="stencil text-center py-3" style="color:#c05a3e">Відображення архівних даних неможливе за відсутності з\'єднання</p></div>':''}
+            ${!state.online?(Object.keys(_archCache()).length?'<div class="crate p-4"><p class="stencil text-center py-3" style="color:var(--khaki)">Архіви показуються з пам\'яті пристрою. Нових даних без з\'єднання не буде, редагування недоступне</p></div>':'<div class="crate p-4"><p class="stencil text-center py-3" style="color:#c05a3e">Архівів на пристрої немає — відкрийте їх хоч раз із мережею</p></div>'):''}
             ${state.online?_periodPickerHtml:''}
             ${state.online&&!state.filterPeriodOpen?_arTop:''}
             ${state.online?_vlHtml:''}
