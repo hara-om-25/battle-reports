@@ -535,6 +535,8 @@ let state = {
     arFilter: null,
     // перелік в АРХІВІ: false — вильоти, true — окремі цілі
     arTargets: false,
+    // натиснутий рядок статистики в переліку ЦІЛЕЙ
+    tgFilter: null,
     // результат звіряння по кожному архіву окремо: {аркуш: {left, fix}}, де
     // left — рядки файлу, що не лягли, а fix — підказки, у яких рядках
     // таблиці поправити дату й час. Показуємо ті, що належать відкритому
@@ -2265,6 +2267,57 @@ function _vType(x) { return _vName(String(x === null || x === undefined ? '' : x
 // parts[j] — рядок j-ї цілі з усіма закресленнями й замінами,
 // notes — пояснення про втручання верифікатора,
 // noteAt — ціль, якої ті пояснення стосуються найперше
+// Вердикт окремої цілі: замінена, верифікована, відхилена або без вердикту.
+// Верифікатор втручається трьома способами — підмінює саму ціль, ставить
+// інший результат або перекидає людей між 200 і 300; будь-яке з трьох
+// робить ціль заміненою, так само як і виліт у сусідньому переліку
+function _tgVerdict(o) {
+    const r = o.r, j = o.j, P = o.p;
+    const v = (r.v && r.v.list) ? r.v.list[j] : '';
+    const sw = P.swap && P.swap[j];
+    const nv = (r.v && r.v.vres) ? String(r.v.vres[j] || '').trim().toLowerCase() : '';
+    const resCh = !!nv && nv !== String(P.ress[j] || '').trim().toLowerCase();
+    const os = r.v && r.v.os;
+    const osCh = !!os && (os.k !== (parseInt(r.qty200) || 0) || os.w !== (parseInt(r.qty300) || 0))
+        && _vType(P.tgts[j] || '') === 'ОС';
+    if (sw || (v === 'ok' && (resCh || osCh))) return 'repl';
+    return v === 'ok' ? 'ok' : v === 'no' ? 'no' : '';
+}
+
+// Бали саме цієї цілі — там, де їх можна знати напевно: скільки дав
+// верифікатор, скільки коштувала заміна, або бали всього вильота, коли
+// ціль у ньому одна. Ділити суму вильота між цілями самотужки не можна
+function _tgPts(o) {
+    const r = o.r, j = o.j, P = o.p;
+    const sw = P.swap && P.swap[j];
+    if (sw && sw.pts !== null && sw.pts !== undefined) return sw.pts;
+    const v = (r.v && r.v.list) ? r.v.list[j] : '';
+    if (v === 'no' && !sw) return 0;
+    const pv = (r.v && r.v.pts) ? r.v.pts[j] : null;
+    if (pv !== null && pv !== undefined) return pv;
+    const st = r.v && r.v.state;
+    if (P.n <= 1 && !st) return parseFloat(r.points) || 0;
+    return null;
+}
+
+// Фільтр переліку цілей: натиснутий рядок статистики відбирає самі цілі,
+// а не вильоти, бо й числа в ньому про цілі
+function toggleTgFilter(el) {
+    const k = el.dataset.k, v = el.dataset.v;
+    const f = state.tgFilter;
+    state.tgFilter = (f && f.k === k && f.v === v) ? null : { k: k, v: v };
+    render();
+}
+function _tgMatch(o) {
+    const f = state.tgFilter;
+    if (!f) return true;
+    if (f.k === 'result') return String(o.p.ress[o.j] || '').trim() === f.v;
+    const st = _tgVerdict(o);
+    if (f.v === 'subm') return st === 'ok' || st === 'repl' || st === 'no';
+    if (f.v === 'okall') return st === 'ok' || st === 'repl';
+    return st === f.v;
+}
+
 // Перемикання переліку АРХІВУ: вильоти <-> цілі
 function toggleArTargets() {
     // Переліки різної довжини, тож після перемальовування сторінка поїхала б
@@ -3296,6 +3349,7 @@ async function recalcArchivePoints() {
 async function loadArchiveSheet(name) {
     state.selArchive = name;
     state.arFilter = null;
+    state.tgFilter = null;
     state.archiveLoading = true;
     render();
     try {
@@ -4870,20 +4924,6 @@ function render() {
                         for(let j=0;j<_p.n;j++)if(String(_p.tgts[j]||'').trim())_tgAll.push({r:r,j:j,p:_p});});
                     _tgAll.forEach((o,i)=>{o.n=i+1;});
                 }
-                // Вердикт окремої цілі: замінена, верифікована, відхилена
-                // або без вердикту. Один на статистику й на картку
-                const _tgVerdict=o=>{
-                    const r=o.r,j=o.j,P=o.p;
-                    const v=(r.v&&r.v.list)?r.v.list[j]:'';
-                    const sw=P.swap&&P.swap[j];
-                    const nv=(r.v&&r.v.vres)?String(r.v.vres[j]||'').trim().toLowerCase():'';
-                    const resCh=!!nv&&nv!==String(P.ress[j]||'').trim().toLowerCase();
-                    const os=r.v&&r.v.os;
-                    const osCh=!!os&&(os.k!==(parseInt(r.qty200)||0)||os.w!==(parseInt(r.qty300)||0))
-                        &&_vType(P.tgts[j]||'')==='ОС';
-                    if(sw||(v==='ok'&&(resCh||osCh)))return 'repl';
-                    return v==='ok'?'ok':v==='no'?'no':'';
-                };
                 // Дзеркало до переліків звіряння: тут не рядок файлу не ліг,
                 // а рядка на наш виліт у файлі немає зовсім. Ті самі картки,
                 // що малюються з білою рамкою й написом НЕ ЗВІРЕНО
@@ -4960,17 +5000,22 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 // РЕЗУЛЬТАТАХ лишаються лише ті, що стоять проти цілі
                 const _tgResCnt={};
                 _tgAll.forEach(o=>{const _r=String(o.p.ress[o.j]||'').trim();if(_r)_tgResCnt[_r]=(_tgResCnt[_r]||0)+1;});
+                // натискається так само, як у переліку вильотів, тільки відбирає цілі
+                const _rowT=(label,val,suf,k,v,c,sub)=>{
+                    const on=state.tgFilter&&state.tgFilter.k===k&&state.tgFilter.v===v;
+                    return `<p class="stencil st-row st-${c}${on?' on':''}${sub?' st-sub':''}" data-k="${esc(k)}" data-v="${esc(v)}" onclick="toggleTgFilter(this)" style="color:var(--text);margin:1px 0">${label} <span style="color:var(--yellow)">— ${val}${suf}</span></p>`;
+                };
                 const _tgResRows=Object.entries(_tgResCnt).sort((a,b)=>b[1]-a[1])
-                    .map(([r,c])=>_row(esc(r),c,' '+_plu(c,'раз','рази','разів'))).join('');
+                    .map(([r,c])=>_rowT(esc(r),c,' '+_plu(c,'раз','рази','разів'),'result',r,'g')).join('');
                 const _tgVrRows=(()=>{
                     const by=st=>_tgAll.filter(o=>_tgVerdict(o)===st).length;
                     const _ok=by('ok'),_rp=by('repl'),_no=by('no');
                     const _c=n=>' '+_plu(n,'ціль','цілі','цілей');
-                    return _row('Подавалось на верифікацію',_ok+_rp+_no,_c(_ok+_rp+_no))
-                        +_row('Верифіковано',_ok+_rp,_c(_ok+_rp))
-                        +_row('Верифіковано повністю',_ok,_c(_ok))
-                        +_row('Верифіковано із заміною',_rp,_c(_rp))
-                        +_row('Відхилено',_no,_c(_no));
+                    return _rowT('Подавалось на верифікацію',_ok+_rp+_no,_c(_ok+_rp+_no),'v','subm','y')
+                        +_rowT('Верифіковано',_ok+_rp,_c(_ok+_rp),'v','okall','n')
+                        +_rowT('Верифіковано повністю',_ok,_c(_ok),'v','ok','n',true)
+                        +_rowT('Верифіковано із заміною',_rp,_c(_rp),'v','repl','b',true)
+                        +_rowT('Відхилено',_no,_c(_no),'v','no','r');
                 })();
                 const _statsBlock=state.archiveRecs.length===0?''
                     :_tgMode?`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:1 1 280px">${_sec('РЕЗУЛЬТАТИ',_tgResRows)}${_sec('ВЕРИФІКАЦІЯ',_tgVrRows)}</div></div>`
@@ -4987,7 +5032,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                     :`Уражено орієнтовно на <span style="color:var(--text)">${_arTotal}</span> ${_bal(_arTotal)}`;
                 const _shRptBlock=state.archiveRecs.length>0?`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ${esc(state.selArchive)}</h3><span class="stencil" style="color:var(--khaki)">${_shHdr}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyArchiveSheetReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_shRptLines.join('\n')}</div></div>`:'';
                 _arTop=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px"><h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">${esc(state.selArchive)}</h1>${_arHeader}</div>`;
-                _arContent=`${_tgMode?'':_shRptBlock}<h2 onclick="state.arFilter=null;render()" class="stencil-shadow text-xl px-2" style="color:var(--yellow);cursor:pointer">СТАТИСТИКА</h2>${_statsBlock}`;
+                _arContent=`${_tgMode?'':_shRptBlock}<h2 onclick="state.arFilter=null;state.tgFilter=null;render()" class="stencil-shadow text-xl px-2" style="color:var(--yellow);cursor:pointer">СТАТИСТИКА</h2>${_statsBlock}`;
                 const _shown=state.archiveRecs.filter(_arMatch).length;
                 let _tgGroups='';
                 if(_tgMode){
@@ -5024,14 +5069,9 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         // верифікатор, або коли ціль у вильоті одна: ділити
                         // суму вильота самотужки не можна — ціни різних
                         // періодів різні, і поділ був би вигадкою
-                        const _pv=(r.v&&r.v.pts)?r.v.pts[j]:null;
-                        const _one=P.n<=1;
-                        const _sp=_sw&&_sw.pts!==null&&_sw.pts!==undefined?_sw.pts:null;
-                        const _pts=_sp!==null?[String(_pt(_sp)),'var(--blue-label)']
-                            :(_v==='no'&&!_sw)?['0','var(--red-label)']
-                            :(_pv!==null&&_pv!==undefined)?[String(_pt(_pv)),_lbl?_lbl[1]:'var(--green-label)']
-                            :(_one&&!_st)?[String(_pt(r.points)),'var(--yellow)']
-                            :null;
+                        const _pn=_tgPts(o);
+                        const _pts=_pn===null?null
+                            :[String(_pt(_pn)),_lbl?_lbl[1]:'var(--yellow)'];
                         // бали — тут же, в рядку цілі, кольором її вердикту
                         if(_pts)_line+=`&nbsp;&nbsp;&nbsp;<span style="color:${_pts[1]}">зараховано ${_pts[0]} ${_bal(parseFloat(_pts[0])||0)}</span>`;
                         const _cpS=(t,k)=>t?`<span class="cp ${k}" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()">${esc(t)}</span>`:'';
@@ -5058,16 +5098,16 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                             +`</div>`;
                     };
                     _tgGroups=_arDates.map(d=>{
-                        const rows=_tgAll.filter(o=>getDateOnly(o.r.datetime)===d&&_arMatch(o.r));
+                        const rows=_tgAll.filter(o=>getDateOnly(o.r.datetime)===d&&_arMatch(o.r)&&_tgMatch(o));
                         if(!rows.length)return '';
-                        const dayPts=_pt(state.archiveRecs.filter(r=>getDateOnly(r.datetime)===d).filter(_arMatch)
-                            .reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+                        // бали дня — сума балів самих цілей, що лишилися на екрані
+                        const dayPts=_pt(rows.reduce((s,o)=>s+(_tgPts(o)||0),0));
                         return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Цілей: <span style="color:var(--text)">${rows.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${rows.map(_tgCard).join('')}</div></div>`;
                     }).join('');
                 }
                 // під фільтром одразу видно, скільки карток лишилося з усіх
-                const _tgShown=_tgAll.filter(o=>_arMatch(o.r)).length;
-                const _flHdr=(_tgMode?'ЦІЛІ':'ВИЛЬОТИ')+(state.arFilter?` <span class="stencil" style="color:var(--khaki);font-size:0.7em">показано ${_tgMode?_tgShown+' з '+_tgAll.length:_shown+' з '+state.archiveRecs.length}</span>`:'');
+                const _tgShown=_tgAll.filter(o=>_arMatch(o.r)&&_tgMatch(o)).length;
+                const _flHdr=(_tgMode?'ЦІЛІ':'ВИЛЬОТИ')+((_tgMode?(state.arFilter||state.tgFilter):state.arFilter)?` <span class="stencil" style="color:var(--khaki);font-size:0.7em">показано ${_tgMode?_tgShown+' з '+_tgAll.length:_shown+' з '+state.archiveRecs.length}</span>`:'');
                 // Кнопка кольору й вигляду головного меню, а літери в ній —
                 // такі самі, як у заголовку поруч. Висоту знімаємо із самого
                 // заголовка вже на сторінці: шрифт Tektur має свої метрики,
