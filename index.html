@@ -4843,8 +4843,11 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _tgMode=!!state.arTargets;
                 let _tgAll=[], _tgGroups='';
                 if(_tgMode){
+                    // Тільки цілі. Виліт без цілі — збитий дрон, розряджена
+                    // АКБ, втрата відеосигналу — у переліку цілей не стоїть
+                    // нічого, тож такого рядка тут просто немає
                     _arOrder.forEach(r=>{const _p=_arRowParts(r);
-                        for(let j=0;j<Math.max(1,_p.n);j++)_tgAll.push({r:r,j:j,p:_p});});
+                        for(let j=0;j<_p.n;j++)if(String(_p.tgts[j]||'').trim())_tgAll.push({r:r,j:j,p:_p});});
                     _tgAll.forEach((o,i)=>{o.n=i+1;});
                     // позначки 200/300 належать цілі ОС — ідуть її рядком,
                     // а якщо ОС у вильоті немає, тримаються останнього
