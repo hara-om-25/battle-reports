@@ -5011,8 +5011,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                     const by=st=>_tgAll.filter(o=>_tgVerdict(o)===st).length;
                     const _ok=by('ok'),_rp=by('repl'),_no=by('no');
                     const _c=n=>' '+_plu(n,'ціль','цілі','цілей');
-                    return _rowT('Подавалось на верифікацію',_ok+_rp+_no,_c(_ok+_rp+_no),'v','subm','y')
-                        +_rowT('Верифіковано',_ok+_rp,_c(_ok+_rp),'v','okall','n')
+                    return _rowT('Верифіковано',_ok+_rp,_c(_ok+_rp),'v','okall','n')
                         +_rowT('Верифіковано повністю',_ok,_c(_ok),'v','ok','n',true)
                         +_rowT('Верифіковано із заміною',_rp,_c(_rp),'v','repl','b',true)
                         +_rowT('Відхилено',_no,_c(_no),'v','no','r');
