@@ -3153,6 +3153,12 @@ async function loadDataFromAPI() {
         state.scoreTable = {};
         for (let i = 1; i < scoreRows.length; i++) {
             if (scoreRows[i] && scoreRows[i][0]) {
+                // рядок із порожніми B і C — це ціль, якої сьогодні немає:
+                // вона лишилась у прайсі лише заради старих звітів. Нуль там
+                // теж ціна, тому дивимось саме на порожнечу, а не на значення
+                const _z = String(scoreRows[i][1] === undefined ? '' : scoreRows[i][1]).trim();
+                const _p = String(scoreRows[i][2] === undefined ? '' : scoreRows[i][2]).trim();
+                if (!_z && !_p) continue;
                 state.scoreTable[scoreRows[i][0]] = {
                     znyshcheno: _num(scoreRows[i][1]),
                     poshkodzheno: _num(scoreRows[i][2]),
