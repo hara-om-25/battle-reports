@@ -1118,6 +1118,7 @@ function _initToTop() {
 
 window.onload = () => {
     _initToTop();
+    _archMigrate();
     loadLocal();
     const savedToken = localStorage.getItem('token');
     const savedEmail = localStorage.getItem('email');
@@ -3398,36 +3399,86 @@ function _parseArchiveRows(rows, name) {
 // Кожен аркуш лежить у своєму ключі: якщо сховище переповниться,
 // гине один аркуш, а не весь кеш. У LS_ARCH — перелік {назва: час}
 function _archKey(name) { return LS_ARCH + ':' + name; }
+// Перелік {назва: коли збережено}. Тільки читає — жодних побічних дій,
+// бо його смикає відмальовування
 function _archKeys() {
     let ix;
     try { ix = JSON.parse(localStorage.getItem(LS_ARCH) || '{}') || {}; }
     catch (e) { ix = {}; }
-    if (typeof ix !== 'object' || Array.isArray(ix)) return {};
-    // старий вигляд кешу — один об'єкт з усіма аркушами; розкладаємо по ключах
-    const old = {};
-    let mixed = false;
-    for (const k in ix) if (typeof ix[k] !== 'number') { old[k] = ix[k]; mixed = true; }
-    if (mixed) {
-        const out = {};
-        for (const k in ix) if (typeof ix[k] === 'number') out[k] = ix[k];
-        localStorage.setItem(LS_ARCH, JSON.stringify(out));
-        for (const k in old) if (Array.isArray(old[k])) _archCachePut(k, old[k]);
-        return _archKeys();
+    if (!ix || typeof ix !== 'object' || Array.isArray(ix)) ix = {};
+    const out = {};
+    for (const k in ix) if (typeof ix[k] === 'number') out[k] = ix[k];
+    // аркуші, що ще лежать у старому спільному записі, теж рахуються
+    const b = _archBlob();
+    for (const k in b) if (!(k in out)) out[k] = 0;
+    return out;
+}
+// Кеш попереднього вигляду: один запис на всі аркуші. Поки він є,
+// читаємо і з нього — інакше архіви зникли б до перекладання
+function _archBlob() {
+    let b;
+    try { b = JSON.parse(localStorage.getItem(LS_ARCH + ':все') || 'null'); }
+    catch (e) { b = null; }
+    if (!b) {
+        try { b = JSON.parse(localStorage.getItem(LS_ARCH) || 'null'); }
+        catch (e) { b = null; }
     }
-    return ix;
+    if (!b || typeof b !== 'object' || Array.isArray(b)) return {};
+    const out = {};
+    for (const k in b) if (Array.isArray(b[k])) out[k] = b[k];
+    return out;
 }
 function _archOne(name) {
     try {
         const r = JSON.parse(localStorage.getItem(_archKey(name)) || 'null');
-        return Array.isArray(r) ? r : null;
-    } catch (e) { return null; }
+        if (Array.isArray(r)) return r;
+    } catch (e) {}
+    const b = _archBlob();
+    return Array.isArray(b[name]) ? b[name] : null;
+}
+// Перекладаємо старий спільний запис на окремі ключі. Аркуш прибирається
+// зі старого запису лише після того, як ліг у свій ключ, тож обрив на
+// середині нічого не губить, а сам старий запис при цьому меншає
+function _archMigrate() {
+    try {
+        let b = _archBlob();
+        const names = Object.keys(b);
+        if (!names.length) { try { localStorage.removeItem(LS_ARCH + ':все'); } catch (e) {} return; }
+        // старий запис лежав просто в LS_ARCH — переносимо, щоб звільнити його
+        // під перелік, і тільки потім розбираємо
+        if (!localStorage.getItem(LS_ARCH + ':все')) {
+            localStorage.setItem(LS_ARCH + ':все', JSON.stringify(b));
+            localStorage.setItem(LS_ARCH, '{}');
+        }
+        for (const n of names) {
+            _archCachePut(n, b[n]);
+            if (!_archOne(n)) continue;
+            delete b[n];
+            try { localStorage.setItem(LS_ARCH + ':все', JSON.stringify(b)); } catch (e) {}
+        }
+        if (!Object.keys(b).length) localStorage.removeItem(LS_ARCH + ':все');
+    } catch (e) { /* кеш не критичний — застосунку це не заважає */ }
 }
 // Викидає найстаріший збережений архів (окрім названого). true — щось звільнили
 function _archDrop(keep) {
-    const ix = _archKeys();
+    let ix;
+    try { ix = JSON.parse(localStorage.getItem(LS_ARCH) || '{}') || {}; } catch (e) { ix = {}; }
+    if (!ix || typeof ix !== 'object' || Array.isArray(ix)) ix = {};
     let old = null;
-    for (const k in ix) if (k !== keep && (old === null || ix[k] < ix[old])) old = k;
-    if (old === null) return false;
+    for (const k in ix) if (k !== keep && typeof ix[k] === 'number'
+        && (old === null || ix[k] < ix[old])) old = k;
+    if (old === null) {
+        // окремих архівів більше немає — віддаємо місце старого спільного запису
+        const b = _archBlob();
+        const rest = Object.keys(b).filter(k => k !== keep);
+        if (!rest.length) return false;
+        delete b[rest[0]];
+        try {
+            if (Object.keys(b).length) localStorage.setItem(LS_ARCH + ':все', JSON.stringify(b));
+            else localStorage.removeItem(LS_ARCH + ':все');
+        } catch (e) { try { localStorage.removeItem(LS_ARCH + ':все'); } catch (e2) {} }
+        return true;
+    }
     try { localStorage.removeItem(_archKey(old)); } catch (e) {}
     delete ix[old];
     try { localStorage.setItem(LS_ARCH, JSON.stringify(ix)); } catch (e) {}
@@ -3439,7 +3490,9 @@ function _archCachePut(name, rows) {
     for (let att = 0; att < 40; att++) {
         try {
             localStorage.setItem(_archKey(name), body);
-            const ix = _archKeys();
+            let ix;
+            try { ix = JSON.parse(localStorage.getItem(LS_ARCH) || '{}') || {}; } catch (e) { ix = {}; }
+            if (!ix || typeof ix !== 'object' || Array.isArray(ix)) ix = {};
             ix[name] = Date.now();
             localStorage.setItem(LS_ARCH, JSON.stringify(ix));
             return;
