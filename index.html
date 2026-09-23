@@ -622,8 +622,86 @@ function _noteOf(r, j) {
 
 function _setNote(uid, memo, flag) {
     if (!state.notes) state.notes = {};
-    if (!memo && !flag) delete state.notes[uid];
-    else state.notes[uid] = { memo: memo || '', flag: !!flag };
+    // Стерту нотатку не викидаємо, а лишаємо порожнім рядком із часом: інакше
+    // вона повернулася б з іншого пристрою, де її ще не стирали
+    state.notes[uid] = { memo: memo || '', flag: !!flag, ts: Date.now() };
+    _notesTouch();
+}
+
+// НОТАТКИ (MEMO й жовтий акцент) живуть в окремому аркуші тієї ж таблиці,
+// щоб були однакові на всіх пристроях. Рядок: ключ | текст | акцент | час.
+// Зливаються за часом: новіша зміна перемагає, а за однакового часу —
+// та, де щось написано. Так нічого не зникає мовчки
+const NOTES_SHEET = 'НОТАТКИ';
+let _notesTimer = null;
+function _noteEmpty(n) { return !n || (!n.memo && !n.flag); }
+
+// Пишемо не одразу: подвійний дотик ставить акцент, і черга таких дотиків
+// не має обертатися чергою запитів
+function _notesTouch() {
+    if (_notesTimer) clearTimeout(_notesTimer);
+    _notesTimer = setTimeout(function () { _notesPush(); }, 1500);
+}
+
+// Аркуша немає — створюємо із заголовком. Повертає true, якщо після цього
+// має сенс повторити дію
+async function _notesEnsureSheet(e) {
+    const m = ((e && e.message) || '').toLowerCase();
+    if (!m.includes('unable to parse range') && !m.includes('not found')) return false;
+    try {
+        const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`, {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + state.token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requests: [{ addSheet: { properties: { title: NOTES_SHEET } } }] })
+        }).then(r => r.json());
+        if (resp.error && !String(resp.error.message).toLowerCase().includes('already exists')) return false;
+        await apiUpdate(NOTES_SHEET + '!A1:D1', [['ключ', 'нотатка', 'акцент', 'оновлено']], true);
+        return true;
+    } catch (e2) { return false; }
+}
+
+async function _notesPush() {
+    if (!state.online || !state.token) return;
+    const keys = Object.keys(state.notes || {});
+    try {
+        if (!keys.length) { await apiClear(NOTES_SHEET + '!A2:D'); return; }
+        const rows = keys.map(k => {
+            const n = state.notes[k] || {};
+            return [k, n.memo || '', n.flag ? 'так' : '', String(n.ts || 0)];
+        });
+        // спершу запис, і лише потім стирається хвіст нижче — аркуш не буває
+        // порожнім, тож обірваний запис нічого не забирає
+        await apiUpdate(NOTES_SHEET + '!A2:D' + (rows.length + 1), rows, true);
+        await apiClear(NOTES_SHEET + '!A' + (rows.length + 2) + ':D');
+    } catch (e) {
+        if (await _notesEnsureSheet(e)) { _notesTimer = setTimeout(function () { _notesPush(); }, 200); return; }
+        /* не вийшло — віддамо наступного разу, локально все на місці */
+    }
+}
+
+async function _notesPull() {
+    if (!state.online || !state.token) return;
+    let rows;
+    try { rows = await apiGet(NOTES_SHEET + '!A2:D'); }
+    catch (e) { if (await _notesEnsureSheet(e)) rows = []; else return; }
+    if (!state.notes) state.notes = {};
+    const seen = {};
+    let changed = false, needPush = false;
+    (rows || []).forEach(row => {
+        const k = String((row && row[0]) || '').trim();
+        if (!k) return;
+        seen[k] = true;
+        const rem = { memo: (row[1] || ''), flag: !!String(row[2] || '').trim(), ts: parseInt(row[3], 10) || 0 };
+        const loc = state.notes[k];
+        const lts = (loc && loc.ts) || 0;
+        if (rem.ts > lts || (rem.ts === lts && _noteEmpty(loc) && !_noteEmpty(rem))) {
+            state.notes[k] = rem; changed = true;
+        } else if (lts > rem.ts) needPush = true;
+    });
+    // те, чого в таблиці ще немає, треба віддати
+    Object.keys(state.notes).forEach(k => { if (!seen[k]) needPush = true; });
+    if (changed) saveLocal();
+    if (needPush) { try { await _notesPush(); } catch (e) { /* наступного разу */ } }
 }
 
 // Вильоти, видалені офлайн. Із state.records їх уже немає — щоб не потрапили
@@ -3291,6 +3369,8 @@ async function loadDataFromAPI() {
         state.ammo    = _mergeList(_ram, state.ammo,    _snap && _snap.ammo);
         state.listsSynced = { drones: _rdr.slice(), ammo: _ram.slice(), results: _rrs.slice() };
         if (_listsDirty()) { try { await _uploadLists(); } catch (e) { /* віддамо наступного разу */ } }
+        // нотатки й акценти — з таблиці, щоб були ті самі на будь-якому пристрої
+        try { await _notesPull(); } catch (e) { /* лишаємось на локальних */ }
         const _pvHdr=listRows[0]||[];state.pvr=[3,4,5,6].map(ci=>{const name=(_pvHdr[ci]||'').trim();if(!name)return null;const map={};for(let i=1;i<listRows.length;i++){const row=listRows[i]||[];const ammo=(row[2]||'').trim();const val=(row[ci]||'').toString().trim().replace(',','.');if(ammo&&val&&val!=='0'){const c=parseFloat(val);if(c)map[ammo]=c;}}return Object.keys(map).length?{name,map}:null;}).filter(Boolean);
         const mainRows = await apiGet('ГОЛОВНА');
         state.records = _applyQueue(_parseMainRows(mainRows));
