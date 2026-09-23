@@ -4902,7 +4902,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                             :(_one&&!_st)?[String(_pt(r.points)),'var(--yellow)']
                             :null;
                         // бали — тут же, в рядку цілі, кольором її вердикту
-                        if(_pts)_line+=` <span style="color:${_pts[1]}">зараховано ${_pts[0]} ${_bal(parseFloat(_pts[0])||0)}</span>`;
+                        if(_pts)_line+=`&nbsp;&nbsp;&nbsp;<span style="color:${_pts[1]}">зараховано ${_pts[0]} ${_bal(parseFloat(_pts[0])||0)}</span>`;
                         const _cpS=(t,k)=>t?`<span class="cp ${k}" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()">${esc(t)}</span>`:'';
                         const _cc=String(r.coordinates||'').split(',');
                         // попереду дати — звіт і номер вильота в ньому:
