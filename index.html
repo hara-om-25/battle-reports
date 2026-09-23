@@ -528,6 +528,8 @@ let state = {
     // натиснутий рядок статистики: {k: вид, v: значення}. Перелік вильотів
     // показує лише те, що під нього підпадає
     arFilter: null,
+    // перелік в АРХІВІ: false — вильоти, true — окремі цілі
+    arTargets: false,
     // результат звіряння по кожному архіву окремо: {аркуш: {left, fix}}, де
     // left — рядки файлу, що не лягли, а fix — підказки, у яких рядках
     // таблиці поправити дату й час. Показуємо ті, що належать відкритому
@@ -2165,6 +2167,86 @@ function _vType(x) { return _vName(String(x === null || x === undefined ? '' : x
 // Позначки 200 і 300 на картці архіву. Скільки людей нарахував верифікатор,
 // видно на самій позначці: наше число закреслене, його стоїть поруч. Нікого
 // не лишилось — позначка йде під ніж цілком
+// Перелік цілей вильоту та пояснення під ним — те саме і в переліку
+// вильотів, і в переліку цілей, тож зібрано в одному місці.
+// parts[j] — рядок j-ї цілі з усіма закресленнями й замінами,
+// notes — пояснення про втручання верифікатора,
+// noteAt — ціль, якої ті пояснення стосуються найперше
+// Перемикання переліку АРХІВУ: вильоти <-> цілі
+function toggleArTargets() {
+    state.arTargets = !state.arTargets;
+    render();
+}
+
+function _arRowParts(r) {
+    const _sep = '<span style="color:var(--yellow)">, </span>';
+    const _dash = '<span style="color:var(--yellow)"> \u2014 </span>';
+    const tgts=r.target?r.target.split(', '):[];
+    const ress=r.result?r.result.split(', '):[];
+    // Нашу ціль замінили чужою — показуємо це просто в переліку:
+    // стара назва перекреслена, нова поруч із тим результатом,
+    // який дав верифікатор. Результати відкинутих цілей при
+    // цьому не важать: замінили їх усі однаково
+    const _swap1=(()=>{const _rp=(r.v&&r.v.repl)||[];
+        if(!_rp.length)return null;
+        const _no=tgts.map((t,j)=>(r.v.list[j]==='no')?j:-1).filter(j=>j>=0);
+        if(!_no.length)return null;
+        // Цілі подаються поштучно, тож і заміни розкладаємо
+        // по одній: перша викреслена дістає першу нову, друга
+        // другу і так далі. Кому не стало пари — лишається
+        // просто викресленою, а повний перелік іде в поясненні.
+        // У файлі результат пишуть з великої, у переліку все
+        // з малої — зводимо до одного вигляду
+        const _u=[];
+        _rp.forEach(rp=>{const _nm=_vType(rp.name),_rr=String(rp.res||'').toLowerCase();
+            // бали заміни беремо тільки там, де вона одна: ділити бали
+            // кількох однакових цілей між рядками нема за чим
+            const _pp=(rp.qty||1)===1?rp.pts:null;
+            for(let k=0;k<Math.max(1,rp.qty||1);k++)_u.push({name:_nm,qty:1,res:_rr,pts:_pp});});
+        const _m={};
+        _no.forEach((j,k)=>{if(_u[k])_m[j]=_u[k];});
+        // нових більше, ніж викреслених — місця під них немає,
+        // тож решту дописуємо кількістю до останньої. Коли
+        // серед решти різні цілі, злічити їх в одну не можна:
+        // повний перелік лишається в поясненні
+        if(_u.length>_no.length){
+            const _lj=_no[_no.length-1],_t=_u.slice(_no.length-1);
+            if(_t.every(u=>u.name===_t[0].name&&u.res===_t[0].res))
+                _m[_lj]={name:_t[0].name,qty:_t.length,res:_t[0].res,pts:_t.every(u=>u.pts!==null&&u.pts!==undefined)?_t.reduce((x,u)=>x+u.pts,0):null};
+        }
+        return _m;})();
+    const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');
+    const _sw=_swap1&&_swap1[j];
+    if(_sw)return `<span class="qty-old">${tn}</span> ${_sw.qty>1?_vW(_sw.qty)+' '+_vY('од.')+' ':''}${_vW(_sw.name)}${_dash}<span style="color:var(--khaki)">${esc(_sw.res||ress[j]||'')}</span>`;
+    // верифікатор поставив цілі інший результат — старий закреслений, новий поруч,
+    // так само як із кількістю на позначках
+    const _nv=(r.v&&r.v.vres&&r.v.list[j]==='ok')?String(r.v.vres[j]||'').trim().toLowerCase():'';
+    const _res=(_nv&&_nv!==String(ress[j]||'').trim().toLowerCase())
+        ?`<span class="qty-old">${rv}</span> <span style="color:var(--khaki)">${esc(_nv)}</span>`
+        :`<span style="color:var(--khaki)">${rv}</span>`;
+    const _one=tn?tn+_dash+_res:_res;return (r.v&&r.v.list[j]==='no')?`<span class="tgt-off">${_one}</span>`:_one;}),..._osParts(r,tgts)].filter(Boolean);
+    // усі заміни — одним рядком під переліком цілей: фраза
+    // «верифікатор замінив» один раз, далі через кому
+    const _swaps=[...((r.v&&r.v.repl)||[]).map((rp,ri)=>{const _rr=String(rp.res||'').toLowerCase();
+    // результат той самий, що й був — замінена сама ціль, і писати результат
+    // обабіч означало б повторювати те, що й так видно вище
+    const _same=ri===0&&_sameRes(r,tgts,ress,_rr);
+    // кількість іде попереду назви, результат — після неї через риску
+    const _rq=rp.qty>1?_vW(rp.qty)+' '+_vY('од.')+' ':'';
+    const _rt=(!_same&&_rr)?`${_dash}${_vK(_rr)}`:'';
+    // перший напис про заміну називає й те, що замінили: скільки саме наших цілей
+    // верифікатор не визнав і чим їх замінив
+    const _gone=ri===0?_replacedList(r,tgts,ress,_same):'';
+    return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`;}),..._resChanges(r,tgts,ress),..._osNote(r)].filter(Boolean);
+    const notes=_swaps.length?[`${_vY('верифікатор замінив')} ${_swaps.join(_vY(', '))}`]:[];
+    const _swKeys = _swap1 ? Object.keys(_swap1).map(Number) : [];
+    return { parts: parts, notes: notes, tgts: tgts, ress: ress, swap: _swap1,
+             // власних позицій у переліку: цілі, а де їх немає — сам результат.
+             // Усе, що в parts далі, — позначки 200/300
+             n: Math.max(tgts.length, ress.length),
+             noteAt: _swKeys.length ? Math.min.apply(null, _swKeys) : 0 };
+}
+
 function _osParts(r, tgts) {
     const dash = '<span style="color:var(--yellow)"> — </span>';
     const os = r.v && r.v.os;
@@ -4692,61 +4774,7 @@ function render() {
                     const dayPts=_pt(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                     const cards=dayR.map(r=>{
                         const n=_arOrder.indexOf(r)+1;
-                        const tgts=r.target?r.target.split(', '):[];
-                        const ress=r.result?r.result.split(', '):[];
-                        // Нашу ціль замінили чужою — показуємо це просто в переліку:
-                        // стара назва перекреслена, нова поруч із тим результатом,
-                        // який дав верифікатор. Результати відкинутих цілей при
-                        // цьому не важать: замінили їх усі однаково
-                        const _swap1=(()=>{const _rp=(r.v&&r.v.repl)||[];
-                            if(!_rp.length)return null;
-                            const _no=tgts.map((t,j)=>(r.v.list[j]==='no')?j:-1).filter(j=>j>=0);
-                            if(!_no.length)return null;
-                            // Цілі подаються поштучно, тож і заміни розкладаємо
-                            // по одній: перша викреслена дістає першу нову, друга
-                            // другу і так далі. Кому не стало пари — лишається
-                            // просто викресленою, а повний перелік іде в поясненні.
-                            // У файлі результат пишуть з великої, у переліку все
-                            // з малої — зводимо до одного вигляду
-                            const _u=[];
-                            _rp.forEach(rp=>{const _nm=_vType(rp.name),_rr=String(rp.res||'').toLowerCase();
-                                for(let k=0;k<Math.max(1,rp.qty||1);k++)_u.push({name:_nm,qty:1,res:_rr});});
-                            const _m={};
-                            _no.forEach((j,k)=>{if(_u[k])_m[j]=_u[k];});
-                            // нових більше, ніж викреслених — місця під них немає,
-                            // тож решту дописуємо кількістю до останньої. Коли
-                            // серед решти різні цілі, злічити їх в одну не можна:
-                            // повний перелік лишається в поясненні
-                            if(_u.length>_no.length){
-                                const _lj=_no[_no.length-1],_t=_u.slice(_no.length-1);
-                                if(_t.every(u=>u.name===_t[0].name&&u.res===_t[0].res))
-                                    _m[_lj]={name:_t[0].name,qty:_t.length,res:_t[0].res};
-                            }
-                            return _m;})();
-                        const parts=[...Array.from({length:Math.max(tgts.length,ress.length)},(_,j)=>{const tn=esc(tgts[j]||'');const rv=esc(ress[j]||'');
-const _sw=_swap1&&_swap1[j];
-if(_sw)return `<span class="qty-old">${tn}</span> ${_sw.qty>1?_vW(_sw.qty)+' '+_vY('од.')+' ':''}${_vW(_sw.name)}${_dash}<span style="color:var(--khaki)">${esc(_sw.res||ress[j]||'')}</span>`;
-// верифікатор поставив цілі інший результат — старий закреслений, новий поруч,
-// так само як із кількістю на позначках
-const _nv=(r.v&&r.v.vres&&r.v.list[j]==='ok')?String(r.v.vres[j]||'').trim().toLowerCase():'';
-const _res=(_nv&&_nv!==String(ress[j]||'').trim().toLowerCase())
-    ?`<span class="qty-old">${rv}</span> <span style="color:var(--khaki)">${esc(_nv)}</span>`
-    :`<span style="color:var(--khaki)">${rv}</span>`;
-const _one=tn?tn+_dash+_res:_res;return (r.v&&r.v.list[j]==='no')?`<span class="tgt-off">${_one}</span>`:_one;}),..._osParts(r,tgts)].filter(Boolean);
-                        // усі заміни — одним рядком під переліком цілей: фраза
-                        // «верифікатор замінив» один раз, далі через кому
-                        const _swaps=[...((r.v&&r.v.repl)||[]).map((rp,ri)=>{const _rr=String(rp.res||'').toLowerCase();
-// результат той самий, що й був — замінена сама ціль, і писати результат
-// обабіч означало б повторювати те, що й так видно вище
-const _same=ri===0&&_sameRes(r,tgts,ress,_rr);
-// кількість іде попереду назви, результат — після неї через риску
-const _rq=rp.qty>1?_vW(rp.qty)+' '+_vY('од.')+' ':'';
-const _rt=(!_same&&_rr)?`${_dash}${_vK(_rr)}`:'';
-// перший напис про заміну називає й те, що замінили: скільки саме наших цілей
-// верифікатор не визнав і чим їх замінив
-const _gone=ri===0?_replacedList(r,tgts,ress,_same):'';
-return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`;}),..._resChanges(r,tgts,ress),..._osNote(r)].filter(Boolean);
-                        const notes=_swaps.length?[`${_vY('верифікатор замінив')} ${_swaps.join(_vY(', '))}`]:[];
+                        const _rp0=_arRowParts(r);const parts=_rp0.parts;const notes=_rp0.notes.slice();
                         // виліт скасовано на користь такого самого, який верифікатор зарахував
                         if(r.v&&r.v.state==='pack'){const _po=_packNum(r);
                             if(_po)notes.push(`${_vY('верифікатор скасував цей виліт на користь')} ${_vW(_po)} ${_vY('вильоту')}`);}
@@ -4809,9 +4837,74 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 _arTop=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px"><h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">${esc(state.selArchive)}</h1>${_arHeader}</div>`;
                 _arContent=`${_shRptBlock}<h2 onclick="state.arFilter=null;render()" class="stencil-shadow text-xl px-2" style="color:var(--yellow);cursor:pointer">СТАТИСТИКА</h2>${_statsBlock}`;
                 const _shown=state.archiveRecs.filter(_arMatch).length;
+                // ПЕРЕЛІК ПО ЦІЛЯХ. Кожна ціль вильоту стає окремою карткою,
+                // нумерація наскрізна по цілях і не залежить від фільтра —
+                // так само, як номери вильотів у сусідньому переліку
+                const _tgMode=!!state.arTargets;
+                let _tgAll=[], _tgGroups='';
+                if(_tgMode){
+                    _arOrder.forEach(r=>{const _p=_arRowParts(r);
+                        for(let j=0;j<Math.max(1,_p.n);j++)_tgAll.push({r:r,j:j,p:_p});});
+                    _tgAll.forEach((o,i)=>{o.n=i+1;});
+                    // позначки 200/300 належать цілі ОС — ідуть її рядком,
+                    // а якщо ОС у вильоті немає, тримаються останнього
+                    const _tgCard=o=>{
+                        const r=o.r,j=o.j,P=o.p;
+                        const _extra=P.parts.slice(P.n);
+                        const _osJ=P.tgts.map((t,k)=>_vType(t)==='ОС'?k:-1).filter(k=>k>=0);
+                        const _at=_osJ.length?_osJ[0]:Math.max(0,P.n-1);
+                        const _line=[P.parts[j]||''].concat(j===_at?_extra:[]).filter(Boolean).join(_sep);
+                        // вердикт саме цієї цілі, а не всього вильоту
+                        const _sw=P.swap&&P.swap[j];
+                        const _v=(r.v&&r.v.list)?r.v.list[j]:'';
+                        const _st=r.v&&r.v.state;
+                        const _lbl=_sw?['ЗАМІНЕНО','var(--blue-label)']
+                            :_v==='ok'?['ВЕРИФІКОВАНО','var(--green-label)']
+                            :_v==='no'?['ВІДХИЛЕНО','var(--red-label)']
+                            :_st==='pack'?['ДУБЛЮЮЧИЙ','var(--red-label)']
+                            :(_anyV&&(parseFloat(r.points)||0))?['НЕ ЗВІРЕНО','var(--red-label)']:null;
+                        // Бали окремої цілі відомі тільки там, де їх дав
+                        // верифікатор, або коли ціль у вильоті одна: ділити
+                        // суму вильота самотужки не можна — ціни різних
+                        // періодів різні, і поділ був би вигадкою
+                        const _pv=(r.v&&r.v.pts)?r.v.pts[j]:null;
+                        const _one=P.n<=1;
+                        const _sp=_sw&&_sw.pts!==null&&_sw.pts!==undefined?_sw.pts:null;
+                        const _pts=_sp!==null?[String(_pt(_sp)),'var(--blue-label)']
+                            :(_v==='no'&&!_sw)?['0','var(--red-label)']
+                            :(_pv!==null&&_pv!==undefined)?[String(_pt(_pv)),_v==='ok'?'var(--green-label)':'var(--blue-label)']
+                            :(_one&&!_st)?[String(_pt(r.points)),'var(--yellow)']
+                            :null;
+                        const _cpS=(t,k)=>t?`<span class="cp ${k}" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()">${esc(t)}</span>`:'';
+                        const _cc=String(r.coordinates||'').split(',');
+                        const _meta=[_cpS(_vNorm(r.datetime),'cp-hl'),
+                            _cpS(_cc[0].trim(),'cp-hl')+(_cc.length>1?esc(', '+_cc.slice(1).join(',').trim()):''),
+                            esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
+                        const _nte=_noteOf(r);
+                        const _notes=(j===P.noteAt)?P.notes:[];
+                        return `<div class="record-card text-sm${_nte.flag?' flagged-bg':''}" ondblclick="toggleArchiveFlag(${r.srow||0})" style="position:relative;padding-left:62px;${_lbl?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)">`
+                            +`<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0})" ondblclick="event.stopPropagation()" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${o.n}</span></div>`
+                            +(_nte.memo&&j===0?`<p class="stencil" style="color:#e08a2e;font-size:0.88em;white-space:pre-wrap">${esc(_nte.memo)}</p>`:'')
+                            +`<p class="stencil" style="color:var(--text)">${_line}</p>`
+                            +_notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')
+                            +(_meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${_meta}</p>`:'')
+                            +(_pts?`<p class="stencil" style="color:${_pts[1]}">${_pts[0]} ${_bal(parseFloat(_pts[0])||0)}</p>`:'')
+                            +(_lbl?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${_lbl[1]}">${_lbl[0]==='ЧАСТКОВО'?_lbl[0]:_lbl[0]}</span>`:'')
+                            +`</div>`;
+                    };
+                    _tgGroups=_arDates.map(d=>{
+                        const rows=_tgAll.filter(o=>getDateOnly(o.r.datetime)===d&&_arMatch(o.r));
+                        if(!rows.length)return '';
+                        const dayPts=_pt(state.archiveRecs.filter(r=>getDateOnly(r.datetime)===d).filter(_arMatch)
+                            .reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+                        return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Цілей: <span style="color:var(--text)">${rows.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${rows.map(_tgCard).join('')}</div></div>`;
+                    }).join('');
+                }
                 // під фільтром одразу видно, скільки карток лишилося з усіх
-                const _flHdr='ВИЛЬОТИ'+(state.arFilter?` <span class="stencil" style="color:var(--khaki);font-size:0.7em">показано ${_shown} з ${state.archiveRecs.length}</span>`:'');
-                _arFlights=`<h2 class="stencil-shadow text-xl px-2" style="color:var(--yellow)">${_flHdr}</h2>${_arGroups||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає записів</p></div>'}`;
+                const _tgShown=_tgAll.filter(o=>_arMatch(o.r)).length;
+                const _flHdr=(_tgMode?'ЦІЛІ':'ВИЛЬОТИ')+(state.arFilter?` <span class="stencil" style="color:var(--khaki);font-size:0.7em">показано ${_tgMode?_tgShown+' з '+_tgAll.length:_shown+' з '+state.archiveRecs.length}</span>`:'');
+                const _tgBtn=`<button onclick="toggleArTargets()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black" style="font-size:0.78em;padding:5px 10px">${_tgMode?'ВИЛЬОТИ':'ЦІЛІ'}</button>`;
+                _arFlights=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px"><h2 class="stencil-shadow text-xl" style="color:var(--yellow)">${_flHdr}</h2>${_tgBtn}</div>${(_tgMode?_tgGroups:_arGroups)||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає записів</p></div>'}`;
             }
         }
         let _allSection='';
