@@ -4859,6 +4859,31 @@ function render() {
                 // Пару вже знайшов _markPacks — тут лишається дізнатись, під
                 // яким номером той виліт малюється
                 const _packNum=x=>(x.v&&x.v.packOf)?_arOrder.indexOf(x.v.packOf)+1:0;
+                // Перелік цілей потрібен і статистиці, і самим карткам,
+                // тож збираємо його тут, один раз. Виліт без цілі — збитий
+                // дрон, розряджена АКБ, втрата відеосигналу — у переліку
+                // цілей не стоїть нічого, тож такого рядка там немає
+                const _tgMode=!!state.arTargets;
+                const _tgAll=[];
+                if(_tgMode){
+                    _arOrder.forEach(r=>{const _p=_arRowParts(r);
+                        for(let j=0;j<_p.n;j++)if(String(_p.tgts[j]||'').trim())_tgAll.push({r:r,j:j,p:_p});});
+                    _tgAll.forEach((o,i)=>{o.n=i+1;});
+                }
+                // Вердикт окремої цілі: замінена, верифікована, відхилена
+                // або без вердикту. Один на статистику й на картку
+                const _tgVerdict=o=>{
+                    const r=o.r,j=o.j,P=o.p;
+                    const v=(r.v&&r.v.list)?r.v.list[j]:'';
+                    const sw=P.swap&&P.swap[j];
+                    const nv=(r.v&&r.v.vres)?String(r.v.vres[j]||'').trim().toLowerCase():'';
+                    const resCh=!!nv&&nv!==String(P.ress[j]||'').trim().toLowerCase();
+                    const os=r.v&&r.v.os;
+                    const osCh=!!os&&(os.k!==(parseInt(r.qty200)||0)||os.w!==(parseInt(r.qty300)||0))
+                        &&_vType(P.tgts[j]||'')==='ОС';
+                    if(sw||(v==='ok'&&(resCh||osCh)))return 'repl';
+                    return v==='ok'?'ok':v==='no'?'no':'';
+                };
                 // Дзеркало до переліків звіряння: тут не рядок файлу не ліг,
                 // а рядка на наш виліт у файлі немає зовсім. Ті самі картки,
                 // що малюються з білою рамкою й написом НЕ ЗВІРЕНО
@@ -4930,7 +4955,26 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 // і скільки не потрапили ні туди, ні туди — саме вони й дають
                 // розрив між загальною сумою балів і «верифіковано + скасовано»
                 const _vrRows=_vrRowsFor(state.archiveRecs,true);
-                const _statsBlock=state.archiveRecs.length>0?`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}</div><div class="space-y-3" style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_resRows)}${_sec('ВЕРИФІКАЦІЯ',_vrRows)}</div></div>`:'';
+                // У переліку цілей статистика теж про цілі: дрони, боєприпаси
+                // й ПВР належать вильоту, а не цілі, тож їх там немає. У
+                // РЕЗУЛЬТАТАХ лишаються лише ті, що стоять проти цілі
+                const _tgResCnt={};
+                _tgAll.forEach(o=>{const _r=String(o.p.ress[o.j]||'').trim();if(_r)_tgResCnt[_r]=(_tgResCnt[_r]||0)+1;});
+                const _tgResRows=Object.entries(_tgResCnt).sort((a,b)=>b[1]-a[1])
+                    .map(([r,c])=>_row(esc(r),c,' '+_plu(c,'раз','рази','разів'))).join('');
+                const _tgVrRows=(()=>{
+                    const by=st=>_tgAll.filter(o=>_tgVerdict(o)===st).length;
+                    const _ok=by('ok'),_rp=by('repl'),_no=by('no');
+                    const _c=n=>' '+_plu(n,'ціль','цілі','цілей');
+                    return _row('Подавалось на верифікацію',_ok+_rp+_no,_c(_ok+_rp+_no))
+                        +_row('Верифіковано',_ok+_rp,_c(_ok+_rp))
+                        +_row('Верифіковано повністю',_ok,_c(_ok))
+                        +_row('Верифіковано із заміною',_rp,_c(_rp))
+                        +_row('Відхилено',_no,_c(_no));
+                })();
+                const _statsBlock=state.archiveRecs.length===0?''
+                    :_tgMode?`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:1 1 280px">${_sec('РЕЗУЛЬТАТИ',_tgResRows)}${_sec('ВЕРИФІКАЦІЯ',_tgVrRows)}</div></div>`
+                    :`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}</div><div class="space-y-3" style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_resRows)}${_sec('ВЕРИФІКАЦІЯ',_vrRows)}</div></div>`;
                 const _shRptLines=(()=>{if(!state.archiveRecs.length)return[];const _l=generateArchiveReport(state.archiveRecs,state.selArchive+'р.');_l.push(''),_l.push('Прогнозовано уражень на '+_arTotal+' '+_bal(_arTotal)+'.');if(_pushVerifyLines(_l,state.archiveRecs))_l.push('');_pushCostLines(_l,_arTotal,state.archiveRecs);return _l;})();
                 // Аркуш звірений — у заголовку підсумків показуємо не наш
                 // прогноз, а те, що нарахував верифікатор. Це та сама сума,
@@ -4943,20 +4987,10 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                     :`Уражено орієнтовно на <span style="color:var(--text)">${_arTotal}</span> ${_bal(_arTotal)}`;
                 const _shRptBlock=state.archiveRecs.length>0?`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ${esc(state.selArchive)}</h3><span class="stencil" style="color:var(--khaki)">${_shHdr}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyArchiveSheetReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_shRptLines.join('\n')}</div></div>`:'';
                 _arTop=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px"><h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">${esc(state.selArchive)}</h1>${_arHeader}</div>`;
-                _arContent=`${_shRptBlock}<h2 onclick="state.arFilter=null;render()" class="stencil-shadow text-xl px-2" style="color:var(--yellow);cursor:pointer">СТАТИСТИКА</h2>${_statsBlock}`;
+                _arContent=`${_tgMode?'':_shRptBlock}<h2 onclick="state.arFilter=null;render()" class="stencil-shadow text-xl px-2" style="color:var(--yellow);cursor:pointer">СТАТИСТИКА</h2>${_statsBlock}`;
                 const _shown=state.archiveRecs.filter(_arMatch).length;
-                // ПЕРЕЛІК ПО ЦІЛЯХ. Кожна ціль вильоту стає окремою карткою,
-                // нумерація наскрізна по цілях і не залежить від фільтра —
-                // так само, як номери вильотів у сусідньому переліку
-                const _tgMode=!!state.arTargets;
-                let _tgAll=[], _tgGroups='';
+                let _tgGroups='';
                 if(_tgMode){
-                    // Тільки цілі. Виліт без цілі — збитий дрон, розряджена
-                    // АКБ, втрата відеосигналу — у переліку цілей не стоїть
-                    // нічого, тож такого рядка тут просто немає
-                    _arOrder.forEach(r=>{const _p=_arRowParts(r);
-                        for(let j=0;j<_p.n;j++)if(String(_p.tgts[j]||'').trim())_tgAll.push({r:r,j:j,p:_p});});
-                    _tgAll.forEach((o,i)=>{o.n=i+1;});
                     // Номер вильота в межах свого звіту: у кожному звіті
                     // нумерація починається спочатку. Де номера звіту немає
                     // (у старих аркушах стовпець А порожній), увесь аркуш
@@ -4980,12 +5014,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         // саму ціль, ставить інший результат або перекидає
                         // людей між 200 і 300. Будь-яке з трьох робить ціль
                         // заміненою — так само, як і виліт у сусідньому переліку
-                        const _nvj=(r.v&&r.v.vres)?String(r.v.vres[j]||'').trim().toLowerCase():'';
-                        const _resCh=!!_nvj&&_nvj!==String(P.ress[j]||'').trim().toLowerCase();
-                        const _os=r.v&&r.v.os;
-                        const _osCh=!!_os&&(_os.k!==(parseInt(r.qty200)||0)||_os.w!==(parseInt(r.qty300)||0))
-                            &&_vType(P.tgts[j]||'')==='ОС';
-                        const _rep=_sw||(_v==='ok'&&(_resCh||_osCh));
+                        const _rep=_tgVerdict(o)==='repl';
                         const _lbl=_rep?['ЗАМІНЕНО','var(--blue-label)']
                             :_v==='ok'?['ВЕРИФІКОВАНО','var(--green-label)']
                             :_v==='no'?['ВІДХИЛЕНО','var(--red-label)']
