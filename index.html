@@ -5018,7 +5018,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         +_rowT('Відхилено',_no,_c(_no),'v','no','r');
                 })();
                 const _statsBlock=state.archiveRecs.length===0?''
-                    :_tgMode?`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:1 1 280px">${_sec('РЕЗУЛЬТАТИ',_tgResRows)}${_sec('ВЕРИФІКАЦІЯ',_tgVrRows)}</div></div>`
+                    :_tgMode?`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('РЕЗУЛЬТАТИ',_tgResRows)}</div><div class="space-y-3" style="flex:3 1 280px">${_sec('ВЕРИФІКАЦІЯ',_tgVrRows)}</div></div>`
                     :`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}</div><div class="space-y-3" style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_resRows)}${_sec('ВЕРИФІКАЦІЯ',_vrRows)}</div></div>`;
                 const _shRptLines=(()=>{if(!state.archiveRecs.length)return[];const _l=generateArchiveReport(state.archiveRecs,state.selArchive+'р.');_l.push(''),_l.push('Прогнозовано уражень на '+_arTotal+' '+_bal(_arTotal)+'.');if(_pushVerifyLines(_l,state.archiveRecs))_l.push('');_pushCostLines(_l,_arTotal,state.archiveRecs);return _l;})();
                 // Аркуш звірений — у заголовку підсумків показуємо не наш
