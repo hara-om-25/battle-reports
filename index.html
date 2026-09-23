@@ -4976,7 +4976,17 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         const _sw=P.swap&&P.swap[j];
                         const _v=(r.v&&r.v.list)?r.v.list[j]:'';
                         const _st=r.v&&r.v.state;
-                        const _lbl=_sw?['ЗАМІНЕНО','var(--blue-label)']
+                        // Верифікатор втручається трьома способами: підмінює
+                        // саму ціль, ставить інший результат або перекидає
+                        // людей між 200 і 300. Будь-яке з трьох робить ціль
+                        // заміненою — так само, як і виліт у сусідньому переліку
+                        const _nvj=(r.v&&r.v.vres)?String(r.v.vres[j]||'').trim().toLowerCase():'';
+                        const _resCh=!!_nvj&&_nvj!==String(P.ress[j]||'').trim().toLowerCase();
+                        const _os=r.v&&r.v.os;
+                        const _osCh=!!_os&&(_os.k!==(parseInt(r.qty200)||0)||_os.w!==(parseInt(r.qty300)||0))
+                            &&_vType(P.tgts[j]||'')==='ОС';
+                        const _rep=_sw||(_v==='ok'&&(_resCh||_osCh));
+                        const _lbl=_rep?['ЗАМІНЕНО','var(--blue-label)']
                             :_v==='ok'?['ВЕРИФІКОВАНО','var(--green-label)']
                             :_v==='no'?['ВІДХИЛЕНО','var(--red-label)']
                             :_st==='pack'?['ДУБЛЮЮЧИЙ','var(--red-label)']
@@ -4990,7 +5000,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         const _sp=_sw&&_sw.pts!==null&&_sw.pts!==undefined?_sw.pts:null;
                         const _pts=_sp!==null?[String(_pt(_sp)),'var(--blue-label)']
                             :(_v==='no'&&!_sw)?['0','var(--red-label)']
-                            :(_pv!==null&&_pv!==undefined)?[String(_pt(_pv)),_v==='ok'?'var(--green-label)':'var(--blue-label)']
+                            :(_pv!==null&&_pv!==undefined)?[String(_pt(_pv)),_lbl?_lbl[1]:'var(--green-label)']
                             :(_one&&!_st)?[String(_pt(r.points)),'var(--yellow)']
                             :null;
                         // бали — тут же, в рядку цілі, кольором її вердикту
