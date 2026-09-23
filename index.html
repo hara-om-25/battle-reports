@@ -4879,7 +4879,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         const _extra=P.parts.slice(P.n);
                         const _osJ=P.tgts.map((t,k)=>_vType(t)==='ОС'?k:-1).filter(k=>k>=0);
                         const _at=_osJ.length?_osJ[0]:Math.max(0,P.n-1);
-                        const _line=[P.parts[j]||''].concat(j===_at?_extra:[]).filter(Boolean).join(_sep);
+                        let _line=[P.parts[j]||''].concat(j===_at?_extra:[]).filter(Boolean).join(_sep);
                         // вердикт саме цієї цілі, а не всього вильоту
                         const _sw=P.swap&&P.swap[j];
                         const _v=(r.v&&r.v.list)?r.v.list[j]:'';
@@ -4901,6 +4901,8 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                             :(_pv!==null&&_pv!==undefined)?[String(_pt(_pv)),_v==='ok'?'var(--green-label)':'var(--blue-label)']
                             :(_one&&!_st)?[String(_pt(r.points)),'var(--yellow)']
                             :null;
+                        // бали — тут же, в рядку цілі, кольором її вердикту
+                        if(_pts)_line+=_ysep+`<span style="color:${_pts[1]}">зараховано ${_pts[0]} ${_bal(parseFloat(_pts[0])||0)}</span>`;
                         const _cpS=(t,k)=>t?`<span class="cp ${k}" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()">${esc(t)}</span>`:'';
                         const _cc=String(r.coordinates||'').split(',');
                         // попереду дати — звіт і номер вильота в ньому:
@@ -4913,17 +4915,14 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                             esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         const _nte=_noteOf(r);
                         const _notes=(j===P.noteAt)?P.notes:[];
-                        return `<div class="record-card text-sm${_nte.flag?' flagged-bg':''}" ondblclick="toggleArchiveFlag(${r.srow||0})" style="position:relative;padding-left:62px;${(_lbl||_pts)?'padding-right:195px;':''}font-size:calc(0.875rem + 1px)">`
+                        return `<div class="record-card text-sm${_nte.flag?' flagged-bg':''}" ondblclick="toggleArchiveFlag(${r.srow||0})" style="position:relative;padding-left:62px;${_lbl?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)">`
                             +`<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0})" ondblclick="event.stopPropagation()" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${o.n}</span></div>`
                             +(_nte.memo&&j===0?`<p class="stencil" style="color:#e08a2e;font-size:0.88em;white-space:pre-wrap">${esc(_nte.memo)}</p>`:'')
                             +`<p class="stencil" style="color:var(--text)">${_line}</p>`
                             +_notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')
                             +(_meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${_meta}</p>`:'')
                             +(_meta2?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em">${_meta2}</p>`:'')
-                            +((_lbl||_pts)?`<span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);text-align:right">`
-                                +(_lbl?`<span class="stencil" style="display:block;letter-spacing:0.08em;font-size:1.05em;color:${_lbl[1]}">${_lbl[0]}</span>`:'')
-                                +(_pts?`<span class="stencil" style="display:block;color:${_pts[1]}">зараховано ${_pts[0]} ${_bal(parseFloat(_pts[0])||0)}</span>`:'')
-                                +`</span>`:'')
+                            +(_lbl?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${_lbl[1]}">${_lbl[0]}</span>`:'')
                             +`</div>`;
                     };
                     _tgGroups=_arDates.map(d=>{
