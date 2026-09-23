@@ -608,9 +608,15 @@ function _pendingOp(r) {
 function _recTime(r) { return ((r && r.datetime || '').match(/\d{1,2}:\d{2}/) || [''])[0]; }
 
 // Нотатка та жовта позначка вильоту. У таблицю не їдуть — лише цей пристрій.
-function _noteOf(r) {
+// Нотатка з акцентом тримається за ключ. Для вильота це його uid, для
+// окремої цілі — uid із номером цілі: переліки вильотів і цілей ведуть
+// свої позначки, і одне одному не заважає
+function _noteKey(r, j) {
     const uid = r && (r.uid || _contentUid(r));
-    const n = (state.notes && state.notes[uid]) || null;
+    return (j === null || j === undefined) ? uid : uid + '#' + j;
+}
+function _noteOf(r, j) {
+    const n = (state.notes && state.notes[_noteKey(r, j)]) || null;
     return { memo: (n && n.memo) || '', flag: !!(n && n.flag) };
 }
 
@@ -3030,11 +3036,11 @@ function toggleRecFlag(idx) {
 // Акцент на архівній картці: подвійний дотик будь-де по ній. Нотатки живуть
 // лише на цьому пристрої й тримаються за uid, а якщо його в аркуші немає —
 // за відбитком вмісту, тож позначка знайдеться й після перечитування
-function toggleArchiveFlag(srow) {
+function toggleArchiveFlag(srow, j) {
     const r = (state.archiveRecs || []).find(x => x.srow === srow);
     if (!r) return;
-    const n = _noteOf(r);
-    _setNote(r.uid || _contentUid(r), n.memo, !n.flag);
+    const n = _noteOf(r, j);
+    _setNote(_noteKey(r, j), n.memo, !n.flag);
     saveLocal();
     render();
 }
@@ -3807,15 +3813,15 @@ function saveEditModalState() {
 
 // Редагування архівного вильота. Запис лежить не в ГОЛОВНІЙ, а в аркуші
 // архіву, тож і правка піде прямо в його рядок — черги офлайн тут немає
-function showEditArchiveRecord(srow) {
+function showEditArchiveRecord(srow, j) {
     if (!srow || !state.online) return;
     const r = (state.archiveRecs || []).find(x => x.srow === srow);
     if (!r) return;
-    showEditRecordModal(-1, r);
+    showEditRecordModal(-1, r, j);
     if (state.editRecord) state.editRecord.arch = { sheet: r.sheet || state.selArchive, srow: srow, rec: r };
 }
 
-function showEditRecordModal(idx, arch) {
+function showEditRecordModal(idx, arch, noteJ) {
     const r = arch || state.records[idx];
     if (!r) return;
     const tNames = r.target ? r.target.split(', ') : [];
@@ -3829,9 +3835,9 @@ function showEditRecordModal(idx, arch) {
     // дату теж правлять: у старих записах вона буває не та, а то й відсутня
     const _dm = ((r.datetime || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/) || []);
     const _dd = (_dm[1] || '').padStart(2, '0'), _mo = (_dm[2] || '').padStart(2, '0'), _yy = _dm[3] || '';
-    const _nt = _noteOf(r);
+    const _nt = _noteOf(r, noteJ);
     state.editRecord = {
-        idx,
+        idx, noteJ: noteJ,
         hour: _hh, minute: _mm,
         day: _dd, month: _mo, year: _yy,
         targets: _pairs.map(t => ({name: t.name, result: t.result})),
@@ -4234,7 +4240,7 @@ async function saveEditRecord() {
         if (_date) r.datetime = _date + ', ' + er.hour + ':' + er.minute + ':' + _sec;
     }
     if (!r.uid) r.uid = _contentUid(r);
-    _setNote(r.uid, er.memo || '', er.flag);   // нотатка й позначка — лише локально
+    _setNote(_noteKey(r, er.noteJ), er.memo || '', er.flag);   // нотатка й позначка — лише локально
     // Архівний виліт: пишемо прямо в його рядок аркуша, стовпці A-I та K.
     // Стовпець J не чіпаємо взагалі — там формула аркуша, яка рахує бали
     // сама, за цінами того періоду. Записати туди число означало б убити
@@ -4913,11 +4919,12 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                             _cpS(_vNorm(r.datetime),'cp-hl')].filter(Boolean).join(_ysep);
                         const _meta2=[_cpS(_cc[0].trim(),'cp-hl')+(_cc.length>1?esc(', '+_cc.slice(1).join(',').trim()):''),
                             esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
-                        const _nte=_noteOf(r);
+                        // нотатка й акцент саме цієї цілі, окремо від вильота
+                        const _nte=_noteOf(r,j);
                         const _notes=(j===P.noteAt)?P.notes:[];
-                        return `<div class="record-card text-sm${_nte.flag?' flagged-bg':''}" ondblclick="toggleArchiveFlag(${r.srow||0})" style="position:relative;padding-left:62px;${_lbl?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)">`
-                            +`<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0})" ondblclick="event.stopPropagation()" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${o.n}</span></div>`
-                            +(_nte.memo&&j===0?`<p class="stencil" style="color:#e08a2e;font-size:0.88em;white-space:pre-wrap">${esc(_nte.memo)}</p>`:'')
+                        return `<div class="record-card text-sm${_nte.flag?' flagged-bg':''}" ondblclick="toggleArchiveFlag(${r.srow||0},${j})" style="position:relative;padding-left:62px;${_lbl?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)">`
+                            +`<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0},${j})" ondblclick="event.stopPropagation()" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${o.n}</span></div>`
+                            +(_nte.memo?`<p class="stencil" style="color:#e08a2e;font-size:0.88em;white-space:pre-wrap">${esc(_nte.memo)}</p>`:'')
                             +`<p class="stencil" style="color:var(--text)">${_line}</p>`
                             +_notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')
                             +(_meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${_meta}</p>`:'')
