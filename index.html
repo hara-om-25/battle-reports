@@ -2281,7 +2281,11 @@ function _tgVerdict(o) {
     const osCh = !!os && (os.k !== (parseInt(r.qty200) || 0) || os.w !== (parseInt(r.qty300) || 0))
         && _vType(P.tgts[j] || '') === 'ОС';
     if (sw || (v === 'ok' && (resCh || osCh))) return 'repl';
-    return v === 'ok' ? 'ok' : v === 'no' ? 'no' : '';
+    if (v === 'ok') return 'ok';
+    if (v === 'no') return 'no';
+    // вердикту в цілі немає, а виліт скасовано на користь такого самого —
+    // отже й ціль дублююча
+    return (r.v && r.v.state === 'pack') ? 'pack' : '';
 }
 
 // Бали саме цієї цілі — там, де їх можна знати напевно: скільки дав
@@ -5009,12 +5013,13 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                     .map(([r,c])=>_rowT(esc(r),c,' '+_plu(c,'раз','рази','разів'),'result',r,'g')).join('');
                 const _tgVrRows=(()=>{
                     const by=st=>_tgAll.filter(o=>_tgVerdict(o)===st).length;
-                    const _ok=by('ok'),_rp=by('repl'),_no=by('no');
+                    const _ok=by('ok'),_rp=by('repl'),_no=by('no'),_pk=by('pack');
                     const _c=n=>' '+_plu(n,'ціль','цілі','цілей');
                     return _rowT('Верифіковано',_ok+_rp,_c(_ok+_rp),'v','okall','n')
                         +_rowT('Верифіковано повністю',_ok,_c(_ok),'v','ok','n',true)
                         +_rowT('Верифіковано із заміною',_rp,_c(_rp),'v','repl','b',true)
-                        +_rowT('Відхилено',_no,_c(_no),'v','no','r');
+                        +_rowT('Відхилено',_no,_c(_no),'v','no','r')
+                        +_rowT('Дублюючі',_pk,_c(_pk),'v','pack','r');
                 })();
                 const _statsBlock=state.archiveRecs.length===0?''
                     :_tgMode?`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('РЕЗУЛЬТАТИ',_tgResRows)}</div><div class="space-y-3" style="flex:3 1 280px">${_sec('ВЕРИФІКАЦІЯ',_tgVrRows)}</div></div>`
