@@ -379,7 +379,9 @@
     .cp-y.cp-hit { background: var(--yellow); color: var(--bg); }
     /* На картці вильоту колір тексту не міняємо — жовтим спалахує лише
        мить натискання, однаково для координати й для дати з часом */
-    .cp-hl.cp-hit { background: var(--yellow); color: var(--bg); }
+    /* !important — бо на картці вильоту колір напису заданий у самому теґу
+       (помаранчевим світиться незбережене), інакше спалах його не перебив би */
+    .cp-hl.cp-hit { background: var(--yellow); color: #000 !important; }
     .cp-g.cp-hit { background: var(--green-label); color: var(--bg); }
     .cp-r.cp-hit { background: var(--red-label); color: var(--bg); }
     .cp-b.cp-hit { background: var(--blue-label); color: var(--bg); }
