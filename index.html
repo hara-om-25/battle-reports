@@ -4730,7 +4730,12 @@ function formatRecord(r, num) {
     const ysep = '<span style="color:var(--yellow)"> | </span>';
     const _rTime=(r.datetime||'').match(/\d{1,2}:\d{2}/)?.[0]||'';
     const _mt = (f, txt) => txt ? `<span style="color:${_c(f,'inherit')}">${esc(txt)}</span>` : '';
-    const meta = [_mt('time',_rTime),_mt('coordinates',r.coordinates),_mt('drone',r.drone),_mt('ammo',r.ammo)].filter(Boolean).join(ysep);
+    // Координата, дрон і БК ідуть у буфер подвійним кліком. Клік не доходить
+    // до картки, інакше разом із копіюванням перемикався б жовтий акцент
+    const _mc = (f, txt) => txt
+        ? `<span class="cp cp-hl" ondblclick="event.stopPropagation();_cpTxt(this)" style="color:${_c(f,'inherit')}">${esc(txt)}</span>`
+        : '';
+    const meta = [_mt('time',_rTime),_mc('coordinates',r.coordinates),_mc('drone',r.drone),_mc('ammo',r.ammo)].filter(Boolean).join(ysep);
     const _gone = !!r._ghost;
     const _nt = _noteOf(r);
     // помаранчева рамка «не синхронізовано» має пріоритет над жовтим акцентом
