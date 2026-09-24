@@ -3151,7 +3151,14 @@ function copyVerifyLeft() {
 function _cpTxt(el) {
     _copyText(el.textContent);
     el.classList.add('cp-hit');
-    setTimeout(() => el.classList.remove('cp-hit'), 350);
+    // Колір напису на картці вильоту заданий у самому теґу, тож на час
+    // спалаху ставимо чорний просто сюди — так його вже ніщо не перебʼє
+    const _wasCol = el.style.color;
+    if (el.classList.contains('cp-hl')) el.style.setProperty('color', '#000', 'important');
+    setTimeout(() => {
+        el.classList.remove('cp-hit');
+        el.style.color = _wasCol;
+    }, 350);
     // прибираємо виділення, якщо система встигла його зробити
     try { const s = window.getSelection(); if (s) s.removeAllRanges(); } catch (e) {}
 }

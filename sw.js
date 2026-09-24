@@ -1,4 +1,4 @@
-const CACHE = 'battle-reports-v3';
+const CACHE = 'battle-reports-v4';
 const PRECACHE = ['/battle-reports/', '/battle-reports/index.html'];
 
 self.addEventListener('install', e => {
@@ -19,8 +19,14 @@ self.addEventListener('fetch', e => {
   // a stale cached copy would keep resurrecting old settings.
   if (url.pathname.endsWith('/manifest.json')) return;
   if (e.request.method !== 'GET') return;
+  // Сама сторінка береться повз кеш браузера: GitHub Pages віддає її з
+  // дозволом «тримай десять хвилин», і перезавантаження показувало старий
+  // застосунок навіть тоді, коли новий уже лежав на сервері
+  const fresh = e.request.mode === 'navigate'
+    ? fetch(e.request.url, { cache: 'reload', credentials: 'same-origin' })
+    : fetch(e.request);
   e.respondWith(
-    fetch(e.request).then(resp => {
+    fresh.then(resp => {
       // cache successful GETs (app shell, tailwind, fonts) so they survive offline
       if (resp && (resp.ok || resp.type === 'opaque')) {
         const copy = resp.clone();
