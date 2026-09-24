@@ -342,7 +342,12 @@
     /* Координата й час у переліках звіряння: натиснув — величина цілком у
        буфері, а не той знак, у який поцілив пальцем. Підсвічування на мить
        показує, що спрацювало */
-    .cp { cursor: pointer; }
+    /* На телефоні подвійний тап спершу виділяє слово системою — вискакує
+       синє підсвічування й віконце пошуку, а копіювання губиться.
+       Тому текст тут не виділяється й не викликає системного меню */
+    .cp { cursor: pointer; -webkit-user-select: none; -moz-user-select: none;
+          -ms-user-select: none; user-select: none;
+          -webkit-touch-callout: none; touch-action: manipulation; }
     .cp-g { color: var(--green-label); }
     .cp-r { color: var(--red-label); }
     .cp-b { color: var(--blue-label); }
@@ -3142,9 +3147,35 @@ function copyVerifyLeft() {
 
 // Величина в буфер. Беремо весь напис, а не місце дотику
 function _cpTxt(el) {
-    navigator.clipboard.writeText(el.textContent).catch(() => {});
+    _copyText(el.textContent);
     el.classList.add('cp-hit');
     setTimeout(() => el.classList.remove('cp-hit'), 350);
+    // прибираємо виділення, якщо система встигла його зробити
+    try { const s = window.getSelection(); if (s) s.removeAllRanges(); } catch (e) {}
+}
+// Новий спосіб працює не скрізь: на телефоні браузер буває відмовляє
+// мовчки. Тому за ним іде давній, через приховане поле
+function _copyText(t) {
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(t).catch(() => _copyFallback(t));
+            return;
+        }
+    } catch (e) {}
+    _copyFallback(t);
+}
+function _copyFallback(t) {
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = t;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0';
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, t.length);
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+    } catch (e) {}
 }
 // Підказка — це один рядок таблиці, знайдений за координатою й ціллю, і час,
 // яким цей виліт подавали на верифікацію. Виправляти руками, тож у рядку
