@@ -4761,10 +4761,10 @@ function formatRecord(r, num) {
     const ysep = '<span style="color:var(--yellow)"> | </span>';
     const _rTime=(r.datetime||'').match(/\d{1,2}:\d{2}/)?.[0]||'';
     const _mt = (f, txt) => txt ? `<span style="color:${_c(f,'inherit')}">${esc(txt)}</span>` : '';
-    // Координата, дрон і БК ідуть у буфер подвійним кліком. Клік не доходить
-    // до картки, інакше разом із копіюванням перемикався б жовтий акцент
+    // Координата, дрон і БК ідуть у буфер одинарним кліком. Подвійний по них
+    // до картки не доходить, інакше разом із копіюванням перемикався б акцент
     const _mc = (f, txt) => txt
-        ? `<span class="cp cp-hl" ondblclick="event.stopPropagation();_cpTxt(this)" style="color:${_c(f,'inherit')}">${esc(txt)}</span>`
+        ? `<span class="cp cp-hl" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()" style="color:${_c(f,'inherit')}">${esc(txt)}</span>`
         : '';
     const meta = [_mt('time',_rTime),_mc('coordinates',r.coordinates),_mc('drone',r.drone),_mc('ammo',r.ammo)].filter(Boolean).join(ysep);
     const _gone = !!r._ghost;
