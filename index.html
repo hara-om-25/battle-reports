@@ -3170,8 +3170,24 @@ function copyVerifyLeft() {
 // у теці. Той код (розбір MGRS, перерахунок у широту й довготу, пакувальник
 // zip, KML) лежить у коміті 4236559, якщо знадобиться повернути
 function _coordSpan(t) {
-    return t ? `<span class="cp cp-hl" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()"`
-        + ` title="Клік — координата в буфер">${esc(t)}</span>` : '';
+    return t ? `<span class="cp cp-hl" onclick="_cpGo(this)" ondblclick="event.stopPropagation()"`
+        + ` title="Клік — координата в буфер і відкрити Кропиву">${esc(t)}</span>` : '';
+}
+
+// Назву мапи всередині системи дістали з самого застосунку через App Manager:
+// «Кропива Мапа» 7.5.3, головне вікно ua.mil.armysos.MainActivity.
+// Встановлювач (ua.mil.kropyva) — то інша програма, його запускати не треба
+const KROPYVA_PKG = 'ua.mil.armysos.android';
+
+// Клік по координаті: кладемо в буфер і одразу відкриваємо Кропиву.
+// Вона сама зазирає в буфер і пропонує «Перейти» до тієї точки
+function _cpGo(el) {
+    _cpTxt(el);
+    try {
+        window.location.href = 'intent:#Intent;package=' + KROPYVA_PKG
+            + ';action=android.intent.action.MAIN'
+            + ';category=android.intent.category.LAUNCHER;end';
+    } catch (e) { /* не на Android або браузер не пустив — координата все одно в буфері */ }
 }
 
 // Позначка під меню. Висоту меню міряємо щоразу: вона міняється від
