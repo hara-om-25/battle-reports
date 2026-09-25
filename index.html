@@ -385,6 +385,21 @@
     .cp-g.cp-hit { background: var(--green-label); color: var(--bg); }
     .cp-r.cp-hit { background: var(--red-label); color: var(--bg); }
     .cp-b.cp-hit { background: var(--blue-label); color: var(--bg); }
+    /* Своя позначка «скопійовано» — під меню, у вигляді ящика, як решта
+       застосунку. Сіру системну, яку Android показує сам унизу екрана,
+       прибрати не можна: веб-сторінка до неї не дотягується */
+    .br-toast {
+      position: fixed; left: 50%; z-index: 9998;
+      transform: translateX(-50%) translateY(-8px);
+      padding: 7px 18px 6px; white-space: nowrap;
+      font-family: 'Tektur', serif; letter-spacing: 0.15em;
+      font-size: 0.78rem; font-weight: 700; color: var(--yellow);
+      background: var(--surface); border: 2px solid var(--olive);
+      border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+    .br-toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
     /* Панель керування списками прилипає під основне меню, а списки їдуть під неї */
     .lists-bar { position: sticky; z-index: 30; top: 0; width: 50vw; margin-left: auto; margin-right: auto; }
     @media (max-width: 640px) { .lists-bar { width: 100%; } }
@@ -3159,9 +3174,30 @@ function _coordSpan(t) {
         + ` title="Клік — координата в буфер">${esc(t)}</span>` : '';
 }
 
+// Позначка під меню. Висоту меню міряємо щоразу: вона міняється від
+// ширини екрана, тож жорстко задати відступ не можна
+let _toastT = null;
+function _toast(msg) {
+    let t = document.getElementById('br-toast');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'br-toast';
+        t.className = 'br-toast';
+        document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    const nav = document.querySelector('nav.crate');
+    t.style.top = ((nav ? nav.getBoundingClientRect().bottom : 8) + 12) + 'px';
+    void t.offsetWidth;            // щоб поява програлась і на повторному кліку
+    t.classList.add('on');
+    clearTimeout(_toastT);
+    _toastT = setTimeout(() => t.classList.remove('on'), 1400);
+}
+
 // Величина в буфер. Беремо весь напис, а не місце дотику
 function _cpTxt(el) {
     _copyText(el.textContent);
+    _toast('СКОПІЙОВАНО');
     el.classList.add('cp-hit');
     // Колір напису на картці вильоту заданий у самому теґу, тож на час
     // спалаху ставимо чорний просто сюди — так його вже ніщо не перебʼє
