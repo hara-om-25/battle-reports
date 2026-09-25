@@ -3191,7 +3191,7 @@ function _toast(msg) {
     void t.offsetWidth;            // щоб поява програлась і на повторному кліку
     t.classList.add('on');
     clearTimeout(_toastT);
-    _toastT = setTimeout(() => t.classList.remove('on'), 1400);
+    _toastT = setTimeout(() => t.classList.remove('on'), 700);
 }
 
 // Величина в буфер. Беремо весь напис, а не місце дотику
