@@ -147,9 +147,20 @@
 | Кропива **Мапа** 7.5.3 — те, що треба запускати | `ua.mil.armysos.android` (головне вікно `ua.mil.armysos.MainActivity`) |
 | Кропива **встановлювач/оновлювач** 3.1.4 | `ua.mil.kropyva` — запускати **не** треба |
 
-Клік по координаті (`_cpGo()`) кладе її в буфер і одразу відкриває мапу
-через `intent:#Intent;package=ua.mil.armysos.android;action=...MAIN;
-category=...LAUNCHER;end`. Далі в Кропиві лишається натиснути «Перейти».
+**Запустити мапу зі сторінки не виходить — і не вийде.** Chrome передає
+запуск лише тим застосункам, які самі оголосили себе доступними з
+інтернету (розряд `BROWSABLE`). У мапи такого немає: у переліку її вікон
+(App Manager → Activities) є `MainActivity`, `ResultRelayActivity`,
+`avia.testActivity`, `drones.graphite.GraphiteLoginActivity`,
+`tutorial.pdfrenderer.PdfActivity` — і жодного входу під координату.
+Спроба `intent:#Intent;package=…;action=…MAIN;category=…LAUNCHER;end`
+дала на пристрої сторінку «Елемент не знайдено» й **загубила застосунок**;
+скасовано. Єдиний `BROWSABLE`-вхід там — `net.openid.appauth.
+RedirectUriReceiverActivity` (повернення після авторизації), чіпати його
+не можна: це шлях OAuth бойового застосунку.
+
+Отже стеля — клік кладе координату в буфер, далі перемикання руками
+й «Перейти» в Кропиві.
 
 Шукати назву мапи в коді встановлювача — марно: він зібраний на F-Droid
 і бере перелік програм із репозиторію під час роботи
