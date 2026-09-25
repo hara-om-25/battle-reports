@@ -3286,11 +3286,19 @@ function _zipOne(fname, text) {
 }
 function _kmlPoint(name, lat, lon) {
     const e = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const c = lon.toFixed(6) + ',' + lat.toFixed(6);
+    // LookAt — усталена в KML вказівка «дивитись сюди». Кропива після
+    // імпорту карту не переводить; чи послухається вона цієї вказівки —
+    // невідомо, але шкоди з неї жодної
+    const look = '<LookAt><longitude>' + lon.toFixed(6) + '</longitude>'
+        + '<latitude>' + lat.toFixed(6) + '</latitude>'
+        + '<altitude>0</altitude><heading>0</heading><tilt>0</tilt>'
+        + '<range>1000</range></LookAt>';
     return '<?xml version="1.0" encoding="UTF-8"?>\n'
         + '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
-        + '<name>' + e(name) + '</name>'
-        + '<Placemark><name>' + e(name) + '</name>'
-        + '<Point><coordinates>' + lon.toFixed(6) + ',' + lat.toFixed(6) + ',0</coordinates></Point>'
+        + '<name>' + e(name) + '</name>' + look
+        + '<Placemark><name>' + e(name) + '</name>' + look
+        + '<Point><coordinates>' + c + ',0</coordinates></Point>'
         + '</Placemark></Document></kml>';
 }
 async function _geoSend(el) {
