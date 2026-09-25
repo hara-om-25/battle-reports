@@ -17,6 +17,11 @@ body {
   font-family: 'Tektur', monospace; font-size: 15px; line-height: 1.5;
 }
 h1 { color: var(--yellow); font-size: 1.5em; letter-spacing: 0.1em; margin: 0 0 4px; }
+/* Версія у правому куті — щоб одразу було видно, чи підтягнулась нова
+   сторінка, чи браузер віддав стару з пам'яті */
+.top { display: flex; justify-content: space-between; align-items: baseline;
+       gap: 12px; flex-wrap: wrap; }
+.ver { color: var(--khaki); font-size: 0.8em; letter-spacing: 0.1em; white-space: nowrap; }
 .sub { color: var(--text-dim); font-size: 0.85em; margin-bottom: 16px; }
 .crate {
   background: var(--surface); border: 2px solid var(--olive); border-radius: 4px;
@@ -46,7 +51,10 @@ pre {
 </style>
 </head>
 <body>
-<h1>ЩО ПРИЙМАЄ ЗАСТОСУНОК</h1>
+<div class="top">
+  <h1>ЩО ПРИЙМАЄ ЗАСТОСУНОК</h1>
+  <span class="ver">ВЕРСІЯ 4 &middot; 25.09.2026</span>
+</div>
 <div class="sub">Читає файл .apk просто тут, на пристрої. Нікуди нічого не надсилає.</div>
 
 <div class="crate">
