@@ -3222,35 +3222,54 @@ function _mgrsToLatLon(s) {
     return (isFinite(r.lat) && isFinite(r.lon) && Math.abs(r.lat) <= 90 && Math.abs(r.lon) <= 180) ? r : null;
 }
 
-// Довге натискання — на карту, коротке — в буфер. Одне не має вмикати друге
-let _geoT = null, _geoFired = false;
+// Довге натискання — віддати координату, коротке — в буфер.
+// Сама віддача йде на відпусканні, а не з таймера: системне «Поділитися»
+// вимагає справжнього дотику, а виклик із таймера ним уже не рахується.
+// На позначці 0,5 с лише спалахуємо — видно, що тримали досить
+let _geoT = null, _geoReady = false, _geoFired = false;
 function _geoDown(el) {
-    _geoFired = false;
+    _geoFired = false; _geoReady = false;
     clearTimeout(_geoT);
-    _geoT = setTimeout(() => { _geoFired = true; _geoOpen(el); }, 500);
+    _geoT = setTimeout(() => { _geoReady = true; _geoFlash(el); }, 500);
 }
-function _geoUp() { clearTimeout(_geoT); }
+function _geoCancel() { clearTimeout(_geoT); _geoReady = false; }
+function _geoUp(el) {
+    clearTimeout(_geoT);
+    if (!_geoReady) return;
+    _geoReady = false;
+    _geoFired = true;            // клік, що прилетить слідом, глушимо
+    _geoSend(el);
+}
 function _geoClick(el) {
     if (_geoFired) { _geoFired = false; return; }
     _cpTxt(el);
 }
-function _geoOpen(el) {
-    const mg = (el.textContent || '').trim();
-    const p = _mgrsToLatLon(mg);
-    if (!p) { showAlert('Не вдалось розібрати координату:\n' + mg); return; }
-    const c = p.lat.toFixed(6) + ',' + p.lon.toFixed(6);
+function _geoFlash(el) {
     el.classList.add('cp-hit');
     el.style.setProperty('color', '#000', 'important');
     setTimeout(() => { el.classList.remove('cp-hit'); el.style.color = ''; }, 350);
     try { const s = window.getSelection(); if (s) s.removeAllRanges(); } catch (e) {}
+}
+// Спершу «Поділитися»: Кропива працює з MGRS як є, і в цьому переліку
+// вона може бути. Немає такої змоги — лишається посилання на карту,
+// але туди MGRS не вписати, тож координату перераховуємо
+async function _geoSend(el) {
+    const mg = (el.textContent || '').trim();
+    if (navigator.share) {
+        try { await navigator.share({ text: mg }); return; }
+        catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    const p = _mgrsToLatLon(mg);
+    if (!p) { showAlert('Не вдалось розібрати координату:\n' + mg); return; }
+    const c = p.lat.toFixed(6) + ',' + p.lon.toFixed(6);
     window.location.href = 'geo:' + c + '?q=' + c + '(' + encodeURIComponent(mg) + ')';
 }
-// Координата в переліках ВИЛЬОТІВ і ЦІЛЕЙ: клік копіює, довге — відкриває
+// Координата в переліках ВИЛЬОТІВ і ЦІЛЕЙ: клік копіює, довге — віддає
 function _coordSpan(t) {
     return t ? `<span class="cp cp-hl" onclick="_geoClick(this)" ondblclick="event.stopPropagation()"`
-        + ` onpointerdown="_geoDown(this)" onpointerup="_geoUp()" onpointercancel="_geoUp()"`
-        + ` onpointerleave="_geoUp()" oncontextmenu="event.preventDefault();return false"`
-        + ` title="Клік — у буфер, довге натискання — на карту">${esc(t)}</span>` : '';
+        + ` onpointerdown="_geoDown(this)" onpointerup="_geoUp(this)" onpointercancel="_geoCancel()"`
+        + ` onpointerleave="_geoCancel()" oncontextmenu="event.preventDefault();return false"`
+        + ` title="Клік — у буфер, довге натискання — віддати координату">${esc(t)}</span>` : '';
 }
 
 // Величина в буфер. Беремо весь напис, а не місце дотику
