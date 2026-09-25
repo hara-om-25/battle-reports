@@ -3250,26 +3250,77 @@ function _geoFlash(el) {
     setTimeout(() => { el.classList.remove('cp-hit'); el.style.color = ''; }, 350);
     try { const s = window.getSelection(); if (s) s.removeAllRanges(); } catch (e) {}
 }
-// Спершу «Поділитися»: Кропива працює з MGRS як є, і в цьому переліку
-// вона може бути. Немає такої змоги — лишається посилання на карту,
-// але туди MGRS не вписати, тож координату перераховуємо
+// Координата йде в Кропиву файлом .kmz — такі вона відкриває сама,
+// і в переліку застосунків для цього файла вона є. Ні «geo:», ні текст
+// через «Поділитися» до неї не доходять, це перевірено на пристрої
+function _crc32(b) {
+    let crc = -1;
+    for (let i = 0; i < b.length; i++) {
+        crc ^= b[i];
+        for (let k = 0; k < 8; k++) crc = (crc >>> 1) ^ (0xEDB88320 & -(crc & 1));
+    }
+    return (crc ^ -1) >>> 0;
+}
+// .kmz — це zip з одним файлом усередині. Пакуємо без стиснення:
+// кілька сотень байтів, а код лишається коротким і без бібліотек
+function _zipOne(fname, text) {
+    const enc = new TextEncoder();
+    const nm = enc.encode(fname), dt = enc.encode(text);
+    const crc = _crc32(dt), n = nm.length, d = dt.length;
+    const out = new Uint8Array(30 + n + d + 46 + n + 22);
+    const v = new DataView(out.buffer);
+    let o = 0;
+    const u32 = x => { v.setUint32(o, x, true); o += 4; };
+    const u16 = x => { v.setUint16(o, x, true); o += 2; };
+    u32(0x04034b50); u16(20); u16(0); u16(0); u16(0); u16(0);   // заголовок файла
+    u32(crc); u32(d); u32(d); u16(n); u16(0);
+    out.set(nm, o); o += n;
+    out.set(dt, o); o += d;
+    const cdo = o;
+    u32(0x02014b50); u16(20); u16(20); u16(0); u16(0); u16(0); u16(0);  // опис у переліку
+    u32(crc); u32(d); u32(d); u16(n); u16(0); u16(0); u16(0); u16(0); u32(0); u32(0);
+    out.set(nm, o); o += n;
+    const cds = o - cdo;   // рахуємо до запису хвоста: далі лічильник поїде
+    u32(0x06054b50); u16(0); u16(0); u16(1); u16(1); u32(cds); u32(cdo); u16(0);
+    return out;
+}
+function _kmlPoint(name, lat, lon) {
+    const e = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return '<?xml version="1.0" encoding="UTF-8"?>\n'
+        + '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
+        + '<name>' + e(name) + '</name>'
+        + '<Placemark><name>' + e(name) + '</name>'
+        + '<Point><coordinates>' + lon.toFixed(6) + ',' + lat.toFixed(6) + ',0</coordinates></Point>'
+        + '</Placemark></Document></kml>';
+}
 async function _geoSend(el) {
     const mg = (el.textContent || '').trim();
-    if (navigator.share) {
-        try { await navigator.share({ text: mg }); return; }
-        catch (e) { if (e && e.name === 'AbortError') return; }
-    }
     const p = _mgrsToLatLon(mg);
     if (!p) { showAlert('Не вдалось розібрати координату:\n' + mg); return; }
-    const c = p.lat.toFixed(6) + ',' + p.lon.toFixed(6);
-    window.location.href = 'geo:' + c + '?q=' + c + '(' + encodeURIComponent(mg) + ')';
+    const bytes = _zipOne('doc.kml', _kmlPoint(mg, p.lat, p.lon));
+    const fname = mg.replace(/[^0-9A-Za-z]+/g, '_').replace(/^_|_$/g, '') + '.kmz';
+    const blob = new Blob([bytes], { type: 'application/vnd.google-earth.kmz' });
+    // Спершу «Поділитися» файлом: там вибір застосунків без зайвих кроків.
+    // Браузер пускає не всякий вид файлів, тому нижче — звичайне збереження
+    try {
+        const f = new File([blob], fname, { type: blob.type });
+        if (navigator.canShare && navigator.canShare({ files: [f] })) {
+            await navigator.share({ files: [f] });
+            return;
+        }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 // Координата в переліках ВИЛЬОТІВ і ЦІЛЕЙ: клік копіює, довге — віддає
 function _coordSpan(t) {
     return t ? `<span class="cp cp-hl" onclick="_geoClick(this)" ondblclick="event.stopPropagation()"`
         + ` onpointerdown="_geoDown(this)" onpointerup="_geoUp(this)" onpointercancel="_geoCancel()"`
         + ` onpointerleave="_geoCancel()" oncontextmenu="event.preventDefault();return false"`
-        + ` title="Клік — у буфер, довге натискання — віддати координату">${esc(t)}</span>` : '';
+        + ` title="Клік — у буфер, довге натискання — файл для Кропиви">${esc(t)}</span>` : '';
 }
 
 // Величина в буфер. Беремо весь напис, а не місце дотику
