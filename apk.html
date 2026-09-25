@@ -53,7 +53,7 @@ pre {
 <body>
 <div class="top">
   <h1>ЩО ПРИЙМАЄ ЗАСТОСУНОК</h1>
-  <span class="ver">ВЕРСІЯ 4 &middot; 25.09.2026</span>
+  <span class="ver">ВЕРСІЯ 5 &middot; 25.09.2026</span>
 </div>
 <div class="sub">Читає файл .apk просто тут, на пристрої. Нікуди нічого не надсилає.</div>
 
@@ -204,7 +204,7 @@ function readStart(dv, p, hSize, pool) {
 /* ---------- звіт ---------- */
 function makeReport(nodes) {
   let pkg = '', ver = '';
-  const comps = [];
+  const comps = [], perms = [];
   let cur = null, filt = null;
   for (const n of nodes) {
     if (n.t === 'end') {
@@ -214,6 +214,7 @@ function makeReport(nodes) {
     }
     const a = n.attrs;
     if (n.name === 'manifest') { pkg = a.package || ''; ver = a.versionName || ''; }
+    else if (/^uses-permission/.test(n.name)) { if (a.name) perms.push(a.name); }
     else if (['activity', 'activity-alias', 'service', 'receiver', 'provider'].includes(n.name)) {
       cur = { kind: n.name, name: a.name || '?', authorities: a.authorities || '', filters: [] };
     } else if (n.name === 'intent-filter' && cur) {
@@ -227,6 +228,43 @@ function makeReport(nodes) {
   }
   say('НАЗВА ПАКЕТА: ' + (pkg || '(не знайдено)'));
   if (ver) say('ВЕРСІЯ: ' + ver);
+  say('');
+  // Дозволи — за ними видно, куди застосунок може дотягтись.
+  // Ті, що варті уваги, виносимо окремо й позначаємо
+  const WATCH = {
+    'INTERNET': 'вихід у мережу',
+    'ACCESS_FINE_LOCATION': 'точне місце',
+    'ACCESS_COARSE_LOCATION': 'приблизне місце',
+    'ACCESS_BACKGROUND_LOCATION': 'місце у тлі',
+    'CAMERA': 'камера',
+    'RECORD_AUDIO': 'запис звуку',
+    'READ_CONTACTS': 'контакти',
+    'READ_SMS': 'читання повідомлень',
+    'RECEIVE_SMS': 'отримання повідомлень',
+    'CALL_PHONE': 'дзвінки',
+    'READ_CALL_LOG': 'журнал дзвінків',
+    'READ_PHONE_STATE': 'дані телефона',
+    'QUERY_ALL_PACKAGES': 'перелік усіх програм',
+    'SYSTEM_ALERT_WINDOW': 'вікна поверх інших',
+    'MANAGE_EXTERNAL_STORAGE': 'уся пам\'ять пристрою',
+    'REQUEST_INSTALL_PACKAGES': 'установлення програм',
+    'PACKAGE_USAGE_STATS': 'що і коли ви запускали',
+    'BIND_ACCESSIBILITY_SERVICE': 'керування екраном'
+  };
+  const shortName = s => s.split('.').pop();
+  const hot = perms.filter(p => WATCH[shortName(p)]);
+  const rest = perms.filter(p => !WATCH[shortName(p)]);
+  say('ДОЗВОЛІВ УСЬОГО: ' + perms.length);
+  if (hot.length) {
+    say('');
+    say('ВАРТІ УВАГИ:');
+    for (const p of [...new Set(hot)].sort()) say('   ' + shortName(p) + ' — ' + WATCH[shortName(p)]);
+  }
+  if (rest.length) {
+    say('');
+    say('РЕШТА ДОЗВОЛІВ:');
+    for (const p of [...new Set(rest)].sort()) say('   ' + shortName(p));
+  }
   say('');
   const withF = comps.filter(c => c.filters.length);
   say('СКЛАДОВИХ ІЗ ЗОВНІШНІМИ ВХОДАМИ: ' + withF.length);
