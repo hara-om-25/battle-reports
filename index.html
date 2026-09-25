@@ -3147,6 +3147,112 @@ function copyVerifyLeft() {
     navigator.clipboard.writeText(lines.join('\n')).catch(() => {});
 }
 
+/* ============ КООРДИНАТА НА КАРТУ ============
+   Довге натискання на координату віддає її системі посиланням «geo:».
+   Android показує вибір застосунків, які вміють приймати точку, — серед
+   них має бути Кропива. У цьому посиланні місця під MGRS немає, формат
+   знає тільки широту й довготу, тож координату перераховуємо.
+   Перерахунок точний: MGRS — це той самий UTM, лише записаний літерами. */
+
+// Стовпці 100-кілометрових квадратів: перша літера залежить від зони,
+// рядки зсунуті на п'ять позицій у парних зонах. Літер I та O немає
+const _MG_COL = ['ABCDEFGH', 'JKLMNPQR', 'STUVWXYZ'];
+const _MG_ROW = 'ABCDEFGHJKLMNPQRSTUV';
+// найменша відстань від екватора для кожної широтної смуги — за нею
+// видно, котрий із двохтисячокілометрових витків нам потрібен
+const _MG_MINN = { C:1100000, D:2000000, E:2800000, F:3700000, G:4600000,
+                   H:5500000, J:6400000, K:7300000, L:8200000, M:9100000,
+                   N:0, P:800000, Q:1700000, R:2600000, S:3500000,
+                   T:4400000, U:5300000, V:6200000, W:7000000, X:7900000 };
+
+function _mgrsParse(s) {
+    const t = String(s || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+    const m = t.match(/^(\d{1,2})([C-HJ-NP-X])([A-HJ-NP-Z])([A-HJ-NP-V])(\d+)$/);
+    if (!m) return null;
+    const zone = parseInt(m[1], 10);
+    if (zone < 1 || zone > 60) return null;
+    const band = m[2], dig = m[5];
+    if (dig.length % 2 || !dig.length || dig.length > 10) return null;
+    const half = dig.length / 2;
+    const step = Math.pow(10, 5 - half);          // 5 цифр — метр, 4 — десять метрів
+    const ci = _MG_COL[(zone - 1) % 3].indexOf(m[3]);
+    let ri = _MG_ROW.indexOf(m[4]);
+    if (ci < 0 || ri < 0) return null;
+    if (zone % 2 === 0) { ri -= 5; if (ri < 0) ri += 20; }
+    // беремо середину названого квадрата, а не його південно-західний ріг
+    const east  = (ci + 1) * 100000 + parseInt(dig.slice(0, half), 10) * step + step / 2;
+    let   north =  ri      * 100000 + parseInt(dig.slice(half), 10)  * step + step / 2;
+    const min = _MG_MINN[band];
+    if (min === undefined) return null;
+    while (north < min) north += 2000000;
+    return { zone: zone, east: east, north: north, south: band < 'N' };
+}
+
+// UTM -> широта й довгота, еліпсоїд WGS-84
+function _utmToLatLon(zone, east, north, south) {
+    const a = 6378137.0, f = 1 / 298.257223563, k0 = 0.9996;
+    const e2 = f * (2 - f), ep2 = e2 / (1 - e2);
+    const e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
+    const x = east - 500000;
+    const y = north - (south ? 10000000 : 0);
+    const mu = (y / k0) / (a * (1 - e2 / 4 - 3 * e2 * e2 / 64 - 5 * Math.pow(e2, 3) / 256));
+    const fp = mu
+        + (3 * e1 / 2 - 27 * Math.pow(e1, 3) / 32) * Math.sin(2 * mu)
+        + (21 * e1 * e1 / 16 - 55 * Math.pow(e1, 4) / 32) * Math.sin(4 * mu)
+        + (151 * Math.pow(e1, 3) / 96) * Math.sin(6 * mu)
+        + (1097 * Math.pow(e1, 4) / 512) * Math.sin(8 * mu);
+    const sf = Math.sin(fp), cf = Math.cos(fp), tf = Math.tan(fp);
+    const C1 = ep2 * cf * cf, T1 = tf * tf;
+    const N1 = a / Math.sqrt(1 - e2 * sf * sf);
+    const R1 = a * (1 - e2) / Math.pow(1 - e2 * sf * sf, 1.5);
+    const D = x / (N1 * k0);
+    const lat = fp - (N1 * tf / R1) * (D * D / 2
+        - (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * ep2) * Math.pow(D, 4) / 24
+        + (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 3 * C1 * C1 - 252 * ep2) * Math.pow(D, 6) / 720);
+    const lon = ((zone - 1) * 6 - 180 + 3) * Math.PI / 180 + (D
+        - (1 + 2 * T1 + C1) * Math.pow(D, 3) / 6
+        + (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * ep2 + 24 * T1 * T1) * Math.pow(D, 5) / 120) / cf;
+    return { lat: lat * 180 / Math.PI, lon: lon * 180 / Math.PI };
+}
+
+function _mgrsToLatLon(s) {
+    const p = _mgrsParse(s);
+    if (!p) return null;
+    const r = _utmToLatLon(p.zone, p.east, p.north, p.south);
+    return (isFinite(r.lat) && isFinite(r.lon) && Math.abs(r.lat) <= 90 && Math.abs(r.lon) <= 180) ? r : null;
+}
+
+// Довге натискання — на карту, коротке — в буфер. Одне не має вмикати друге
+let _geoT = null, _geoFired = false;
+function _geoDown(el) {
+    _geoFired = false;
+    clearTimeout(_geoT);
+    _geoT = setTimeout(() => { _geoFired = true; _geoOpen(el); }, 500);
+}
+function _geoUp() { clearTimeout(_geoT); }
+function _geoClick(el) {
+    if (_geoFired) { _geoFired = false; return; }
+    _cpTxt(el);
+}
+function _geoOpen(el) {
+    const mg = (el.textContent || '').trim();
+    const p = _mgrsToLatLon(mg);
+    if (!p) { showAlert('Не вдалось розібрати координату:\n' + mg); return; }
+    const c = p.lat.toFixed(6) + ',' + p.lon.toFixed(6);
+    el.classList.add('cp-hit');
+    el.style.setProperty('color', '#000', 'important');
+    setTimeout(() => { el.classList.remove('cp-hit'); el.style.color = ''; }, 350);
+    try { const s = window.getSelection(); if (s) s.removeAllRanges(); } catch (e) {}
+    window.location.href = 'geo:' + c + '?q=' + c + '(' + encodeURIComponent(mg) + ')';
+}
+// Координата в переліках ВИЛЬОТІВ і ЦІЛЕЙ: клік копіює, довге — відкриває
+function _coordSpan(t) {
+    return t ? `<span class="cp cp-hl" onclick="_geoClick(this)" ondblclick="event.stopPropagation()"`
+        + ` onpointerdown="_geoDown(this)" onpointerup="_geoUp()" onpointercancel="_geoUp()"`
+        + ` onpointerleave="_geoUp()" oncontextmenu="event.preventDefault();return false"`
+        + ` title="Клік — у буфер, довге натискання — на карту">${esc(t)}</span>` : '';
+}
+
 // Величина в буфер. Беремо весь напис, а не місце дотику
 function _cpTxt(el) {
     _copyText(el.textContent);
@@ -5193,7 +5299,7 @@ function render() {
                         // шукають і вставляють саме MGRS
                         const _cpS=(t,k)=>t?`<span class="cp ${k}" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()">${esc(t)}</span>`:'';
                         const _cc=String(r.coordinates||'').split(',');
-                        const _coordCell=_cpS(_cc[0].trim(),'cp-hl')
+                        const _coordCell=_coordSpan(_cc[0].trim())
                             +(_cc.length>1?esc(', '+_cc.slice(1).join(',').trim()):'');
                         const meta=[_cpS(_vNorm(r.datetime),'cp-hl'),_coordCell,esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
@@ -5316,7 +5422,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         const _rn=_repNo.get(r)||{rep:0,num:0};
                         const _meta=[_rn.rep?'Звіт №'+_rn.rep:'',_rn.num?'Виліт №'+_rn.num:'',
                             _cpS(_vNorm(r.datetime),'cp-hl')].filter(Boolean).join(_ysep);
-                        const _meta2=[_cpS(_cc[0].trim(),'cp-hl')+(_cc.length>1?esc(', '+_cc.slice(1).join(',').trim()):''),
+                        const _meta2=[_coordSpan(_cc[0].trim())+(_cc.length>1?esc(', '+_cc.slice(1).join(',').trim()):''),
                             esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // нотатка й акцент саме цієї цілі, окремо від вильота
                         const _nte=_noteOf(r,j);
