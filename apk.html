@@ -243,17 +243,23 @@ function makeReport(nodes) {
     for (const p of provs) say('   ' + p.authorities);
     say('');
   }
+  return pkg;
 }
 
-/* ---------- пошук схем у коді ---------- */
-async function scanDex(file, list) {
+/* ---------- пошук у коді: посилання, ключі координат і назви інших
+              застосунків. Останнє потрібне, коли цей .apk — лише
+              встановлювач, а сама карта живе окремо ---------- */
+async function scanDex(file, list, pkg) {
   say('');
   say('=== ПОШУК У КОДІ ===');
   const dexes = list.filter(e => /^classes\d*\.dex$/.test(e.name));
   if (!dexes.length) { say('файлів коду не знайшов'); return; }
-  const found = new Map();
+  const uri = new Set(), key = new Set(), pkgs = new Set();
   const reUri = /[a-z][a-z0-9+.\-]{1,20}:\/\/[A-Za-z0-9_\-./?=&%{}]*/g;
   const reKey = /[A-Za-z0-9_.]*(?:mgrs|MGRS|coord|Coord|point|Point|latlon|LatLon)[A-Za-z0-9_.]*/g;
+  // схоже на назву пакета: три й більше частин через крапку, малими
+  const rePkg = /\b[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]{1,})+\b/g;
+  const root = (pkg || '').split('.').slice(0, 2).join('.');   // напр. ua.mil
   for (const e of dexes) {
     say('дивлюсь ' + e.name + '...');
     out.scrollTop = out.scrollHeight;
@@ -262,20 +268,36 @@ async function scanDex(file, list) {
     try { data = await readEntry(file, e); }
     catch (err) { say('   не вийшло: ' + err.message); continue; }
     const txt = new TextDecoder('utf-8', { fatal: false }).decode(data);
-    for (const re of [reUri, reKey]) {
-      re.lastIndex = 0;
-      let m;
-      while ((m = re.exec(txt))) {
-        const s = m[0];
-        if (s.length > 3 && s.length < 120) found.set(s, (found.get(s) || 0) + 1);
-      }
+    let m;
+    reUri.lastIndex = 0;
+    while ((m = reUri.exec(txt))) if (m[0].length < 120) uri.add(m[0]);
+    reKey.lastIndex = 0;
+    while ((m = reKey.exec(txt))) if (m[0].length > 3 && m[0].length < 120) key.add(m[0]);
+    rePkg.lastIndex = 0;
+    while ((m = rePkg.exec(txt))) {
+      const s = m[0];
+      if (s.length > 120) continue;
+      const parts = s.split('.');
+      if (parts.length < 3) continue;
+      // лишаємо лише своє коріння або те, де згадана кропива чи мапа
+      if ((root && s.startsWith(root + '.')) || /kropyva|kropiva|mapa/i.test(s)) pkgs.add(s);
     }
   }
-  const keys = [...found.keys()].sort();
-  say('знайдено рядків: ' + keys.length);
-  say('');
-  for (const k of keys.slice(0, 400)) say('   ' + k);
-  if (keys.length > 400) say('   ... і ще ' + (keys.length - 400));
+  const block = (title, arr, limit) => {
+    say('');
+    say(title + ': ' + arr.length);
+    for (const k of arr.slice(0, limit)) say('   ' + k);
+    if (arr.length > limit) say('   ... і ще ' + (arr.length - limit));
+  };
+  // назва застосунку коротка (три-чотири частини) — такі показуємо перші,
+  // бо серед довгих будуть просто нутрощі самого коду
+  const dots = s => s.split('.').length;
+  const all = [...pkgs].filter(s => s !== pkg).sort((a, b) => dots(a) - dots(b) || (a < b ? -1 : 1));
+  block('НАЗВИ, СХОЖІ НА ІНШІ ЗАСТОСУНКИ (короткі — найімовірніші)',
+        all.filter(s => dots(s) <= 4), 120);
+  block('ДОВШІ НАЗВИ', all.filter(s => dots(s) > 4), 60);
+  block('ПОСИЛАННЯ', [...uri].sort(), 200);
+  block('КЛЮЧІ КООРДИНАТ', [...key].sort(), 200);
 }
 
 /* ---------- робота ---------- */
@@ -291,7 +313,7 @@ $('#f').addEventListener('change', async ev => {
     const man = list.find(e => e.name === 'AndroidManifest.xml');
     if (!man) throw new Error('у архіві немає AndroidManifest.xml');
     const raw = await readEntry(file, man);
-    makeReport(parseAxml(raw));
+    window.__pkg = makeReport(parseAxml(raw));
     window.__list = list;
     $('#dex').disabled = false;
   } catch (e) {
@@ -302,7 +324,7 @@ $('#f').addEventListener('change', async ev => {
 
 $('#dex').addEventListener('click', async () => {
   $('#dex').disabled = true;
-  try { await scanDex(theFile, window.__list); }
+  try { await scanDex(theFile, window.__list, window.__pkg); }
   catch (e) { say('ПОМИЛКА: ' + e.message); }
 });
 
