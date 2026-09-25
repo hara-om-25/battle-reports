@@ -246,20 +246,27 @@ function makeReport(nodes) {
   return pkg;
 }
 
-/* ---------- пошук у коді: посилання, ключі координат і назви інших
-              застосунків. Останнє потрібне, коли цей .apk — лише
-              встановлювач, а сама карта живе окремо ---------- */
+/* ---------- пошук у коді ----------
+   Пастка: у зібраному коді назви класів записані **через скісну риску**
+   (`Lua/mil/kropyva/...;`), а не через крапку. Перший підхід шукав
+   крапки й не знайшов нічого. Тепер дивимось обидва вигляди. */
 async function scanDex(file, list, pkg) {
   say('');
   say('=== ПОШУК У КОДІ ===');
   const dexes = list.filter(e => /^classes\d*\.dex$/.test(e.name));
   if (!dexes.length) { say('файлів коду не знайшов'); return; }
-  const uri = new Set(), key = new Set(), pkgs = new Set();
+  const uri = new Set(), key = new Set(), pkgs = new Set(), inner = new Set(), kro = new Set();
   const reUri = /[a-z][a-z0-9+.\-]{1,20}:\/\/[A-Za-z0-9_\-./?=&%{}]*/g;
-  const reKey = /[A-Za-z0-9_.]*(?:mgrs|MGRS|coord|Coord|point|Point|latlon|LatLon)[A-Za-z0-9_.]*/g;
-  // схоже на назву пакета: три й більше частин через крапку, малими
+  // тільки те, що справді про координати: «point» і «coord» дають сотні
+  // рядків із криптографічної бібліотеки й користі не мають
+  const reKey = /[A-Za-z0-9_.]*(?:mgrs|MGRS|Mgrs|latlon|latLon|LatLon|utmZone)[A-Za-z0-9_.]*/g;
   const rePkg = /\b[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]{1,})+\b/g;
+  // клас у коді записаний як `Lua/mil/kropyva/mapa/MapActivity;` —
+  // беремо з нього початок малими літерами, це і є назва гілки
+  const reDesc = /L([a-z][A-Za-z0-9_$\/]*);/g;
+  const reKro = /[A-Za-z0-9_.\/\-]*(?:kropyva|kropiva|Kropyva|KROPYVA)[A-Za-z0-9_.\/\-]*/g;
   const root = (pkg || '').split('.').slice(0, 2).join('.');   // напр. ua.mil
+  const mine = s => (root && s.startsWith(root + '.')) || /kropyva|kropiva|mapa/i.test(s);
   for (const e of dexes) {
     say('дивлюсь ' + e.name + '...');
     out.scrollTop = out.scrollHeight;
@@ -273,14 +280,23 @@ async function scanDex(file, list, pkg) {
     while ((m = reUri.exec(txt))) if (m[0].length < 120) uri.add(m[0]);
     reKey.lastIndex = 0;
     while ((m = reKey.exec(txt))) if (m[0].length > 3 && m[0].length < 120) key.add(m[0]);
+    reKro.lastIndex = 0;
+    while ((m = reKro.exec(txt))) if (m[0].length < 120) kro.add(m[0]);
     rePkg.lastIndex = 0;
     while ((m = rePkg.exec(txt))) {
       const s = m[0];
-      if (s.length > 120) continue;
-      const parts = s.split('.');
-      if (parts.length < 3) continue;
-      // лишаємо лише своє коріння або те, де згадана кропива чи мапа
-      if ((root && s.startsWith(root + '.')) || /kropyva|kropiva|mapa/i.test(s)) pkgs.add(s);
+      if (s.length < 120 && s.split('.').length >= 3 && mine(s)) pkgs.add(s);
+    }
+    reDesc.lastIndex = 0;
+    while ((m = reDesc.exec(txt))) {
+      const seg = [];
+      for (const part of m[1].split('/')) {
+        if (/^[a-z][a-z0-9_]*$/.test(part)) seg.push(part); else break;
+      }
+      if (seg.length >= 3) {
+        const s = seg.join('.');
+        if (s.length < 120 && mine(s)) inner.add(s);
+      }
     }
   }
   const block = (title, arr, limit) => {
@@ -289,15 +305,21 @@ async function scanDex(file, list, pkg) {
     for (const k of arr.slice(0, limit)) say('   ' + k);
     if (arr.length > limit) say('   ... і ще ' + (arr.length - limit));
   };
-  // назва застосунку коротка (три-чотири частини) — такі показуємо перші,
-  // бо серед довгих будуть просто нутрощі самого коду
   const dots = s => s.split('.').length;
-  const all = [...pkgs].filter(s => s !== pkg).sort((a, b) => dots(a) - dots(b) || (a < b ? -1 : 1));
-  block('НАЗВИ, СХОЖІ НА ІНШІ ЗАСТОСУНКИ (короткі — найімовірніші)',
-        all.filter(s => dots(s) <= 4), 120);
-  block('ДОВШІ НАЗВИ', all.filter(s => dots(s) > 4), 60);
+  const byLen = (a, b) => dots(a) - dots(b) || (a < b ? -1 : 1);
+  // назва застосунку коротка — такі найімовірніші; довгі це нутрощі коду
+  const named = [...pkgs].filter(s => s !== pkg).sort(byLen);
+  block('НАЗВИ ЗАСТОСУНКІВ, ЗАПИСАНІ ЯК ТЕКСТ (короткі — найімовірніші)', named, 120);
+  // з внутрішніх назв лишаємо тільки коріння: за ним видно, які гілки є
+  const roots = new Set();
+  for (const s of inner) {
+    const p = s.split('.');
+    for (let n = 3; n <= Math.min(4, p.length); n++) roots.add(p.slice(0, n).join('.'));
+  }
+  block('ГІЛКИ ВНУТРІШНІХ НАЗВ', [...roots].filter(s => s !== pkg).sort(byLen), 120);
+  block('УСЕ ЗІ СЛОВОМ «KROPYVA»', [...kro].sort(byLen), 200);
   block('ПОСИЛАННЯ', [...uri].sort(), 200);
-  block('КЛЮЧІ КООРДИНАТ', [...key].sort(), 200);
+  block('MGRS І КООРДИНАТИ', [...key].sort(), 200);
 }
 
 /* ---------- робота ---------- */
