@@ -3298,7 +3298,12 @@ async function _geoSend(el) {
     const p = _mgrsToLatLon(mg);
     if (!p) { showAlert('Не вдалось розібрати координату:\n' + mg); return; }
     const bytes = _zipOne('doc.kml', _kmlPoint(mg, p.lat, p.lon));
-    const fname = mg.replace(/[^0-9A-Za-z]+/g, '_').replace(/^_|_$/g, '') + '.kmz';
+    // До назви додаємо час: інакше файл із такою самою назвою вже лежить
+    // у теці завантажень, і браузер щоразу перепитує, чи качати знову
+    const d = new Date();
+    const hh = n => String(n).padStart(2, '0');
+    const fname = mg.replace(/[^0-9A-Za-z]+/g, '_').replace(/^_|_$/g, '')
+        + '_' + hh(d.getHours()) + hh(d.getMinutes()) + hh(d.getSeconds()) + '.kmz';
     const blob = new Blob([bytes], { type: 'application/vnd.google-earth.kmz' });
     // Спершу «Поділитися» файлом: там вибір застосунків без зайвих кроків.
     // Браузер пускає не всякий вид файлів, тому нижче — звичайне збереження
