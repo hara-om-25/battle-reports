@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-13';
+const APP_VER = 'v.26.09-14';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2597,10 +2597,17 @@ function _arRowParts(r) {
     // перший напис про заміну називає й те, що замінили: скільки саме наших цілей
     // верифікатор не визнав і чим їх замінив
     const _gone=ri===0?_replacedList(r,tgts,ress,_same):'';
-    return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`;}),..._resChanges(r,tgts,ress),..._osNote(r)].filter(Boolean);
-    const notes=_swaps.length?[`${_vY('верифікатор замінив')} ${_swaps.join(_vY(', '))}`]:[];
+    return `${_gone?_gone+' ':''}${_vY('на')} ${_rq}${_vW(_vType(rp.name))}${_rt}`;})].filter(Boolean);
+    // Зміна результату й перелік 200/300 стосуються всього вильоту однаково,
+    // тож ідуть в обидва переліки. Заміни — ні: у переліку ЦІЛЕЙ картка одна
+    // на одну ціль, і «3 од.» на ній читалося б так, ніби в цій самій цілі
+    // замінили три. Там заміну підписує сама картка
+    const _rest=[..._resChanges(r,tgts,ress),..._osNote(r)].filter(Boolean);
+    const _mkNote=a=>a.length?[`${_vY('верифікатор замінив')} ${a.join(_vY(', '))}`]:[];
+    const notes=_mkNote(_swaps.concat(_rest));
+    const notesTg=_mkNote(_rest);
     const _swKeys = _swap1 ? Object.keys(_swap1).map(Number) : [];
-    return { parts: parts, notes: notes, tgts: tgts, ress: ress, swap: _swap1,
+    return { parts: parts, notes: notes, notesTg: notesTg, tgts: tgts, ress: ress, swap: _swap1,
              // власних позицій у переліку: цілі, а де їх немає — сам результат.
              // Усе, що в parts далі, — позначки 200/300
              n: Math.max(tgts.length, ress.length),
@@ -5551,11 +5558,17 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         const _vcm=String(r.vcomm||'').split('\n')[j]||'';
                         // нотатка й акцент саме цієї цілі, окремо від вильота
                         const _nte=_noteOf(r,j);
-                        const _notes=(j===P.noteAt)?P.notes:[];
+                        // Заміна підписується тут же, на своїй картці, і без
+                        // кількостей: картка одна на одну ціль, трьох одиниць
+                        // у ній бути не може. Гуртовий напис із «3 од.» лишився
+                        // в переліку ВИЛЬОТІВ, де всі три цілі на одній картці
+                        const _swN=_sw?`${_vY('верифікатор замінив')} ${_vW(_vType(P.tgts[j]||''))} ${_vY('на')} ${_vW(_sw.name)}`:'';
+                        const _notes=(j===P.noteAt)?P.notesTg:[];
                         return `<div class="record-card text-sm${_nte.flag?' flagged-bg':''}" ondblclick="toggleArchiveFlag(${r.srow||0},${j})" style="position:relative;padding-left:62px;${_lbl?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)">`
                             +`<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0},${j})" ondblclick="event.stopPropagation()" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${o.n}</span></div>`
                             +(_nte.memo?`<p class="stencil" style="color:#e08a2e;font-size:0.88em;white-space:pre-wrap">${esc(_nte.memo)}</p>`:'')
                             +`<p class="stencil" style="color:var(--text)">${_line}</p>`
+                            +(_swN?`<p class="stencil" style="color:var(--text)">${_swN}</p>`:'')
                             +(_st==='pack'?`<p class="stencil" style="color:var(--text)">${_packNote(_pkTo,true)}</p>`:'')
                             +_notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')
                             +(_meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${_meta}</p>`:'')
