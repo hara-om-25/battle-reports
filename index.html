@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-19';
+const APP_VER = 'v.26.09-20';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1811,9 +1811,10 @@ function _statTail(o) {
 // малюванні, а не в самому тексті доповіді: у буфер вона має йти словами,
 // без розмітки
 function _rptColor(s) {
-    return String(s).replace(/(верифіковано|відхилено|дублюючих)(\s+\d+)/g,
-        (m, w, n) => '<span style="color:var(--' + (w === 'верифіковано' ? 'green' : 'red')
-            + '-label)">' + w + n + '</span>');
+    const clr = { 'верифіковано': 'var(--green-label)', 'відхилено': 'var(--red-label)',
+                  'дублюючих': 'var(--red-label)', 'не звірено': 'var(--yellow)' };
+    return String(s).replace(/(верифіковано|відхилено|дублюючих|не звірено)(\s+\d+)/g,
+        (m, w, n) => '<span style="color:' + clr[w] + '">' + w + n + '</span>');
 }
 
 function generateArchiveReport(recs, periodLabel) {
