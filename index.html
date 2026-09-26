@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-7';
+const APP_VER = 'v.26.09-8';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1158,10 +1158,12 @@ function _initVerMark() {
     document.body.appendChild(v);
     const place = () => {
         const vw = document.documentElement.clientWidth;
-        let right = 0;
+        let right = 0, edge = null;
         document.querySelectorAll('#app .crate:not(nav), #app .lists-cols').forEach(el => {
             const r = el.getBoundingClientRect();
-            if (r.width && r.right > right) right = r.right;
+            if (!r.width) return;
+            if (r.right > right) right = r.right;
+            if (edge === null || r.top < edge) edge = r.top;
         });
         const band = right ? vw - right : 0;
         const w = v.offsetWidth;
@@ -1171,7 +1173,12 @@ function _initVerMark() {
         v.style.visibility = '';
         v.style.right = Math.round((band - w) / 2) + 'px';
         const nav = document.querySelector('nav.crate');
-        v.style.top = ((nav ? nav.getBoundingClientRect().bottom : 8) + 12) + 'px';
+        // Напис стоїть під верхнім краєм вмісту, а не врівень із ним: край
+        // тягнеться через усе поле, і напис на тій самій лінії читався як
+        // її частина. Догорнули так, що край пішов під меню, — напис
+        // лишається під меню, інакше поїхав би вгору разом із ним
+        const under = (nav ? nav.getBoundingClientRect().bottom : 8) + 12;
+        v.style.top = Math.round(Math.max(under, edge === null ? under : edge + 12)) + 'px';
     };
     window.addEventListener('resize', place, { passive: true });
     window.addEventListener('scroll', place, { passive: true });
