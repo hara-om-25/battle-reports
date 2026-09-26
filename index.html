@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-10';
+const APP_VER = 'v.26.09-11';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1153,24 +1153,12 @@ function _initVerMark() {
     v.className = 'stencil';
     v.textContent = APP_VER;
     v.title = 'Номер складання застосунку';
-    v.style.cssText = 'position:absolute;z-index:25;color:var(--text-dim);'
+    // Напис тримається меню, а не сторінки: меню прилипле (sticky top-4),
+    // тож під час гортання воно стоїть, а вміст їде під ним. Лежав би напис
+    // у сторінці — поїхав би разом зі ЗВІТОМ і відстав би від кнопки
+    v.style.cssText = 'position:fixed;z-index:25;color:var(--text-dim);'
         + 'font-size:0.8em;white-space:nowrap;pointer-events:none';
     document.body.appendChild(v);
-    // Місце вкладеного вузла в самій розкладці, а не на екрані: екранний
-    // прямокутник поїхав би разом із гортанням, а напис має лежати в
-    // сторінці й гортатися з нею
-    const _lay = el => {
-        let x = 0, y = 0;
-        for (let e = el; e; e = e.offsetParent) {
-            x += e.offsetLeft; y += e.offsetTop;
-            // offsetLeft міряється від внутрішнього краю рамки батька, тож
-            // саму рамку треба додати — інакше на кожному ящику з рамкою
-            // напис з'їжджає на її товщину
-            const p = e.offsetParent;
-            if (p) { x += p.clientLeft; y += p.clientTop; }
-        }
-        return { x: x, y: y };
-    };
     const place = () => {
         // Напис потрібен лише там, де дивляться, чи свіжий застосунок, —
         // на ФОРМІ. На решті вкладок він тільки висить збоку
@@ -1180,14 +1168,15 @@ function _initVerMark() {
         if (!nav || !btn) { v.style.visibility = 'hidden'; return; }
         v.style.visibility = '';
         const w = v.offsetWidth, vw = document.documentElement.clientWidth;
+        const b = btn.getBoundingClientRect();
         // по центру кнопки ВИЙТИ, під самим меню; на вузькому екрані кнопка
         // стоїть скраю, тож напис притримуємо в межах екрана
-        const p = _lay(btn);
-        const x = p.x + (btn.offsetWidth - w) / 2;
+        const x = b.left + (b.width - w) / 2;
         v.style.left = Math.round(Math.min(Math.max(x, 4), Math.max(4, vw - w - 4))) + 'px';
-        v.style.top = Math.round(_lay(nav).y + nav.offsetHeight + 12) + 'px';
+        v.style.top = Math.round(nav.getBoundingClientRect().bottom + 12) + 'px';
     };
     window.addEventListener('resize', place, { passive: true });
+    window.addEventListener('scroll', place, { passive: true });
     const app = document.getElementById('app');
     if (app && window.MutationObserver) new MutationObserver(place).observe(app, { childList: true, subtree: true });
     place();
