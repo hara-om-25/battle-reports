@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'в.26.09-1';
+const APP_VER = 'в.26.09-2';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2302,14 +2302,16 @@ function _loadXLSX() {
 // і тільки тим аркушам, у які справді є що писати.
 async function _sheetGrid() {
     const r = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?fields=sheets(properties(sheetId,title,gridProperties(columnCount)))`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?fields=sheets(properties(sheetId,title,gridProperties(columnCount,rowCount)))`,
         { headers: { 'Authorization': `Bearer ${state.token}` } }
     ).then(r => r.json());
     if (r.error) throw new Error(r.error.message);
     const map = {};
     (r.sheets || []).forEach(sh => {
         const pr = sh.properties || {};
-        map[pr.title] = { id: pr.sheetId, cols: (pr.gridProperties || {}).columnCount || 0 };
+        map[pr.title] = { id: pr.sheetId,
+                          cols: (pr.gridProperties || {}).columnCount || 0,
+                          rows: (pr.gridProperties || {}).rowCount || 0 };
     });
     return map;
 }
@@ -3134,7 +3136,14 @@ async function runVerification(file) {
             // прогонів, і саме вони роздували підсумки. Але робити це до
             // запису не можна: обірвана дорога лишала б аркуш без вердиктів
             await apiUpdate(name + '!L2:O' + rows.length, col, true);
-            await apiClear(name + '!L' + (rows.length + 1) + ':O');
+            // Хвіст нижче записаного чистимо **межами аркуша**, а не «до кінця»:
+            // коли записи доходять до останнього рядка, рядка нижче просто
+            // немає, і запит «від наступного й далі» падає з «exceeds grid
+            // limits» — звіряння обривалось уже після вдалого запису
+            const _gr = grid[name] || {};
+            if ((_gr.rows || 0) > rows.length) {
+                await apiClear(name + '!L' + (rows.length + 1) + ':O' + _gr.rows);
+            }
             sheetsTouched++;
         }
     } catch (e) {
