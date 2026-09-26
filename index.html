@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-8';
+const APP_VER = 'v.26.09-9';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1157,6 +1157,9 @@ function _initVerMark() {
         + 'font-size:0.8em;white-space:nowrap;pointer-events:none';
     document.body.appendChild(v);
     const place = () => {
+        // Напис потрібен лише там, де дивляться, чи свіжий застосунок, —
+        // на ФОРМІ. На решті вкладок він тільки висить збоку
+        if (state.page !== 'form') { v.style.visibility = 'hidden'; return; }
         const vw = document.documentElement.clientWidth;
         let right = 0, edge = null;
         document.querySelectorAll('#app .crate:not(nav), #app .lists-cols').forEach(el => {
