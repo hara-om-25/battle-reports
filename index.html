@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-17';
+const APP_VER = 'v.26.09-18';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1723,6 +1723,23 @@ function _sheetPeriod(title) {
     return { from: y + String(m).padStart(2, '0') + String(d).padStart(2, '0'), to: to };
 }
 
+// Не кожен аркуш названий датами: буває й просто «24-25». Тоді період
+// беремо з самих записів — від найранішого дня до найпізнішого. Без цього
+// звіряння не мало з чим порівнювати дати файлу, і рядки чужих періодів
+// лізли в перелік «РЯДКИ ФАЙЛУ, ЩО НЕ ЛЯГЛИ»
+function _archPeriod(name, recs) {
+    const p = _sheetPeriod(name);
+    if (p) return p;
+    let from = '', to = '';
+    (recs || []).forEach(r => {
+        const d = _recYMD(r.datetime);
+        if (!d) return;
+        if (!from || d < from) from = d;
+        if (!to || d > to) to = d;
+    });
+    return from ? { from: from, to: to } : null;
+}
+
 // Ключ запису для відбору за періодом. Якщо дати в самому рядку немає —
 // беремо період аркуша, у якому він лежить
 function _recInPeriod(r, from, to) {
@@ -2852,7 +2869,7 @@ async function runVerification(file) {
     // Звіряємо тільки з відкритим архівом. У файлі можуть бути періоди інших
     // аркушів — їх до цього архіву не приплітаємо, лише рахуємо числом
     const _sheets = [state.selArchive];
-    const _pSel = _sheetPeriod(state.selArchive);
+    const _pSel = _archPeriod(state.selArchive, state.archiveRecs);
     const inPeriod = items.filter(it => it.verdict
         && (!_pSel || (it.date >= _pSel.from && it.date <= _pSel.to))).length;
 
@@ -2865,8 +2882,8 @@ async function runVerification(file) {
             const rows = await apiGet(name);
             if (rows.length < 2) continue;
             // У частині аркушів у колонці дати лежить лише час. Тоді день
-            // звіряємо з періодом у назві аркуша — іншої дати там просто немає
-            const period = _sheetPeriod(name);
+            // звіряємо з періодом аркуша — іншої дати там просто немає
+            const period = _pSel;
 
             // для кожного рядка аркуша готуємо переліки по його цілях
             const cell = [];
