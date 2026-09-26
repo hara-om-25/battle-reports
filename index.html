@@ -2120,6 +2120,19 @@ function _vWords(x) {
         .filter(w => w.length >= 2 && !/^\d+$/.test(w));
 }
 
+// Примітка й коментар верифікатора для цілі. На одну ціль буває кілька
+// рядків файлу (ОС — це позиція, а не людина), тож текст накопичуємо,
+// але однакове не повторюємо
+function _vPutNote(c, j, it) {
+    if (!c || j < 0) return;
+    for (const [src, dst] of [['note', 'n'], ['comment', 'cm']]) {
+        const t = it[src];
+        if (!t) continue;
+        const had = c[dst][j] || '';
+        if (had.split('; ').indexOf(t) < 0) c[dst][j] = had ? had + '; ' + t : t;
+    }
+}
+
 function _vTargetMatch(a, b) {
     const wa = _vWords(a), wb = _vWords(b);
     if (!wa.length || !wb.length) return false;
@@ -2809,6 +2822,8 @@ async function runVerification(file) {
                     res: rs,
                     miss: tg.map((x, k) => _vMiss(rs[k])),
                     v: tg.map(() => ''), p: tg.map(() => ''), repl: [],
+                    // примітка й коментар верифікатора — на кожну ціль свої
+                    n: tg.map(() => ''), cm: tg.map(() => ''),
                     osIdx: os.length === 1 ? os[0] : -1, osK: 0, osW: 0
                 });
             }
@@ -2924,6 +2939,7 @@ async function runVerification(file) {
                         if (it.verdict === 'Підтверджено' || !c.v[j]) c.v[j] = it.verdict;
                         const a = parseFloat(c.p[j]), b = parseFloat(it.pts);
                         c.p[j] = (isNaN(a) && isNaN(b)) ? '' : String((isNaN(a) ? 0 : a) + (isNaN(b) ? 0 : b));
+                        _vPutNote(c, j, it);
                         if (it.verdict === 'Підтверджено') {
                             const rs = _vNorm(it.res).toLowerCase();
                             if (rs.indexOf('знищ') === 0) c.osK += it.qty;
@@ -2942,6 +2958,7 @@ async function runVerification(file) {
                             if (it.verdict === 'Підтверджено' || !c.v[j]) c.v[j] = it.verdict + nr;
                             const a = parseFloat(c.p[j]), b = parseFloat(it.pts);
                             c.p[j] = (isNaN(a) && isNaN(b)) ? '' : String((isNaN(a) ? 0 : a) + (isNaN(b) ? 0 : b));
+                            _vPutNote(c, j, it);
                             if (it.verdict === 'Підтверджено') {
                                 const rs = _vNorm(it.res).toLowerCase();
                                 if (rs.indexOf('знищ') === 0) c.osK += it.qty;
@@ -2950,6 +2967,7 @@ async function runVerification(file) {
                         } else {
                             c.v[j] = it.verdict + nr;
                             c.p[j] = it.pts;
+                            _vPutNote(c, j, it);
                         }
                     } else if (it.verdict !== 'Підтверджено') {
                         // Верифікатор відхилив ціль, якої у вильоті немає.
@@ -3089,7 +3107,7 @@ async function runVerification(file) {
                 // рядок без збігу очищаємо: звіряння повністю переписує колонки
                 // верифікації аркуша, інакше в них лишається сміття від
                 // попередніх прогонів і роздуває підсумки
-                if (!c.v.some(Boolean) && !c.repl.length && !c.pack) { col.push(['', '']); continue; }
+                if (!c.v.some(Boolean) && !c.repl.length && !c.pack) { col.push(['', '', '', '']); continue; }
                 // заміни йдуть після переліку цілей окремими позначками
                 const lv = c.v.slice(), pv = c.p.slice();
                 c.repl.forEach(rp => {
@@ -3101,15 +3119,18 @@ async function runVerification(file) {
                 // скільки людей верифікатор провів знищеними, а скільки
                 // пораненими — картка звірить це з нашими 200 і 300
                 if (c.osK || c.osW) { lv.push('ОС:' + c.osK + '|' + c.osW); pv.push(''); }
-                col.push([lv.join(', '), pv.join(', ')]);
+                // Примітка й коментар — через перенос рядка, а не кому:
+                // це вільний текст, і кома в ньому цілком може бути,
+                // тоді перелік розпався б не там, де треба
+                col.push([lv.join(', '), pv.join(', '), c.n.join('\n'), c.cm.join('\n')]);
             }
-            if (await _widenSheet(grid, name, 13)) sheetsWidened++;
+            if (await _widenSheet(grid, name, 15)) sheetsWidened++;
             // Спершу запис, і аж потім стирається хвіст нижче нього. Хвіст
             // прибрати треба — там могли лишитись рядки від попередніх
             // прогонів, і саме вони роздували підсумки. Але робити це до
             // запису не можна: обірвана дорога лишала б аркуш без вердиктів
-            await apiUpdate(name + '!L2:M' + rows.length, col, true);
-            await apiClear(name + '!L' + (rows.length + 1) + ':M');
+            await apiUpdate(name + '!L2:O' + rows.length, col, true);
+            await apiClear(name + '!L' + (rows.length + 1) + ':O');
             sheetsTouched++;
         }
     } catch (e) {
@@ -3559,6 +3580,8 @@ function _parseArchiveRows(rows, name) {
                 points: _num(row[9]),
                 uid: (row[10] || '').trim(),
                 v: _verdictInfo(row[2] || '', row[11], row[12], row[3], row[4]),
+                // примітка й коментар верифікатора, по рядку на ціль
+                vnote: row[13] || '', vcomm: row[14] || '',
                 sheet: name, srow: i + 1
             });
         }
@@ -5420,6 +5443,10 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                             _cpS(_vNorm(r.datetime),'cp-hl')].filter(Boolean).join(_ysep);
                         const _meta2=[_coordSpan(_cc[0].trim())+(_cc.length>1?esc(', '+_cc.slice(1).join(',').trim()):''),
                             esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
+                        // Примітка й коментар верифікатора саме цієї цілі:
+                        // у клітинці по рядку на кожну ціль, у тому ж порядку
+                        const _vnt=String(r.vnote||'').split('\n')[j]||'';
+                        const _vcm=String(r.vcomm||'').split('\n')[j]||'';
                         // нотатка й акцент саме цієї цілі, окремо від вильота
                         const _nte=_noteOf(r,j);
                         const _notes=(j===P.noteAt)?P.notes:[];
@@ -5430,6 +5457,8 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                             +_notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')
                             +(_meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${_meta}</p>`:'')
                             +(_meta2?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em">${_meta2}</p>`:'')
+                            +(_vnt?`<p class="stencil" style="color:var(--text);font-size:0.92em">${esc(_vnt)}</p>`:'')
+                            +(_vcm?`<p class="stencil" style="color:var(--yellow);font-size:0.92em">${esc(_vcm)}</p>`:'')
                             +(_lbl?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${_lbl[1]}">${_lbl[0]}</span>`:'')
                             +`</div>`;
                     };
