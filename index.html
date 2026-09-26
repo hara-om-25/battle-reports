@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-5';
+const APP_VER = 'v.26.09-6';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2608,7 +2608,10 @@ function _osParts(r, tgts) {
     // верифікатор не визнав жодної ОС вильоту: якщо хоч одна жива, люди
     // на позиції теж живі, і гасити позначку через сусідню — неправда
     const _osJ = (tgts || []).map((t, j) => _vType(t) === 'ОС' ? j : -1).filter(j => j >= 0);
-    const rej = !!(r.v && r.v.list) && _osJ.length > 0 && _osJ.every(j => r.v.list[j] === 'no');
+    // У дублюючого вильота не рахується нічого, отже й позначки 200/300
+    // йдуть під ніж разом із ціллю: незакреслене число читається як живе
+    const pack = !!(r.v && r.v.state === 'pack');
+    const rej = pack || (!!(r.v && r.v.list) && _osJ.length > 0 && _osJ.every(j => r.v.list[j] === 'no'));
     const k = parseInt(r.qty200) || 0, w = parseInt(r.qty300) || 0;
     // скасована позначка малюється в тих самих тегах, а колір їй задає
     // .mark-off — один на все викреслене
@@ -2627,7 +2630,7 @@ function _osParts(r, tgts) {
     // Чиста перестановка: усі, хто були на одній позиції, перейшли на іншу.
     // Тоді це одна позначка — стара назва перекреслена, нова поруч, а число
     // лишається як було
-    const move = !os ? null
+    const move = (!os || pack) ? null
         : (w > 0 && os.w === 0 && k === 0 && os.k === w) ? ['300', '200', w]
         : (k > 0 && os.k === 0 && w === 0 && os.w === k) ? ['200', '300', k] : null;
     if (move) {
@@ -2638,6 +2641,15 @@ function _osParts(r, tgts) {
     }
     return [chip('200', '#e05050', k, os ? os.k : null),
             chip('300', '#5599dd', w, os ? os.w : null)];
+}
+
+// Пояснення під дублюючим вильотом — одне на обидва переліки, слово в слово
+// і тими самими барвами, що й решта пояснень верифікатора. Номер білий, і він
+// той самий, яким виліт підписаний у своєму переліку: у ВИЛЬОТАХ це число
+// на картці, у ЦІЛЯХ — «Виліт №» з рядка під ціллю
+function _packNote(n) {
+    return n ? `${_vY('верифікатор скасував цей виліт на користь вильоту')} ${_vW('№' + n)}`
+             : _vY('верифікатор скасував цей виліт на користь такого самого');
 }
 
 // Наскільки верифікатор змінив кількість на позиціях ОС. Кожна позиція, що
@@ -5376,8 +5388,7 @@ function render() {
                         const n=_arOrder.indexOf(r)+1;
                         const _rp0=_arRowParts(r);const parts=_rp0.parts;const notes=_rp0.notes.slice();
                         // виліт скасовано на користь такого самого, який верифікатор зарахував
-                        if(r.v&&r.v.state==='pack'){const _po=_packNum(r);
-                            if(_po)notes.push(`${_vY('верифікатор скасував цей виліт на користь')} ${_vW(_po)} ${_vY('вильоту')}`);}
+                        if(r.v&&r.v.state==='pack')notes.push(_packNote(_packNum(r)));
                         // Дата й час попереду решти: без них з картки не видно,
                         // коли був виліт, і доводиться лізти в таблицю
                         // Дата й координата натискаються: значення цілком лягає
@@ -5516,10 +5527,10 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         // нумерації, що стоїть у рядку нижче, — щоб було з чим
                         // звірити. Коли зарахований виліт з іншого звіту,
                         // називаємо й звіт: інакше номер нікуди не приткнути
-                        let _pkTo='';
+                        let _pkTo=0;
                         if(_st==='pack'&&r.v&&r.v.packOf){
                             const _pk=_repNo.get(r.v.packOf);
-                            if(_pk&&_pk.num)_pkTo=(_pk.rep&&_pk.rep!==_rn.rep?'звіту №'+_pk.rep+' ':'')+'вильоту №'+_pk.num;
+                            if(_pk)_pkTo=_pk.num;
                         }
                         // Примітка й коментар верифікатора саме цієї цілі:
                         // у клітинці по рядку на кожну ціль, у тому ж порядку
@@ -5532,7 +5543,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                             +`<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0},${j})" ondblclick="event.stopPropagation()" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${o.n}</span></div>`
                             +(_nte.memo?`<p class="stencil" style="color:#e08a2e;font-size:0.88em;white-space:pre-wrap">${esc(_nte.memo)}</p>`:'')
                             +`<p class="stencil" style="color:var(--text)">${_line}</p>`
-                            +(_st==='pack'?`<p class="stencil" style="color:var(--khaki)">${_pkTo?'зараховано '+_pkTo:'зараховано іншому вильоту'}</p>`:'')
+                            +(_st==='pack'?`<p class="stencil" style="color:var(--text)">${_packNote(_pkTo)}</p>`:'')
                             +_notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')
                             +(_meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${_meta}</p>`:'')
                             +(_meta2?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em">${_meta2}</p>`:'')
