@@ -2010,6 +2010,59 @@ async function goToArchive() {
 
 function _vNorm(x) { return String(x === null || x === undefined ? '' : x).trim(); }
 
+// Прочерк у клітинці — це «нічого не написано», а не текст
+function _vNote(x) {
+    const s = _vNorm(x);
+    return (s === '-' || s === '—' || s === '–') ? '' : s;
+}
+
+/* Де в файлі який стовпець. Раніше бралося за номером, і кожен новий
+   стовпець від верифікатора мовчки ламав розбір: коли між «Оцінкою» та
+   «Балами» вклинились «Примітка» й «Коментар», бали читались із примітки,
+   там стояв прочерк — і кожен підтверджений рядок відкидався як
+   суперечливий. Тепер шукаємо за назвами в шапці.
+   Файл без шапки читається по-старому: дата A, ціль B і C, кількість D,
+   координата E, результат F, далі оцінка в G або H (де більше слів
+   вердикту), а бали — одразу за нею. */
+const _V_HEAD = [
+    ['date',    ['дата']],
+    ['vid',     ['вид']],
+    ['name',    ['назва']],
+    ['qty',     ['кількість']],
+    ['coord',   ['координат']],
+    ['res',     ['результат']],
+    ['ammo',    ['боєприпас', 'заряд']],
+    ['verdict', ['оцінка']],
+    ['note',    ['примітка']],
+    ['comment', ['коментар']],
+    ['pts',     ['бал']]
+];
+function _vCols(rows) {
+    for (let i = 0; i < Math.min(rows.length, 20); i++) {
+        const r = rows[i] || [];
+        const map = {}; let hit = 0;
+        for (const [key, words] of _V_HEAD) {
+            map[key] = -1;
+            for (let c = 0; c < r.length; c++) {
+                const t = _vNorm(r[c]).toLowerCase();
+                if (t && words.some(w => t.indexOf(w) >= 0)) { map[key] = c; hit++; break; }
+            }
+        }
+        // шапкою вважаємо рядок, де знайшлося головне: координата, дата й оцінка
+        if (hit >= 4 && map.coord >= 0 && map.date >= 0 && map.verdict >= 0) {
+            if (map.pts < 0) map.pts = map.verdict + 1;
+            return map;
+        }
+    }
+    // шапки немає — давній лад за номерами
+    const _isW = x => { const w = _vNorm(x).toLowerCase(); return w === 'підтверджено' || w === 'відхилено'; };
+    let n6 = 0, n7 = 0;
+    rows.forEach(r => { if (_isW(r[6])) n6++; if (_isW(r[7])) n7++; });
+    const wi = n7 > n6 ? 7 : 6;
+    return { date: 0, vid: 1, name: 2, qty: 3, coord: 4, res: 5,
+             ammo: wi === 7 ? 6 : -1, verdict: wi, pts: wi + 1, note: -1, comment: -1 };
+}
+
 // У клітинці координат буває дописане зайве: «37U CP 71227 60561, 155».
 // Пробіли в самій координаті теж бувають розставлені абияк:
 // «37U  D Q 3312 5 26562» — це те саме, що «37U DQ 33125 26562».
@@ -2672,27 +2725,19 @@ async function runVerification(file) {
     try {
         const wb = XL.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: true });
         const rows = XL.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
-        // Оцінка й бали стояли в G і H. Відколи у файлі з'явилася колонка БК,
-        // вони переїхали в H та I, а в G став боєприпас. Файли обох виглядів
-        // мають читатися, тож шукаємо, де саме лежить слово вердикту, і
-        // вирішуємо по всьому файлу, а не по одному рядку: у поодинокому
-        // рядку клітинка буває порожня чи зіпсована
-        const _isW = x => { const w = _vNorm(x).toLowerCase(); return w === 'підтверджено' || w === 'відхилено'; };
-        let _n6 = 0, _n7 = 0;
-        rows.forEach(r => { if (_isW(r[6])) _n6++; if (_isW(r[7])) _n7++; });
-        const _wi = _n7 > _n6 ? 7 : 6;
+        const C = _vCols(rows);
         items = [];
         rows.forEach(r => {
-            const coord = _vCoord(r[4]), date = _vDate(r[0]);
+            const coord = _vCoord(r[C.coord]), date = _vDate(r[C.date]);
             // рядок шапки сюди не потрапить: у нього немає ні координат, ні дати
             if (!coord || !date) return;
-            const word = _vNorm(r[_wi]).toLowerCase();
+            const word = _vNorm(r[C.verdict]).toLowerCase();
             // Вердикт читається з двох клітинок одразу, і вони мають збігатися:
             // «Підтверджено» і число більше нуля — ціль верифіковано;
             // «Відхилено» і прочерк — відхилено. Рядок, де слово й бали
             // суперечать одне одному, не застосовуємо взагалі: одній клітинці
             // вірити на слово тут не можна
-            const pts = _vNorm(r[_wi + 1]).replace(/,/g, '.');
+            const pts = _vNorm(r[C.pts]).replace(/,/g, '.');
             const num = parseFloat(pts);
             const hasPts = pts !== '' && !isNaN(num) && num > 0;
             let verdict = '';
@@ -2700,21 +2745,24 @@ async function runVerification(file) {
             else if (word === 'відхилено' && !hasPts) verdict = 'Відхилено';
             else if (word || pts) oddRows++;
             items.push({
-                coord: coord, date: date, min: _vMinutes(r[0]),
+                coord: coord, date: date, min: _vMinutes(r[C.date]),
                 // як воно написано у файлі — щоб було що показати людині,
                 // коли рядок нікуди не ляже
-                dt: _vNorm(r[0]), rawCoord: _vNorm(r[4]),
-                tgt: _vFileTarget(r[1], r[2]),
-                res: _vNorm(r[5]),
+                dt: _vNorm(r[C.date]), rawCoord: _vNorm(r[C.coord]),
+                tgt: _vFileTarget(r[C.vid], r[C.name]),
+                res: _vNorm(r[C.res]),
                 // боєприпас є тільки у файлах нового вигляду
-                ammo: _wi === 7 ? _vAmmoKey(_vAmmo(r[6])) : '',
+                ammo: C.ammo >= 0 ? _vAmmoKey(_vAmmo(r[C.ammo])) : '',
                 // скільки наших заходів покриває цей рядок файлу
-                ammoQty: _wi === 7 ? _vAmmoQty(r[6]) : 1,
+                ammoQty: C.ammo >= 0 ? _vAmmoQty(r[C.ammo]) : 1,
                 // скільки одиниць покриває рядок: верифікатор може замінити
                 // чотири «Антени» на дві «Антени вел» одним рядком
-                qty: Math.max(1, parseInt(_vNorm(r[3]), 10) || 1),
+                qty: Math.max(1, parseInt(_vNorm(r[C.qty]), 10) || 1),
                 verdict: verdict,
-                pts: hasPts ? pts : ''
+                pts: hasPts ? pts : '',
+                // примітка й коментар верифікатора — у старих файлах їх немає
+                note: C.note >= 0 ? _vNote(r[C.note]) : '',
+                comment: C.comment >= 0 ? _vNote(r[C.comment]) : ''
             });
         });
     } catch (e) {
