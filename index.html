@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-4';
+const APP_VER = 'v.26.09-5';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2211,10 +2211,16 @@ function _verdictInfo(targetsStr, l, m, q200, q300) {
     }
     // після переліку цілей можуть стояти заміни: верифікатор указав ціль,
     // якої в цьому вильоті немає
-    let rsum = 0, os = null, pack = false;
+    let rsum = 0, os = null, pack = false, packRow = 0;
     for (let i = n; i < lv.length; i++) {
-        // виліт іде пакетом із таким самим, який верифікатор уже підтвердив
-        if (lv[i] === 'ПАКЕТ') { pack = true; continue; }
+        // виліт іде пакетом із таким самим, який верифікатор уже підтвердив.
+        // За двокрапкою — рядок аркуша, який забрав вердикт: за ним картка
+        // каже, кому саме зарахована ціль
+        if (lv[i].split(':')[0] === 'ПАКЕТ') {
+            pack = true;
+            packRow = parseInt(lv[i].split(':')[1], 10) || 0;
+            continue;
+        }
         // лічильники ОС: скільки людей верифікатор провів знищеними й скільки
         // пораненими. Балів за собою не несуть — вони вже в самій цілі
         if (lv[i].slice(0, 3) === 'ОС:') {
@@ -2243,7 +2249,8 @@ function _verdictInfo(targetsStr, l, m, q200, q300) {
     const state = (repl.length || vres.some(Boolean) || osDiff) ? 'repl'
                 : (!ok && !no) ? (pack ? 'pack' : '')
                 : (ok && no) ? 'part' : ok ? 'ok' : 'no';
-    return { list: list, pts: pts, vres: vres, sum: own + rsum, ok: ok, no: no, repl: repl, os: os, pack: pack, state: state };
+    return { list: list, pts: pts, vres: vres, sum: own + rsum, ok: ok, no: no,
+             repl: repl, os: os, pack: pack, packRow: packRow, state: state };
 }
 
 // Місце удару: день і координата, у якої відкинуто два крайні знаки — у них
@@ -2477,6 +2484,8 @@ function _tgPts(o) {
     if (sw && sw.pts !== null && sw.pts !== undefined) return sw.pts;
     const v = (r.v && r.v.list) ? r.v.list[j] : '';
     if (v === 'no' && !sw) return 0;
+    // дублююча ціль зарахована сусідній картці — тут за неї рівно нуль
+    if (r.v && r.v.state === 'pack') return 0;
     const pv = (r.v && r.v.pts) ? r.v.pts[j] : null;
     if (pv !== null && pv !== undefined) return pv;
     const st = r.v && r.v.state;
@@ -2565,7 +2574,11 @@ function _arRowParts(r) {
     const _res=(_nv&&_nv!==String(ress[j]||'').trim().toLowerCase())
         ?`<span class="qty-old">${rv}</span> <span style="color:var(--khaki)">${esc(_nv)}</span>`
         :`<span style="color:var(--khaki)">${rv}</span>`;
-    const _one=tn?tn+_dash+_res:_res;return (r.v&&r.v.list[j]==='no')?`<span class="tgt-off">${_one}</span>`:_one;}),..._osParts(r,tgts)].filter(Boolean);
+    const _one=tn?tn+_dash+_res:_res;
+    // Дублююча ціль закреслюється так само, як відхилена: її результат уже
+    // порахований у сусідній картці, отже тут вона не рахується ніде
+    const _off=(r.v&&r.v.list[j]==='no')||(r.v&&r.v.state==='pack');
+    return _off?`<span class="tgt-off">${_one}</span>`:_one;}),..._osParts(r,tgts)].filter(Boolean);
     // усі заміни — одним рядком під переліком цілей: фраза
     // «верифікатор замінив» один раз, далі через кому
     const _swaps=[...((r.v&&r.v.repl)||[]).map((rp,ri)=>{const _rr=String(rp.res||'').toLowerCase();
@@ -3133,7 +3146,9 @@ async function runVerification(file) {
                 if (!c.v.some(Boolean) && !c.repl.length) continue;
                 const ok = !!c.repl.length || c.v.some(v => v && v.split('|')[0] === 'Підтверджено');
                 const k = _key(i);
-                if (ok || !_done[k]) _done[k] = ok ? 'ok' : 'no';
+                // разом із долею удару тримаємо й рядок, який його забрав:
+                // дублюючому вильоту треба показати, кому пішла його ціль
+                if (ok || !_done[k]) _done[k] = { res: ok ? 'ok' : 'no', row: i + 1 };
             }
             for (let i = 1; i < rows.length; i++) {
                 const c = cell[i - 1];
@@ -3142,8 +3157,9 @@ async function runVerification(file) {
                 // Верифікатор відхилив сам удар, а заходів на нього було
                 // кілька: відхилений він для всіх. Дублювати тут нічого —
                 // за дублюючим стоять бали, а тут їх немає ні в кого
-                if (_done[_key(i)] === 'no') { c.v.forEach((v, k) => { if (!v) c.v[k] = 'Відхилено'; }); continue; }
-                if (_done[_key(i)]) c.pack = true;
+                const _dn = _done[_key(i)];
+                if (_dn && _dn.res === 'no') { c.v.forEach((v, k) => { if (!v) c.v[k] = 'Відхилено'; }); continue; }
+                if (_dn) { c.pack = true; c.packRow = _dn.row; }
             }
 
             const col = [];
@@ -3160,7 +3176,7 @@ async function runVerification(file) {
                     pv.push(rp[1]);
                 });
                 // виліт іде пакетом з таким самим підтвердженим
-                if (c.pack) { lv.push('ПАКЕТ'); pv.push(''); }
+                if (c.pack) { lv.push('ПАКЕТ' + (c.packRow ? ':' + c.packRow : '')); pv.push(''); }
                 // скільки людей верифікатор провів знищеними, а скільки
                 // пораненими — картка звірить це з нашими 200 і 300
                 if (c.osK || c.osW) { lv.push('ОС:' + c.osK + '|' + c.osW); pv.push(''); }
@@ -5495,6 +5511,16 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                             _cpS(_vNorm(r.datetime),'cp-hl')].filter(Boolean).join(_ysep);
                         const _meta2=[_coordSpan(_cc[0].trim())+(_cc.length>1?esc(', '+_cc.slice(1).join(',').trim()):''),
                             esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
+                        // Дублююча ціль: кажемо прямо, кому вона зарахована.
+                        // Пару знайшов _markPacks, номер беремо з тієї самої
+                        // нумерації, що стоїть у рядку нижче, — щоб було з чим
+                        // звірити. Коли зарахований виліт з іншого звіту,
+                        // називаємо й звіт: інакше номер нікуди не приткнути
+                        let _pkTo='';
+                        if(_st==='pack'&&r.v&&r.v.packOf){
+                            const _pk=_repNo.get(r.v.packOf);
+                            if(_pk&&_pk.num)_pkTo=(_pk.rep&&_pk.rep!==_rn.rep?'звіту №'+_pk.rep+' ':'')+'вильоту №'+_pk.num;
+                        }
                         // Примітка й коментар верифікатора саме цієї цілі:
                         // у клітинці по рядку на кожну ціль, у тому ж порядку
                         const _vnt=String(r.vnote||'').split('\n')[j]||'';
@@ -5506,6 +5532,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                             +`<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0},${j})" ondblclick="event.stopPropagation()" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${o.n}</span></div>`
                             +(_nte.memo?`<p class="stencil" style="color:#e08a2e;font-size:0.88em;white-space:pre-wrap">${esc(_nte.memo)}</p>`:'')
                             +`<p class="stencil" style="color:var(--text)">${_line}</p>`
+                            +(_st==='pack'?`<p class="stencil" style="color:var(--khaki)">${_pkTo?'зараховано '+_pkTo:'зараховано іншому вильоту'}</p>`:'')
                             +_notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')
                             +(_meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${_meta}</p>`:'')
                             +(_meta2?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em">${_meta2}</p>`:'')
