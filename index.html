@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-6';
+const APP_VER = 'v.26.09-7';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2643,13 +2643,15 @@ function _osParts(r, tgts) {
             chip('300', '#5599dd', w, os ? os.w : null)];
 }
 
-// Пояснення під дублюючим вильотом — одне на обидва переліки, слово в слово
-// і тими самими барвами, що й решта пояснень верифікатора. Номер білий, і він
-// той самий, яким виліт підписаний у своєму переліку: у ВИЛЬОТАХ це число
-// на картці, у ЦІЛЯХ — «Виліт №» з рядка під ціллю
-function _packNote(n) {
-    return n ? `${_vY('верифікатор скасував цей виліт на користь вильоту')} ${_vW('№' + n)}`
-             : _vY('верифікатор скасував цей виліт на користь такого самого');
+// Пояснення під дублюючим — однакове в обох переліках і тими самими барвами,
+// що й решта пояснень верифікатора. Номер **завжди той, що стоїть на картці
+// свого ж переліку**: у ВИЛЬОТАХ це виліт, у ЦІЛЯХ — ціль. Інакше шукати
+// його нікуди: у переліку ЦІЛЕЙ картки підписані номерами цілей, і «виліт
+// №8» відсилав до картки, на якій стоїть зовсім інше число
+function _packNote(n, tg) {
+    const w = tg ? ['цю ціль', 'цілі', 'такої самої'] : ['цей виліт', 'вильоту', 'такого самого'];
+    return n ? `${_vY('верифікатор скасував ' + w[0] + ' на користь ' + w[1])} ${_vW('№' + n)}`
+             : _vY('верифікатор скасував ' + w[0] + ' на користь ' + w[2]);
 }
 
 // Наскільки верифікатор змінив кількість на позиціях ОС. Кожна позиція, що
@@ -5529,8 +5531,13 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         // називаємо й звіт: інакше номер нікуди не приткнути
                         let _pkTo=0;
                         if(_st==='pack'&&r.v&&r.v.packOf){
-                            const _pk=_repNo.get(r.v.packOf);
-                            if(_pk)_pkTo=_pk.num;
+                            // Ціль зарахована не «вильоту», а картці цього ж
+                            // переліку: шукаємо в зарахованому вильоті ту саму
+                            // ціль, а як не знайдемо — його першу
+                            const _nm=_vName(P.tgts[j]||'');
+                            const _o2=_tgAll.find(x=>x.r===r.v.packOf&&_vName(x.p.tgts[x.j]||'')===_nm)
+                                ||_tgAll.find(x=>x.r===r.v.packOf);
+                            if(_o2)_pkTo=_o2.n;
                         }
                         // Примітка й коментар верифікатора саме цієї цілі:
                         // у клітинці по рядку на кожну ціль, у тому ж порядку
@@ -5543,7 +5550,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                             +`<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0},${j})" ondblclick="event.stopPropagation()" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${o.n}</span></div>`
                             +(_nte.memo?`<p class="stencil" style="color:#e08a2e;font-size:0.88em;white-space:pre-wrap">${esc(_nte.memo)}</p>`:'')
                             +`<p class="stencil" style="color:var(--text)">${_line}</p>`
-                            +(_st==='pack'?`<p class="stencil" style="color:var(--text)">${_packNote(_pkTo)}</p>`:'')
+                            +(_st==='pack'?`<p class="stencil" style="color:var(--text)">${_packNote(_pkTo,true)}</p>`:'')
                             +_notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')
                             +(_meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${_meta}</p>`:'')
                             +(_meta2?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em">${_meta2}</p>`:'')
