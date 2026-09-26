@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-18';
+const APP_VER = 'v.26.09-19';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1804,6 +1804,16 @@ function _statTail(o) {
     if (o.dup) p.push('дублюючих ' + o.dup);
     if (o.unv) p.push('не звірено ' + o.unv);
     return p.length ? ' (' + p.join(', ') + ')' : '';
+}
+
+// Лічильники в дужках доповіді фарбуються тими самими барвами, що й підписи
+// карток: верифіковане зелене, відхилене й дублююче червоні. Робиться на
+// малюванні, а не в самому тексті доповіді: у буфер вона має йти словами,
+// без розмітки
+function _rptColor(s) {
+    return String(s).replace(/(верифіковано|відхилено|дублюючих)(\s+\d+)/g,
+        (m, w, n) => '<span style="color:var(--' + (w === 'верифіковано' ? 'green' : 'red')
+            + '-label)">' + w + n + '</span>');
 }
 
 function generateArchiveReport(recs, periodLabel) {
@@ -5480,7 +5490,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _shHdr=_anyV
                     ?`Верифіковано уражень на <span style="color:var(--text)">${_shVSum}</span> ${_bal(_shVSum)}`
                     :`Уражено орієнтовно на <span style="color:var(--text)">${_arTotal}</span> ${_bal(_arTotal)}`;
-                const _shRptBlock=state.archiveRecs.length>0?`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ${esc(state.selArchive)}</h3><span class="stencil" style="color:var(--khaki)">${_shHdr}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyArchiveSheetReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_shRptLines.join('\n')}</div></div>`:'';
+                const _shRptBlock=state.archiveRecs.length>0?`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ${esc(state.selArchive)}</h3><span class="stencil" style="color:var(--khaki)">${_shHdr}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyArchiveSheetReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_shRptLines.map(_rptColor).join('\n')}</div></div>`:'';
                 _arTop=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px"><h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">${esc(state.selArchive)}</h1>${_arHeader}</div>`;
                 _arContent=`${_tgMode?'':_shRptBlock}<h2 onclick="state.arFilter=null;state.tgFilter=null;render()" class="stencil-shadow text-xl px-2" style="color:var(--yellow);cursor:pointer">СТАТИСТИКА</h2>${_statsBlock}`;
                 const _shown=state.archiveRecs.filter(_arMatch).length;
@@ -5612,7 +5622,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _allHdr=_allAnyV
                     ?`Верифіковано уражень на <span style="color:var(--text)">${_allVSum}</span> ${_bal(_allVSum)}`
                     :`Уражено орієнтовно на <span style="color:var(--text)">${_allTotal}</span> ${_bal(_allTotal)}`;
-                const _allRptBlock=`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ВСІ ВИЇЗДИ З ${_allEarliest} ДОТЕПЕР</h3><span class="stencil" style="color:var(--khaki)">${_allHdr}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyAllArchiveReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_allRptLines.join('\n')}</div></div>`;
+                const _allRptBlock=`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ВСІ ВИЇЗДИ З ${_allEarliest} ДОТЕПЕР</h3><span class="stencil" style="color:var(--khaki)">${_allHdr}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyAllArchiveReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_allRptLines.map(_rptColor).join('\n')}</div></div>`;
                 const _allDrnCnt={};_allRecs.forEach(r=>{if(r.drone)_allDrnCnt[r.drone]=(_allDrnCnt[r.drone]||0)+1;});
                 const _allAmmoCnt={};_allRecs.forEach(r=>{if(r.ammo)_allAmmoCnt[r.ammo]=(_allAmmoCnt[r.ammo]||0)+1;});
                 const _allResCnt={};_allRecs.forEach(r=>{if(r.result)r.result.split(', ').forEach(x=>{x=x.trim();if(x)_allResCnt[x]=(_allResCnt[x]||0)+1;});});
@@ -5675,7 +5685,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                     +'<span class="stencil" style="color:var(--khaki)">'+_fHdr+'</span></div>'
                     +'<button onclick="copyFilteredPeriodReport()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
                     +'</div>'
-                    +'<div class="report-box">'+_fLines.join('\n')+'</div></div>';
+                    +'<div class="report-box">'+_fLines.map(_rptColor).join('\n')+'</div></div>';
             }
         }
         // Вильоти, у яких порожній тип дрона. Через них у підсумках
@@ -5817,7 +5827,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 _zSumLines.push(''),_zSumLines.push('Прогнозовано уражень на '+_zPts+' '+_bal(_zPts)+'.');
                 if(_pushVerifyLines(_zSumLines,_zRecs))_zSumLines.push('');
                 _pushCostLines(_zSumLines,_zPts,_zRecs);
-                const _zSumBlock='<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ПЕРІОД</h3><button onclick="copyZvityPeriodReport()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div><div class="report-box">'+_zSumLines.join('\n')+'</div></div>';
+                const _zSumBlock='<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ПЕРІОД</h3><button onclick="copyZvityPeriodReport()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div><div class="report-box">'+_zSumLines.map(_rptColor).join('\n')+'</div></div>';
                 _zvResult=_zGroups+_zReports+_zSumBlock;
             }
         }
@@ -5904,7 +5914,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
              +'<div class="flex gap-2 flex-wrap">'
              +'<button onclick="copyZvityAllReport()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
              +'</div></div>'
-             +'<div class="report-box">'+_zvL.join('\n')+'</div>'
+             +'<div class="report-box">'+_zvL.map(_rptColor).join('\n')+'</div>'
              +'</div></div>';
         }
     }
