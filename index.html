@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-21';
+const APP_VER = 'v.26.09-22';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1787,9 +1787,14 @@ function _parseMainRows(rows) {
 // цілі вильоту, якого звіряння не зачепило зовсім
 // Кожна ціль потрапляє рівно в один кошик, тож лічильники завжди дають
 // у сумі кількість у рядку
-function _tgtStat(r, j) {
+function _tgtStat(r, j, swap) {
     const st = r.v && r.v.state;
     const v = (r.v && r.v.list && r.v.list[j]) || '';
+    // Ціль, яку верифікатор підмінив іншою, не відхилена: бали за неї є,
+    // просто під іншою назвою, і часто більші за наші. На картці такій цілі
+    // стоїть ЗАМІНЕНО — у доповіді має бути так само, інакше з дужок виходить,
+    // ніби виліт не зарахували
+    if (swap && swap[j]) return 'rep';
     if (v === 'ok') return 'ok';
     if (v === 'no') return 'no';
     // виліт скасовано як дублюючий: його цілі верифікатор не розглядав окремо
@@ -1800,6 +1805,7 @@ function _statTail(o) {
     if (!o) return '';
     const p = [];
     if (o.ok) p.push('верифіковано ' + o.ok);
+    if (o.rep) p.push('замінено ' + o.rep);
     if (o.no) p.push('відхилено ' + o.no);
     if (o.dup) p.push('дублюючих ' + o.dup);
     if (o.unv) p.push('не звірено ' + o.unv);
@@ -1812,8 +1818,9 @@ function _statTail(o) {
 // без розмітки
 function _rptColor(s) {
     const clr = { 'верифіковано': 'var(--green-label)', 'відхилено': 'var(--red-label)',
-                  'дублюючих': 'var(--blue-label)', 'не звірено': 'var(--yellow)' };
-    return String(s).replace(/(верифіковано|відхилено|дублюючих|не звірено)(\s+\d+)/g,
+                  'замінено': 'var(--blue-label)', 'дублюючих': 'var(--blue-label)',
+                  'не звірено': 'var(--yellow)' };
+    return String(s).replace(/(верифіковано|замінено|відхилено|дублюючих|не звірено)(\s+\d+)/g,
         (m, w, n) => '<span style="color:' + clr[w] + '">' + w + n + '</span>');
 }
 
@@ -1824,12 +1831,14 @@ function generateArchiveReport(recs, periodLabel) {
     const osSum300 = recs.reduce((s, r) => s + (parseInt(r.qty300) || 0), 0);
     // без звіряння лічильники не показуємо зовсім
     const anyV = recs.some(r => r.v && r.v.state);
-    const _mk = () => ({ ok: 0, no: 0, dup: 0, unv: 0 });
+    const _mk = () => ({ ok: 0, rep: 0, no: 0, dup: 0, unv: 0 });
     const os200 = _mk(), os300 = _mk();
+    // мапа замін вильоту — та сама, що й у переліках: {номер цілі: нова ціль}
+    const _swOf = r => (r.v && r.v.repl && r.v.repl.length) ? (_arRowParts(r).swap || null) : null;
     if (anyV) recs.forEach(r => {
         const oi = r.target.split(', ').findIndex(t => t.trim().toLowerCase().startsWith('ос'));
         if (oi < 0) return;
-        const s = _tgtStat(r, oi);
+        const s = _tgtStat(r, oi, _swOf(r));
         if (!s) return;
         os200[s] += parseInt(r.qty200) || 0;
         os300[s] += parseInt(r.qty300) || 0;
@@ -1838,6 +1847,7 @@ function generateArchiveReport(recs, periodLabel) {
     recs.forEach(r => {
         const targets = r.target.split(', ');
         const results = r.result.split(', ');
+        const _sw = anyV ? _swOf(r) : null;
         targets.forEach((tgt, idx) => {
             const tgtTrim = tgt.trim();
             const res = (results[idx] || '').trim();
@@ -1849,7 +1859,7 @@ function generateArchiveReport(recs, periodLabel) {
                 const key=dispName.toUpperCase()+' '+res;
                 if(!otherGrouped[key])otherGrouped[key]={d:dispName,r:res,n:0,v:_mk()};
                 otherGrouped[key].n++;
-                if(anyV){const s=_tgtStat(r,idx);if(s)otherGrouped[key].v[s]++;}
+                if(anyV){const s=_tgtStat(r,idx,_sw);if(s)otherGrouped[key].v[s]++;}
             }
         });
     });
