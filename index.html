@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-14';
+const APP_VER = 'v.26.09-15';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2591,8 +2591,11 @@ function _arRowParts(r) {
     // результат той самий, що й був — замінена сама ціль, і писати результат
     // обабіч означало б повторювати те, що й так видно вище
     const _same=ri===0&&_sameRes(r,tgts,ress,_rr);
-    // кількість іде попереду назви, результат — після неї через риску
-    const _rq=rp.qty>1?_vW(rp.qty)+' '+_vY('од.')+' ':'';
+    // Кількість нової цілі пишемо лише тоді, коли вона не збігається з
+    // числом замінених: коли збігається, це просто «кожна стала такою»,
+    // і «3 од.» там зайве — цілі окремі, а не одиниці всередині однієї
+    const _noN=tgts.filter((t,j)=>r.v&&r.v.list[j]==='no').length;
+    const _rq=(rp.qty>1&&rp.qty!==_noN)?_vW(rp.qty)+' '+_vY('од.')+' ':'';
     const _rt=(!_same&&_rr)?`${_dash}${_vK(_rr)}`:'';
     // перший напис про заміну називає й те, що замінили: скільки саме наших цілей
     // верифікатор не визнав і чим їх замінив
@@ -2742,44 +2745,19 @@ function _sameRes(r, tgts, ress, sub) {
 
 function _replacedList(r, tgts, ress, plain) {
     if (!r.v || !r.v.repl || !r.v.repl.length) return '';
-    // результат той самий — досить назвати самі цілі, без номерів. Перекреслення
-    // тут не потрібне: воно вже стоїть у переліку цілей
-    if (plain) {
-        const cnt = {}, ord = [];
-        tgts.forEach((t, j) => {
-            if (r.v.list[j] !== 'no') return;
-            const ty = _vType(t);
-            if (!cnt[ty]) { cnt[ty] = 0; ord.push(ty); }
-            cnt[ty]++;
-        });
-        return ord.map(ty => (cnt[ty] > 1 ? _vW(cnt[ty]) + ' ' + _vY('од.') + ' ' : '') + _vW(ty))
-                  .join(_vY(', '));
-    }
-    const by = {}, order = [];
+    // Цілі називаємо поіменно, як вони стоять у переліку зверху: «Антена 1,
+    // Антена 2, Антена 3». Лічити їх кількістю не можна — це окремі цілі, у
+    // кожної своя картка, свої бали й свій вердикт, а «3 од. АНТЕНА»
+    // читається так, ніби три одиниці стоять усередині однієї цілі.
+    // Результат дописуємо лише там, де верифікатор поставив інший: коли він
+    // той самий, він і так стоїть у перекресленому переліку зверху
+    const out = [];
     tgts.forEach((t, j) => {
         if (r.v.list[j] !== 'no') return;
-        const ty = _vType(t);
-        if (!by[ty]) { by[ty] = { total: 0, cnt: {}, ord: [] }; order.push(ty); }
-        const g = by[ty], rs = String(ress[j] || '').trim().toLowerCase();
-        if (!g.cnt[rs]) { g.cnt[rs] = 0; g.ord.push(rs); }
-        g.cnt[rs]++; g.total++;
+        const rs = String(ress[j] || '').trim().toLowerCase();
+        out.push(_vW(t) + (plain || !rs ? '' : _vD() + _vK(rs)));
     });
-    // «АНТЕНА знищено 4 одиниці», а коли результати різні —
-    // «АНТЕНА знищено 3 та пошкоджено 1 одиниці»
-    return order.map(ty => {
-        const g = by[ty];
-        // ціль трапилась один раз — досить назви: її результат і так стоїть
-        // у перекресленому переліку зверху, дублювати його тут нема потреби
-        if (g.total === 1) return _vW(ty);
-        // кількість пишемо лише тоді, коли ціль не одна: «знищено 3 од.»,
-        // а на одну просто «пошкоджено». Виняток — коли результатів кілька:
-        // «знищено 3 од. та пошкоджено» не показує, скільки ж їх пошкоджено
-        return _vW(ty) + _vD() + g.ord.map(rs => {
-            const n = g.cnt[rs];
-            if (!rs) return _vW(n) + ' ' + _vY('од.');
-            return (n > 1 || g.ord.length > 1) ? _vK(rs) + ' ' + _vW(n) + ' ' + _vY('од.') : _vK(rs);
-        }).join(_vY(' та '));
-    }).join(_vY(', '));
+    return out.join(_vY(', '));
 }
 
 // Час у хвилинах від початку доби. Немає часу — null
@@ -5562,7 +5540,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         // кількостей: картка одна на одну ціль, трьох одиниць
                         // у ній бути не може. Гуртовий напис із «3 од.» лишився
                         // в переліку ВИЛЬОТІВ, де всі три цілі на одній картці
-                        const _swN=_sw?`${_vY('верифікатор замінив')} ${_vW(_vType(P.tgts[j]||''))} ${_vY('на')} ${_vW(_sw.name)}`:'';
+                        const _swN=_sw?`${_vY('верифікатор замінив')} ${_vW(P.tgts[j]||'')} ${_vY('на')} ${_vW(_sw.name)}`:'';
                         const _notes=(j===P.noteAt)?P.notesTg:[];
                         return `<div class="record-card text-sm${_nte.flag?' flagged-bg':''}" ondblclick="toggleArchiveFlag(${r.srow||0},${j})" style="position:relative;padding-left:62px;${_lbl?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)">`
                             +`<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0},${j})" ondblclick="event.stopPropagation()" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${o.n}</span></div>`
