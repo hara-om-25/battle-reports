@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-12';
+const APP_VER = 'v.26.09-13';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2551,9 +2551,13 @@ function _arRowParts(r) {
         // з малої — зводимо до одного вигляду
         const _u=[];
         _rp.forEach(rp=>{const _nm=_vType(rp.name),_rr=String(rp.res||'').toLowerCase();
-            // бали заміни беремо тільки там, де вона одна: ділити бали
-            // кількох однакових цілей між рядками нема за чим
-            const _pp=(rp.qty||1)===1?rp.pts:null;
+            // Бали заміни ділимо порівну між її одиницями. Це не вигадка:
+            // в одному рядку верифікатора стоїть та сама ціль із тим самим
+            // результатом, отже й ціна в кожної однакова, а сума — просто
+            // ціна на кількість. Без цього три однакові антени лишались
+            // зовсім без балів, хоч верифікатор їх порахував
+            const _q=Math.max(1,rp.qty||1);
+            const _pp=(rp.pts===null||rp.pts===undefined)?null:rp.pts/_q;
             for(let k=0;k<Math.max(1,rp.qty||1);k++)_u.push({name:_nm,qty:1,res:_rr,pts:_pp});});
         const _m={};
         _no.forEach((j,k)=>{if(_u[k])_m[j]=_u[k];});
