@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-25';
+const APP_VER = 'v.26.09-26';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5563,14 +5563,16 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         const _pts=_pn===null?null
                             :[String(_pt(_pn)),_lbl?_lbl[1]:'var(--yellow)'];
                         // бали — тут же, в рядку цілі, кольором її вердикту
-                        if(_pts)_line+=`&nbsp;&nbsp;&nbsp;<span style="color:${_pts[1]}">зараховано ${_pts[0]} ${_bal(parseFloat(_pts[0])||0)}</span>`;
+                        // бали й різниця відділяються жовтою рискою — тією самою,
+                        // що й у рядку під ціллю: інакше все злипається в одну стрічку
+                        if(_pts)_line+=`${_ysep}<span style="color:${_pts[1]}">зараховано ${_pts[0]} ${_bal(parseFloat(_pts[0])||0)}</span>`;
                         // наскільки верифікатор розійшовся з нами на цій цілі:
                         // зелений плюс, коли дав більше за наш прайс, червоний
                         // мінус — коли менше. Рівно стільки ж, скільки просили,
                         // різниці не дає, і нуля там не пишемо
                         const _own=_pn===null?null:_tgOwn(r,j,P);
                         const _dif=_own===null?0:_pt(_pn-_own);
-                        if(_dif)_line+=`&nbsp;&nbsp;<span style="color:${_dif>0?'var(--green-label)':'var(--red-label)'}">${_dif>0?'+':'\u2212'}${_pt(Math.abs(_dif))} ${_bal(Math.abs(_dif))}</span>`;
+                        if(_dif)_line+=`${_ysep}<span style="color:${_dif>0?'var(--green-label)':'var(--red-label)'}">${_dif>0?'+':'\u2212'}${_pt(Math.abs(_dif))} ${_bal(Math.abs(_dif))}</span>`;
                         const _cpS=(t,k)=>t?`<span class="cp ${k}" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()">${esc(t)}</span>`:'';
                         const _cc=String(r.coordinates||'').split(',');
                         // попереду дати — звіт і номер вильота в ньому:
