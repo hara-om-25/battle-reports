@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-24';
+const APP_VER = 'v.26.09-25';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -4079,11 +4079,17 @@ function _abbrOfName(n) {
     const src = (n || '').trim();
     const p = src.split(' '), l = p[p.length - 1];
     const base = /^\d+$/.test(l) ? p.slice(0, -1).join(' ') : src;
-    const u = base.toUpperCase();
-    const key = Object.keys(state.scoreTable).find(k => k.toUpperCase() === u);
+    // У прайсі назви пишуть через підкреслення («Антена_БПЛА»), а в записах —
+    // через пробіл. Ще трапляються латинські літери, схожі на наші («ДР_с» з
+    // латинською c). Зводимо обидва боки до одного вигляду — інакше ціль мовчки
+    // лишалась без ціни: ні різниці на картці, ні попередження у формі
+    const _lat = 'ABCEHIKMOPTXY', _cyr = 'АВСЕНІКМОРТХУ';
+    const _n = x => String(x || '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase()
+        .replace(/[ABCEHIKMOPTXY]/g, c => _cyr[_lat.indexOf(c)]);
+    const u = _n(base);
+    const key = Object.keys(state.scoreTable).find(k => _n(k) === u);
     if (key) return key;
-    const lo = base.toLowerCase();
-    for (const [a, d] of Object.entries(state.scoreTable)) if (d.fullName && d.fullName.toLowerCase() === lo) return a;
+    for (const [a, d] of Object.entries(state.scoreTable)) if (d.fullName && _n(d.fullName) === u) return a;
     return base;
 }
 // Чи бракує кількості ОС для набору цілей: знищено вимагає 200, пошкоджено — 300
