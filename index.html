@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-26';
+const APP_VER = 'v.26.09-28';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1781,6 +1781,26 @@ function _parseMainRows(rows) {
     return out;
 }
 
+// Верифікатор пише на цілі «Верифіковано раніше» — це не відмова: удар він
+// зарахував, просто в сусідній цілі того самого вильоту (дві антени на одній
+// позиції він проводить одним рядком і дає за обидві). Отже ціль дублююча,
+// а не відхилена
+const _V_DUP_RE = /(верифік|зарахов)[а-яіїєґ']*\s+ран[іи]ше|вже\s+(верифік|зарахов)|дубл/i;
+function _tgDupSaid(r, j) {
+    const n = String(r.vnote || '').split('\n')[j] || '';
+    const c = String(r.vcomm || '').split('\n')[j] || '';
+    return _V_DUP_RE.test(n + ' ' + c);
+}
+// Сусідня ціль того самого вильоту, якій ті бали й пішли: той самий вид цілі
+// і вердикт із балами. Немає такої — ціль усе одно дублююча, просто нема на
+// кого показати
+function _tgDupOf(r, j, P) {
+    if (!r.v || !r.v.list || r.v.list[j] !== 'no' || !_tgDupSaid(r, j)) return null;
+    const ty = _vType((P.tgts[j] || ''));
+    const k = (P.tgts || []).findIndex((t, i) => i !== j && _vType(t) === ty && r.v.list[i] === 'ok');
+    return { j: k };
+}
+
 // Вердикт по одній цілі вильоту. Верифікованою вона вважається, якщо
 // верифікатор її підтвердив — байдуже, чи виліт підписаний ВЕРИФІКОВАНО,
 // ЗАМІНЕНО чи ЧАСТКОВО. Відхиленою — якщо він її не визнав. «Не звірено» це
@@ -1796,7 +1816,8 @@ function _tgtStat(r, j, swap) {
     // ніби виліт не зарахували
     if (swap && swap[j]) return 'rep';
     if (v === 'ok') return 'ok';
-    if (v === 'no') return 'no';
+    // «верифіковано раніше» — удар зарахований сусідній цілі, а не відхилений
+    if (v === 'no') return _tgDupSaid(r, j) ? 'dup' : 'no';
     // виліт скасовано як дублюючий: його цілі верифікатор не розглядав окремо
     if (st === 'pack') return 'dup';
     return 'unv';
@@ -2226,7 +2247,7 @@ function _vTargetMatch(a, b) {
 // у тому ж порядку, що й цілі в колонці C та результати в колонці I.
 // Повертає: list — вердикти ('ok'/'no'/''), pts — бали, sum — сума лише
 // підтверджених, state — 'ok' | 'no' | 'part' | '' на весь виліт
-function _verdictInfo(targetsStr, l, m, q200, q300) {
+function _verdictInfo(targetsStr, l, m, q200, q300, note, comm) {
     const n = String(targetsStr || '').split(', ').filter(x => x.trim()).length;
     const lv = String(l || '').split(',').map(x => x.trim());
     const mv = String(m || '').split(',').map(x => x.trim());
@@ -2234,8 +2255,13 @@ function _verdictInfo(targetsStr, l, m, q200, q300) {
     // own — бали, які верифікатор дав власним цілям вильоту. Саме з ними
     // порівнюються нараховані бали, коли рахуємо скасоване: те, що він
     // дописав понад виліт, скасування не зменшує
-    let ok = 0, no = 0, own = 0;
+    let ok = 0, no = 0, own = 0, dup = 0;
     const vres = [];
+    // Ціль, про яку верифікатор написав «Верифіковано раніше», не відхилена:
+    // удар він зарахував сусідній цілі того самого вильоту. Тож у відмови її
+    // не лічимо — інакше цілком зарахований виліт підписувався ЧАСТКОВО
+    const _dupLine = i => _V_DUP_RE.test((String(note || '').split('\n')[i] || '')
+        + ' ' + (String(comm || '').split('\n')[i] || ''));
     for (let i = 0; i < n; i++) {
         // у вердикті може стояти й результат верифікатора: «Підтверджено|Знищено»
         const _q = (lv[i] || '').split('|');
@@ -2247,7 +2273,7 @@ function _verdictInfo(targetsStr, l, m, q200, q300) {
         const p = isNaN(num) ? null : num;
         pts.push(p);
         if (v === 'ok') { ok++; if (p !== null) own += p; }
-        else if (v === 'no') { no++; }
+        else if (v === 'no') { if (_dupLine(i)) dup++; else no++; }
     }
     // після переліку цілей можуть стояти заміни: верифікатор указав ціль,
     // якої в цьому вильоті немає
@@ -2278,7 +2304,7 @@ function _verdictInfo(targetsStr, l, m, q200, q300) {
     // усі цілі вильотів з балами, отже мовчання — це відмова. Рахуємо так
     // лише тоді, коли виліт узагалі звірявся: без жодного вердикту він просто
     // НЕ ЗВІРЕНИЙ, і перекреслювати там нічого
-    if (ok || no || repl.length) {
+    if (ok || no || dup || repl.length) {
         for (let i = 0; i < n; i++) if (!list[i]) { list[i] = 'no'; no++; }
     }
     // Верифікатор міг втрутитися трьома способами: підмінити ціль, поставити
@@ -2287,7 +2313,7 @@ function _verdictInfo(targetsStr, l, m, q200, q300) {
     // підписувалась як просто верифікована
     const osDiff = !!os && (os.k !== (parseInt(q200) || 0) || os.w !== (parseInt(q300) || 0));
     const state = (repl.length || vres.some(Boolean) || osDiff) ? 'repl'
-                : (!ok && !no) ? (pack ? 'pack' : '')
+                : (!ok && !no) ? ((pack || dup) ? 'pack' : '')
                 : (ok && no) ? 'part' : ok ? 'ok' : 'no';
     return { list: list, pts: pts, vres: vres, sum: own + rsum, ok: ok, no: no,
              repl: repl, os: os, pack: pack, packRow: packRow, state: state };
@@ -2509,7 +2535,8 @@ function _tgVerdict(o) {
         && _vType(P.tgts[j] || '') === 'ОС';
     if (sw || (v === 'ok' && (resCh || osCh))) return 'repl';
     if (v === 'ok') return 'ok';
-    if (v === 'no') return 'no';
+    // верифікатор сам написав, що цей удар уже зарахував, — дублююча, не відхилена
+    if (v === 'no') return _tgDupOf(r, j, P) ? 'pack' : 'no';
     // вердикту в цілі немає, а виліт скасовано на користь такого самого —
     // отже й ціль дублююча
     return (r.v && r.v.state === 'pack') ? 'pack' : '';
@@ -2538,7 +2565,7 @@ function _tgPts(o) {
     const v = (r.v && r.v.list) ? r.v.list[j] : '';
     if (v === 'no' && !sw) return 0;
     // дублююча ціль зарахована сусідній картці — тут за неї рівно нуль
-    if (r.v && r.v.state === 'pack') return 0;
+    if ((r.v && r.v.state === 'pack') || _tgDupOf(r, j, P)) return 0;
     const pv = (r.v && r.v.pts) ? r.v.pts[j] : null;
     if (pv !== null && pv !== undefined) return pv;
     const st = r.v && r.v.state;
@@ -3705,7 +3732,7 @@ function _parseArchiveRows(rows, name) {
                 result: row[8] || '',
                 points: _num(row[9]),
                 uid: (row[10] || '').trim(),
-                v: _verdictInfo(row[2] || '', row[11], row[12], row[3], row[4]),
+                v: _verdictInfo(row[2] || '', row[11], row[12], row[3], row[4], row[13], row[14]),
                 // примітка й коментар верифікатора, по рядку на ціль
                 vnote: row[13] || '', vcomm: row[14] || '',
                 sheet: name, srow: i + 1
@@ -5549,11 +5576,12 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         // саму ціль, ставить інший результат або перекидає
                         // людей між 200 і 300. Будь-яке з трьох робить ціль
                         // заміненою — так само, як і виліт у сусідньому переліку
-                        const _rep=_tgVerdict(o)==='repl';
+                        const _tv=_tgVerdict(o);
+                        const _rep=_tv==='repl';
                         const _lbl=_rep?['ЗАМІНЕНО','var(--blue-label)']
-                            :_v==='ok'?['ВЕРИФІКОВАНО','var(--green-label)']
-                            :_v==='no'?['ВІДХИЛЕНО','var(--red-label)']
-                            :_st==='pack'?['ДУБЛЮЮЧИЙ','var(--red-label)']
+                            :_tv==='ok'?['ВЕРИФІКОВАНО','var(--green-label)']
+                            :_tv==='pack'?['ДУБЛЮЮЧИЙ','var(--red-label)']
+                            :_tv==='no'?['ВІДХИЛЕНО','var(--red-label)']
                             :(_anyV&&(parseFloat(r.points)||0))?['НЕ ЗВІРЕНО','var(--red-label)']:null;
                         // Бали окремої цілі відомі тільки там, де їх дав
                         // верифікатор, або коли ціль у вильоті одна: ділити
@@ -5589,7 +5617,14 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         // звірити. Коли зарахований виліт з іншого звіту,
                         // називаємо й звіт: інакше номер нікуди не приткнути
                         let _pkTo=0;
-                        if(_st==='pack'&&r.v&&r.v.packOf){
+                        // дублююча всередині свого ж вильоту: бали пішли сусідній
+                        // цілі тієї самої картки — шукаємо її номер у переліку
+                        const _dup=_tgDupOf(r,j,P);
+                        if(_dup){
+                            const _o2=_dup.j>=0?_tgAll.find(x=>x.r===r&&x.j===_dup.j):null;
+                            if(_o2)_pkTo=_o2.n;
+                        }
+                        else if(_st==='pack'&&r.v&&r.v.packOf){
                             // Ціль зарахована не «вильоту», а картці цього ж
                             // переліку: шукаємо в зарахованому вильоті ту саму
                             // ціль, а як не знайдемо — його першу
@@ -5615,7 +5650,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                             +(_nte.memo?`<p class="stencil" style="color:#e08a2e;font-size:0.88em;white-space:pre-wrap">${esc(_nte.memo)}</p>`:'')
                             +`<p class="stencil" style="color:var(--text)">${_line}</p>`
                             +(_swN?`<p class="stencil" style="color:var(--text)">${_swN}</p>`:'')
-                            +(_st==='pack'?`<p class="stencil" style="color:var(--text)">${_packNote(_pkTo,true)}</p>`:'')
+                            +(_tv==='pack'?`<p class="stencil" style="color:var(--text)">${_packNote(_pkTo,true)}</p>`:'')
                             +_notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')
                             +(_meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${_meta}</p>`:'')
                             +(_meta2?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em">${_meta2}</p>`:'')
