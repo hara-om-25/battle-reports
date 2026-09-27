@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-23';
+const APP_VER = 'v.26.09-24';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2513,6 +2513,19 @@ function _tgVerdict(o) {
     // вердикту в цілі немає, а виліт скасовано на користь такого самого —
     // отже й ціль дублююча
     return (r.v && r.v.state === 'pack') ? 'pack' : '';
+}
+
+// Скільки ця ціль коштувала за нашим прайсом — щоб показати, наскільки
+// верифікатор розійшовся з нами саме на ній. Ціна береться з «е бали»,
+// тобто **поточна**: в архіві з часів іншого прайса різниця буде рахуватись
+// за нинішніми цінами
+function _tgOwn(r, j, P) {
+    const nm = (P.tgts[j] || '').trim();
+    if (!nm) return null;
+    const ab = _abbrOfName(nm);
+    if (!state.scoreTable[ab]) return null;
+    const n = calculatePoints(ab, r.qty200, r.qty300, String(P.ress[j] || '').trim());
+    return isNaN(n) ? null : n;
 }
 
 // Бали саме цієї цілі — там, де їх можна знати напевно: скільки дав
@@ -5545,6 +5558,13 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                             :[String(_pt(_pn)),_lbl?_lbl[1]:'var(--yellow)'];
                         // бали — тут же, в рядку цілі, кольором її вердикту
                         if(_pts)_line+=`&nbsp;&nbsp;&nbsp;<span style="color:${_pts[1]}">зараховано ${_pts[0]} ${_bal(parseFloat(_pts[0])||0)}</span>`;
+                        // наскільки верифікатор розійшовся з нами на цій цілі:
+                        // зелений плюс, коли дав більше за наш прайс, червоний
+                        // мінус — коли менше. Рівно стільки ж, скільки просили,
+                        // різниці не дає, і нуля там не пишемо
+                        const _own=_pn===null?null:_tgOwn(r,j,P);
+                        const _dif=_own===null?0:_pt(_pn-_own);
+                        if(_dif)_line+=`&nbsp;&nbsp;<span style="color:${_dif>0?'var(--green-label)':'var(--red-label)'}">${_dif>0?'+':'\u2212'}${_pt(Math.abs(_dif))} ${_bal(Math.abs(_dif))}</span>`;
                         const _cpS=(t,k)=>t?`<span class="cp ${k}" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()">${esc(t)}</span>`:'';
                         const _cc=String(r.coordinates||'').split(',');
                         // попереду дати — звіт і номер вильота в ньому:
