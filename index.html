@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-28';
+const APP_VER = 'v.26.09-29';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1891,7 +1891,9 @@ function generateArchiveReport(recs, periodLabel) {
     if (hasOs && osSum300 > 0) _allItems.push({t:_osN+' 300',n:osSum300,v:os300});
     Object.entries(otherGrouped).forEach(([k,v])=>_allItems.push({t:v.d+' '+v.r,n:v.n,v:v.v}));
     _allItems.sort((a,b)=>b.n-a.n);
-    const lines = [periodLabel + ' ТГ "' + reportTitle + '" здійснено ' + recs.length + ' вильотів, уражено:'];
+    // «1 вильотів» не буває: число й слово мусять збігатися
+    const lines = [periodLabel + ' ТГ "' + reportTitle + '" здійснено ' + recs.length
+        + ' ' + _vyl(recs.length) + ', уражено:'];
     _allItems.forEach((p,i)=>lines.push('  '+(i+1)+'. '+p.t+' - '+p.n+' шт'+_statTail(p.v)+(i===_allItems.length-1?'.':';')));
     return lines;
 }
