@@ -576,7 +576,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-52';
+const APP_VER = 'v.26.09-53';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -588,6 +588,7 @@ let state = {
     // перелік в АРХІВІ: false — вильоти, true — окремі цілі
     arTargets: false,
     arShowSum: false,
+    arShowList: false,
     arShowStat: false,
     // натиснутий рядок статистики в переліку ЦІЛЕЙ
     tgFilter: null,
@@ -2691,8 +2692,12 @@ function _arToggle(k) {
     render();
 }
 function _arSetList(tg) {
-    if (!!state.arTargets === tg) { render(); return; }
-    toggleArTargets();
+    // друге натискання на ту саму кнопку ховає перелік
+    if (state.arShowList && !!state.arTargets === tg) { state.arShowList = false; render(); return; }
+    const _b = document.getElementById('ar-list-btn');
+    state.arShowList = true;
+    if (!!state.arTargets !== tg) { toggleArTargets(); return; }
+    render();
 }
 
 function toggleArTargets() {
@@ -5595,15 +5600,18 @@ function render() {
         // між назвою і ПІДСУМКАМИ стають блоки звіряння, щоб не гортати
         // по них через увесь архів
         let _arTop='', _arFlights='', _vuHtml='';
-        if(state.selArchive){
+        // Без відкритого періоду ВИЛЬОТИ й ЦІЛІ показуються за всі періоди разом
+        const _allMode=!state.selArchive&&!!state.arShowList&&state.allArchiveLoaded&&state.allArchiveRecs.length>0;
+        const _R=state.selArchive?state.archiveRecs:state.allArchiveRecs;
+        if(state.selArchive||_allMode){
             if(state.archiveLoading){
                 _arContent='<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Завантаження...</p></div>';
             } else {
-                const _arDates=[...new Set(state.archiveRecs.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>{const f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};return f(a)<f(b)?-1:1;});
-                const _arTotal=_pt(state.archiveRecs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
+                const _arDates=[...new Set(_R.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>{const f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};return f(a)<f(b)?-1:1;});
+                const _arTotal=_pt(_R.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                 // чи звірявся цей аркуш узагалі: доки жоден виліт не дістав
                 // вердикту, немає підстав позначати решту як не звірені
-                const _anyV=state.archiveRecs.some(x=>x.v&&x.v.state);
+                const _anyV=_R.some(x=>x.v&&x.v.state);
                 const _sep='<span style="color:var(--yellow)">, </span>';
                 const _dash='<span style="color:var(--yellow)"> \u2014 </span>';
                 const _ysep='<span style="color:var(--yellow)"> | </span>';
@@ -5611,7 +5619,7 @@ function render() {
                 // Заздалегідь проходимо цей порядок, щоб знати номер вильоту,
                 // на користь якого скасовано однаковий із ним
                 const _arOrder=[];
-                _arDates.forEach(d=>{_byTime(state.archiveRecs.filter(x=>getDateOnly(x.datetime)===d)).forEach(x=>_arOrder.push(x));});
+                _arDates.forEach(d=>{_byTime(_R.filter(x=>getDateOnly(x.datetime)===d)).forEach(x=>_arOrder.push(x));});
                 // Пару вже знайшов _markPacks — тут лишається дізнатись, під
                 // яким номером той виліт малюється
                 const _packNum=x=>(x.v&&x.v.packOf)?_arOrder.indexOf(x.v.packOf)+1:0;
@@ -5644,7 +5652,7 @@ function render() {
                     // Під фільтром лишаються тільки потрібні картки, але номер
                     // у кожної той самий, що й без фільтра: він береться з
                     // повного порядку, а не з лічильника відмальованих
-                    const dayR=_byTime(state.archiveRecs.filter(r=>getDateOnly(r.datetime)===d)).filter(_arMatch);
+                    const dayR=_byTime(_R.filter(r=>getDateOnly(r.datetime)===d)).filter(_arMatch);
                     if(!dayR.length)return '';
                     const dayPts=_pt(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
                     const cards=dayR.map(r=>{
@@ -5684,10 +5692,10 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                     }).join('');
                     return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
                 }).join('');
-                const _arHeader=state.archiveRecs.length>0?`<div class="stencil" style="font-size:calc(1.15em - 1px);margin-top:6px;display:flex;flex-wrap:wrap;gap:2px 20px"><span style="color:var(--khaki);white-space:nowrap">ВИЛЬОТІВ ЗА ЗВІТ:&nbsp;<span style="color:var(--yellow)">${state.archiveRecs.length}</span></span><span style="color:var(--khaki);white-space:nowrap">БАЛІВ ЗА ЗВІТ:&nbsp;<span style="color:var(--yellow)">${_arTotal}</span></span></div>`:'';
-                const _drnCnt={};state.archiveRecs.forEach(r=>{if(r.drone)_drnCnt[r.drone]=(_drnCnt[r.drone]||0)+1;});
-                const _ammoCnt={};state.archiveRecs.forEach(r=>{if(r.ammo)_ammoCnt[r.ammo]=(_ammoCnt[r.ammo]||0)+1;});
-                const _resCnt={};state.archiveRecs.forEach(r=>{if(r.result)r.result.split(', ').forEach(x=>{x=x.trim();if(x)_resCnt[x]=(_resCnt[x]||0)+1;});});
+                const _arHeader=_R.length>0?`<div class="stencil" style="font-size:calc(1.15em - 1px);margin-top:6px;display:flex;flex-wrap:wrap;gap:2px 20px"><span style="color:var(--khaki);white-space:nowrap">ВИЛЬОТІВ ЗА ЗВІТ:&nbsp;<span style="color:var(--yellow)">${_R.length}</span></span><span style="color:var(--khaki);white-space:nowrap">БАЛІВ ЗА ЗВІТ:&nbsp;<span style="color:var(--yellow)">${_arTotal}</span></span></div>`:'';
+                const _drnCnt={};_R.forEach(r=>{if(r.drone)_drnCnt[r.drone]=(_drnCnt[r.drone]||0)+1;});
+                const _ammoCnt={};_R.forEach(r=>{if(r.ammo)_ammoCnt[r.ammo]=(_ammoCnt[r.ammo]||0)+1;});
+                const _resCnt={};_R.forEach(r=>{if(r.result)r.result.split(', ').forEach(x=>{x=x.trim();if(x)_resCnt[x]=(_resCnt[x]||0)+1;});});
                 const _drnRows=Object.entries(_drnCnt).sort((a,b)=>b[1]-a[1]).map(([d,c])=>_rowF(esc(d),c,' шт','drone',d,'g')).join('');
                 const _ammoRows=Object.entries(_ammoCnt).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_rowF(esc(a),c,' шт','ammo',a,'g')).join('');
                 const _pvrRows=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_ammoCnt[am]||0)*cf,0);return tot?_row(esc(pvr.name),tot+' кг'):'';}).filter(Boolean).join('');
@@ -5695,7 +5703,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 // Скільки вильотів взагалі без балів, скільки отримали вердикт,
                 // і скільки не потрапили ні туди, ні туди — саме вони й дають
                 // розрив між загальною сумою балів і «верифіковано + скасовано»
-                const _vrRows=_vrRowsFor(state.archiveRecs,true);
+                const _vrRows=_vrRowsFor(_R,true);
                 // У переліку цілей статистика теж про цілі: дрони, боєприпаси
                 // й ПВР належать вильоту, а не цілі, тож їх там немає. У
                 // РЕЗУЛЬТАТАХ лишаються лише ті, що стоять проти цілі
@@ -5718,23 +5726,23 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         +_rowT('Відхилено',_no,_c(_no),'v','no','r')
                         +_rowT('Дублюючі',_pk,_c(_pk),'v','pack','r');
                 })();
-                const _statsBlock=state.archiveRecs.length===0?''
+                const _statsBlock=_R.length===0?''
                     :_tgMode?`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('РЕЗУЛЬТАТИ',_tgResRows)}</div><div class="space-y-3" style="flex:3 1 280px">${_sec('ВЕРИФІКАЦІЯ',_tgVrRows)}</div></div>`
                     :`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}</div><div class="space-y-3" style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_resRows)}${_sec('ВЕРИФІКАЦІЯ',_vrRows)}</div></div>`;
-                const _shRptLines=(()=>{if(!state.archiveRecs.length)return[];const _l=generateArchiveReport(state.archiveRecs,state.selArchive+'р.');_l.push(''),_l.push('Прогнозовано уражень на '+_arTotal+' '+_bal(_arTotal)+'.');if(_pushVerifyLines(_l,state.archiveRecs))_l.push('');_pushCostLines(_l,_arTotal,state.archiveRecs);return _l;})();
+                const _shRptLines=(()=>{if(!_R.length)return[];const _l=generateArchiveReport(_R,(state.selArchive||'')+'р.');_l.push(''),_l.push('Прогнозовано уражень на '+_arTotal+' '+_bal(_arTotal)+'.');if(_pushVerifyLines(_l,_R))_l.push('');_pushCostLines(_l,_arTotal,_R);return _l;})();
                 // Аркуш звірений — у заголовку підсумків показуємо не наш
                 // прогноз, а те, що нарахував верифікатор. Це та сама сума,
                 // що й у рядку «Верифіковано уражень на», і надбавка
                 // верифікатора вже в ній: окремо її додавати не можна
-                const _shVSum=_pt(state.archiveRecs.reduce((s,r)=>
+                const _shVSum=_pt(_R.reduce((s,r)=>
                     s+((r.v&&r.v.state&&r.v.state!=='pack')?(r.v.sum||0):0),0));
                 const _shHdr=_anyV
                     ?`Верифіковано уражень на <span style="color:var(--text)">${_shVSum}</span> ${_bal(_shVSum)}`
                     :`Уражено орієнтовно на <span style="color:var(--text)">${_arTotal}</span> ${_bal(_arTotal)}`;
-                const _shRptBlock=state.archiveRecs.length>0?`<div id="ar-sum" class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ${esc(state.selArchive)}</h3><span class="stencil" style="color:var(--khaki)">${_shHdr}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyArchiveSheetReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_shRptLines.map(_rptColor).join('\n')}</div></div>`:'';
-                _arTop=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px"><h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">${esc(state.selArchive)}</h1>${_arHeader}</div>`;
+                const _shRptBlock=_R.length>0?`<div id="ar-sum" class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ${esc(state.selArchive)}</h3><span class="stencil" style="color:var(--khaki)">${_shHdr}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyArchiveSheetReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_shRptLines.map(_rptColor).join('\n')}</div></div>`:'';
+                _arTop=_allMode?'':`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px"><h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">${esc(state.selArchive)}</h1>${_arHeader}</div>`;
                 _arContent=`${_tgMode||!state.arShowSum?'':_shRptBlock}${!state.arShowStat?'':`<h2 id="ar-stat" onclick="state.arFilter=null;state.tgFilter=null;render()" class="stencil-shadow text-xl px-2" style="color:var(--yellow);cursor:pointer">СТАТИСТИКА</h2>${_statsBlock}`}`;
-                const _shown=state.archiveRecs.filter(_arMatch).length;
+                const _shown=_R.filter(_arMatch).length;
                 let _tgGroups='';
                 if(_tgMode){
                     // Номер вильота в межах свого звіту: у кожному звіті
@@ -5861,7 +5869,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 }
                 // під фільтром одразу видно, скільки карток лишилося з усіх
                 const _tgShown=_tgAll.filter(o=>_arMatch(o.r)&&_tgMatch(o)).length;
-                const _flHdr=(_tgMode?'ЦІЛІ':'ВИЛЬОТИ')+((_tgMode?(state.arFilter||state.tgFilter):state.arFilter)?` <span class="stencil" style="color:var(--khaki);font-size:0.7em">показано ${_tgMode?_tgShown+' з '+_tgAll.length:_shown+' з '+state.archiveRecs.length}</span>`:'');
+                const _flHdr=(_tgMode?'ЦІЛІ':'ВИЛЬОТИ')+((_tgMode?(state.arFilter||state.tgFilter):state.arFilter)?` <span class="stencil" style="color:var(--khaki);font-size:0.7em">показано ${_tgMode?_tgShown+' з '+_tgAll.length:_shown+' з '+_R.length}</span>`:'');
                 // Кнопка кольору й вигляду головного меню, а літери в ній —
                 // такі самі, як у заголовку поруч. Висоту знімаємо із самого
                 // заголовка вже на сторінці: шрифт Tektur має свої метрики,
@@ -5872,7 +5880,9 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         }
         let _allSection='';
         if(!state.selArchive){
-            if(state.allArchiveLoading){
+            if(!state.arShowSum&&!state.arShowStat&&!state.arShowList){
+                _allSection='';
+            } else if(state.allArchiveLoading){
                 _allSection='<div class="crate p-4"><p class="stencil text-center py-4" style="color:var(--text-dim)">Завантаження всіх звітів...</p></div>';
             } else if(state.allArchiveLoaded&&state.allArchiveRecs.length>0){
                 const _allRecs=state.allArchiveRecs;
@@ -5897,7 +5907,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _allPvrRows=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_allAmmoCnt[am]||0)*cf,0);return tot?_row(esc(pvr.name),tot+' кг'):'';}).filter(Boolean).join('');
                 const _allResRows=Object.entries(_allResCnt).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,' '+_plu(c,'раз','рази','разів'))).join('');
                 const _allStatsBlock=`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_allDrnRows)}${_sec('БОЄПРИПАСИ',_allAmmoRows)}${_sec('ПВР',_allPvrRows)}</div><div class="space-y-3" style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_allResRows)}${_sec('ВЕРИФІКАЦІЯ',_vrRowsFor(_allRecs))}</div></div>`;
-                _allSection=_allRptBlock+'<h2 class="stencil-shadow text-xl px-2" style="color:var(--yellow)">ЗАГАЛЬНА СТАТИСТИКА</h2>'+_allStatsBlock;
+                _allSection=(state.arShowSum?_allRptBlock:'')+(state.arShowStat?'<h2 class="stencil-shadow text-xl px-2" style="color:var(--yellow)">ЗАГАЛЬНА СТАТИСТИКА</h2>'+_allStatsBlock:'');
             }
         }
         {
@@ -6004,16 +6014,16 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 +'</div><div class="report-box">'+L.map(x=>_vfLine(x,true)).join('\n')+'</div></div>';
         })();
         const _sbBtn=(t,cls,on,oc,tip,pr)=>`<button ${on?`onclick="${oc}" `:'disabled '}onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil ${cls}${pr?' active':''}" style="font-size:0.78em;padding:5px 10px;width:100%${on?'':';cursor:not-allowed'}"${tip?` title="${tip}"`:''}>${t}</button>`;
-        const _sbOpen=!!state.selArchive&&!state.filterPeriodOpen;
+        const _sbOpen=!state.filterPeriodOpen;
         const _sbArch=(()=>{if(!state.records.length||!state.online)return'';const _f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};const _sd=[...new Set(state.records.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_f(a)<_f(b)?-1:1);const[_d1,_m1,_y1]=_sd[0].split('.'),[_d2,_m2,_y2]=_sd[_sd.length-1].split('.');const _n=(_sd[0]===_sd[_sd.length-1])?_sd[0]:(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1:(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1:_sd[0]+' — '+_sd[_sd.length-1];return'<button onclick="archiveMainSheet()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">АРХІВУВАТИ '+_n+'</button>';})();
         const _sbVerify=state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="showVerifyModal()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-blue" style="font-size:0.78em;padding:5px 10px">ВЕРИФІКАЦІЯ</button>':'';
         const _sbCol=`<div class="arch-side" style="margin-left:auto;display:flex;flex-direction:column;gap:8px;flex:0 0 auto;min-width:170px">`
-            +_sbBtn('ПІДСУМКИ','btn-black',_sbOpen,"_arToggle('arShowSum')",_sbOpen?'':'Спершу відкрийте період',state.arShowSum&&_sbOpen)
-            +_sbBtn('СТАТИСТИКА','btn-yellow',_sbOpen,"_arToggle('arShowStat')",_sbOpen?'':'Спершу відкрийте період',state.arShowStat&&_sbOpen)
+            +_sbBtn('ПІДСУМКИ','btn-black',_sbOpen,"_arToggle('arShowSum')",'',state.arShowSum&&_sbOpen)
+            +_sbBtn('СТАТИСТИКА','btn-yellow',_sbOpen,"_arToggle('arShowStat')",'',state.arShowStat&&_sbOpen)
             +(_sbArch||'').replace('<button ','<button data-side="1" ').replace('style="font-size:0.78em;padding:5px 10px"','style="font-size:0.78em;padding:5px 10px;width:100%"')
             +(_sbVerify||'').replace('style="font-size:0.78em;padding:5px 10px"','style="font-size:0.78em;padding:5px 10px;width:100%"')
-            +_sbBtn('ВИЛЬОТИ','btn-olive',_sbOpen,"_arSetList(false)",_sbOpen?'':'Спершу відкрийте період',!state.arTargets&&_sbOpen)
-            +_sbBtn('ЦІЛІ','btn-olive',_sbOpen,"_arSetList(true)",_sbOpen?'':'Спершу відкрийте період',state.arTargets&&_sbOpen)
+            +_sbBtn('ВИЛЬОТИ','btn-olive',_sbOpen,"_arSetList(false)",'',state.arShowList&&!state.arTargets&&_sbOpen)
+            +_sbBtn('ЦІЛІ','btn-olive',_sbOpen,"_arSetList(true)",'',state.arShowList&&state.arTargets&&_sbOpen)
             +`</div>`;
         h+=`<div class="p-4 space-y-4 arch-wrap">
             <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><div id="ar-hdr-right" style="display:flex;align-items:center;gap:12px">${_SHOW_FSFIX&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="restoreFsPoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-orange" style="font-size:0.78em;padding:5px 10px" title="Повернути по 0,5 бала за кожен ФС «пошкоджено»">ПОВЕРНУТИ ФС</button>':''}${_SHOW_RECALC&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="recalcArchivePoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black" style="font-size:0.78em;padding:5px 10px" title="Перерахувати стовпець J за нинішніми «е балами»">ПЕРЕРАХУВАТИ БАЛИ</button>':''}<span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em;${state.online?'':'display:none'}">за період</span></div></div>
@@ -6025,7 +6035,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             ${state.online?_vfHtml:''}
             ${!state.filterPeriodOpen?_vuHtml:''}
             ${state.filterPeriodOpen?(state.online?(state.filterPeriodShown?_periodResultHtml:''):''):(state.selArchive?_arContent:_allSection)}
-            ${!state.filterPeriodOpen?_arFlights:''}
+            ${!state.filterPeriodOpen&&state.arShowList?_arFlights:''}
             ${state.online?_vdHtml:''}
         </div>`;
         }
