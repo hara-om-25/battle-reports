@@ -565,7 +565,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-48';
+const APP_VER = 'v.26.09-49';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -4908,6 +4908,17 @@ function _sizeArchRot() {
             box.style.height = Math.ceil(bbox + (rows - 1) * down + 8) + 'px';
         });
     });
+    // «за період» стоїть по правому краю найширшої рамки року, а не сторінки
+    const _hr = document.getElementById('ar-hdr-right');
+    if (_hr) {
+        _hr.style.marginRight = '0px';
+        const cr = [...document.querySelectorAll('.arch-groups .crate')];
+        if (cr.length) {
+            const edge = Math.max(...cr.map(c => c.getBoundingClientRect().right));
+            const d = _hr.getBoundingClientRect().right - edge;
+            if (d > 0) _hr.style.marginRight = d + 'px';
+        }
+    }
 }
 window.addEventListener('resize', _sizeArchRot, { passive: true });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { _sizeListCols(); _sizeArchRot(); });
@@ -5984,7 +5995,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             +_sbBtn('ЦІЛІ','btn-black',_sbOpen,"_arSetList(true)",_sbOpen?'':'Спершу відкрийте період',state.arTargets&&_sbOpen)
             +`</div>`;
         h+=`<div class="p-4 space-y-4 arch-wrap">
-            <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><div style="display:flex;align-items:center;gap:12px">${_SHOW_FSFIX&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="restoreFsPoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-orange" style="font-size:0.78em;padding:5px 10px" title="Повернути по 0,5 бала за кожен ФС «пошкоджено»">ПОВЕРНУТИ ФС</button>':''}${_SHOW_RECALC&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="recalcArchivePoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black" style="font-size:0.78em;padding:5px 10px" title="Перерахувати стовпець J за нинішніми «е балами»">ПЕРЕРАХУВАТИ БАЛИ</button>':''}<span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em;${state.online?'':'display:none'}">за період</span></div></div>
+            <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><div id="ar-hdr-right" style="display:flex;align-items:center;gap:12px">${_SHOW_FSFIX&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="restoreFsPoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-orange" style="font-size:0.78em;padding:5px 10px" title="Повернути по 0,5 бала за кожен ФС «пошкоджено»">ПОВЕРНУТИ ФС</button>':''}${_SHOW_RECALC&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="recalcArchivePoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black" style="font-size:0.78em;padding:5px 10px" title="Перерахувати стовпець J за нинішніми «е балами»">ПЕРЕРАХУВАТИ БАЛИ</button>':''}<span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em;${state.online?'':'display:none'}">за період</span></div></div>
             ${!state.filterPeriodOpen?'<div class="arch-top flex flex-wrap gap-4 items-start">'+(state.archiveLoading&&!state.selArchive?'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p></div>':_arBtns)+_sbCol+'</div>':''}
             ${!state.online?(Object.keys(_archKeys()).length?'<div class="crate p-4"><p class="stencil text-center py-3" style="color:var(--khaki)">Архіви показуються з пам\'яті пристрою. Нових даних без з\'єднання не буде, редагування недоступне</p></div>':'<div class="crate p-4"><p class="stencil text-center py-3" style="color:#c05a3e">Архівів на пристрої немає — відкрийте їх хоч раз із мережею</p></div>'):''}
             ${state.online?_periodPickerHtml:''}
