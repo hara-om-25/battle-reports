@@ -584,7 +584,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-57';
+const APP_VER = 'v.26.09-58';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5842,24 +5842,26 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         // кількостей: картка одна на одну ціль, трьох одиниць
                         // у ній бути не може. Гуртовий напис із «3 од.» лишився
                         // в переліку ВИЛЬОТІВ, де всі три цілі на одній картці
-                        const _swN=_sw?`${_vY('верифікатор замінив')} ${_vW(P.tgts[j]||'')} ${_vY('на')} ${_vW(_sw.name)}`:'';
+                        const _swN=_sw?`${_vW(P.tgts[j]||'')} ${_vY('на')} ${_vW(_sw.name)}`:'';
                         // зміна результату саме цієї цілі: старий закреслений угорі, а тут
                         // сказано, хто це зробив
                         const _rcN=(()=>{const nr=r.v&&r.v.vres&&r.v.list[j]==='ok'?String(r.v.vres[j]||'').trim().toLowerCase():'';
                             const was=String((P.ress||[])[j]||'').trim().toLowerCase();
-                            return(nr&&nr!==was)?`${_vY('верифікатор замінив')} ${_vK(was||'—')} ${_vY('на')} ${_vK(nr)}`:'';})();
+                            return(nr&&nr!==was)?`${_vK(was||'—')} ${_vY('на')} ${_vK(nr)}`:'';})();
                         // пояснення про 200/300 — на картці цілі ОС, до якої вони стосуються;
                         // немає ОС — на картці, де стоїть перша заміна
-                        const _notes=(j===(_osJ.length?_at:P.noteAt))?P.notesTg:[];
+                        // усе, що верифікатор зробив із цією ціллю, — одним рядком з однією фразою
+                        // «верифікатор замінив»: заміна цілі, зміна результату, 200/300
+                        const _osN=(j===(_osJ.length?_at:P.noteAt))?_osNote(r).filter(Boolean):[];
+                        const _vfr=[_swN,_rcN,..._osN].filter(Boolean);
+                        const _vLine=_vfr.length?`${_vY('верифікатор замінив')} ${_vfr.join(_vY(', '))}`:'';
                         return `<div class="record-card text-sm${_lbl&&_lbl[0]==='НЕ ЗВІРЕНО'?' not-verified':''}${_nte.flag?' flagged-bg':''}" ondblclick="toggleArchiveFlag(${r.srow||0},${j})" style="position:relative;padding-left:62px;${_lbl?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)">`
                             +`<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0},${j})" ondblclick="event.stopPropagation()" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${o.n}</span></div>`
                             +(_nte.memo?`<p class="stencil" style="color:#e08a2e;font-size:0.88em;white-space:pre-wrap">${esc(_nte.memo)}</p>`:'')
                             +`<p class="stencil" style="color:var(--text)">${_line}</p>`
-                            +(_swN?`<p class="stencil" style="color:var(--text)">${_swN}</p>`:'')
-                            +(_rcN?`<p class="stencil" style="color:var(--text)">${_rcN}</p>`:'')
+                            +(_vLine?`<p class="stencil" style="color:var(--text)">${_vLine}</p>`:'')
                             +(_tv==='pack'?`<p class="stencil" style="color:var(--text)">${_packNote(_pkTo,true)}</p>`:'')
-                            +_notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')
-                            +(_meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${_meta}</p>`:'')
+                                                        +(_meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${_meta}</p>`:'')
                             +(_meta2?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em">${_meta2}</p>`:'')
                             +(_vnt?`<p class="stencil" style="color:var(--text);font-size:0.92em">${esc(_vnt)}</p>`:'')
                             +(_vcm?`<p class="stencil" style="color:var(--yellow);font-size:0.92em">${esc(_vcm)}</p>`:'')
@@ -5881,8 +5883,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 // такі самі, як у заголовку поруч. Висоту знімаємо із самого
                 // заголовка вже на сторінці: шрифт Tektur має свої метрики,
                 // і жорсткі пікселі тут не збігаються
-                const _tgBtn=`<button id="ar-list-btn" onclick="toggleArTargets()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ar-list stencil-shadow text-xl">${_tgMode?'ВИЛЬОТИ':'ЦІЛІ'}</button>`;
-                _arFlights=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px"><h2 id="ar-list-hdr" class="stencil-shadow text-xl" style="color:var(--yellow)">${_flHdr}</h2>${_tgBtn}</div>${(_tgMode?_tgGroups:_arGroups)||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає записів</p></div>'}`;
+                _arFlights=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px"><h2 id="ar-list-hdr" class="stencil-shadow text-xl" style="color:var(--yellow)">${_flHdr}</h2></div>${(_tgMode?_tgGroups:_arGroups)||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає записів</p></div>'}`;
             }
         }
         let _allSection='';
