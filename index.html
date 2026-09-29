@@ -565,7 +565,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-50';
+const APP_VER = 'v.26.09-51';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5822,7 +5822,9 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         const _rcN=(()=>{const nr=r.v&&r.v.vres&&r.v.list[j]==='ok'?String(r.v.vres[j]||'').trim().toLowerCase():'';
                             const was=String((P.ress||[])[j]||'').trim().toLowerCase();
                             return(nr&&nr!==was)?`${_vY('верифікатор замінив')} ${_vK(was||'—')} ${_vY('на')} ${_vK(nr)}`:'';})();
-                        const _notes=(j===P.noteAt)?P.notesTg:[];
+                        // пояснення про 200/300 — на картці цілі ОС, до якої вони стосуються;
+                        // немає ОС — на картці, де стоїть перша заміна
+                        const _notes=(j===(_osJ.length?_at:P.noteAt))?P.notesTg:[];
                         return `<div class="record-card text-sm${_nte.flag?' flagged-bg':''}" ondblclick="toggleArchiveFlag(${r.srow||0},${j})" style="position:relative;padding-left:62px;${_lbl?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)">`
                             +`<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0},${j})" ondblclick="event.stopPropagation()" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${o.n}</span></div>`
                             +(_nte.memo?`<p class="stencil" style="color:#e08a2e;font-size:0.88em;white-space:pre-wrap">${esc(_nte.memo)}</p>`:'')
