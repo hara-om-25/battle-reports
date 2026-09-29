@@ -189,6 +189,17 @@
       box-shadow: 0 4px 0 #1f2d3d, 0 6px 12px rgba(0,0,0,0.4);
     }
     .btn-yellow.active { box-shadow: 0 2px 0 var(--yellow-dim), 0 4px 8px rgba(0,0,0,0.4); }
+    .btn-olive {
+      background: var(--surface);
+      border-color: var(--olive);
+      color: var(--text-dim);
+      box-shadow: 0 4px 0 #2d3818, 0 6px 12px rgba(0,0,0,0.4);
+    }
+    .btn-olive:active, .btn-olive.active {
+      background: var(--olive-dark);
+      color: var(--text);
+      box-shadow: 0 2px 0 #2d3818, 0 4px 8px rgba(0,0,0,0.4);
+    }
     .btn-black {
       background: #1a1d18;
       border-color: #3a3d35;
@@ -565,7 +576,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-51';
+const APP_VER = 'v.26.09-52';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5992,7 +6003,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 +'<button onclick="copyVerifyFix()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
                 +'</div><div class="report-box">'+L.map(x=>_vfLine(x,true)).join('\n')+'</div></div>';
         })();
-        const _sbBtn=(t,cls,on,oc,tip,pr)=>`<button ${on?`onclick="${oc}" `:'disabled '}onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil ${cls}${pr?' active':''}" style="font-size:0.78em;padding:5px 10px;width:100%${on?'':';opacity:0.45;cursor:not-allowed'}"${tip?` title="${tip}"`:''}>${t}</button>`;
+        const _sbBtn=(t,cls,on,oc,tip,pr)=>`<button ${on?`onclick="${oc}" `:'disabled '}onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil ${cls}${pr?' active':''}" style="font-size:0.78em;padding:5px 10px;width:100%${on?'':';cursor:not-allowed'}"${tip?` title="${tip}"`:''}>${t}</button>`;
         const _sbOpen=!!state.selArchive&&!state.filterPeriodOpen;
         const _sbArch=(()=>{if(!state.records.length||!state.online)return'';const _f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};const _sd=[...new Set(state.records.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_f(a)<_f(b)?-1:1);const[_d1,_m1,_y1]=_sd[0].split('.'),[_d2,_m2,_y2]=_sd[_sd.length-1].split('.');const _n=(_sd[0]===_sd[_sd.length-1])?_sd[0]:(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1:(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1:_sd[0]+' — '+_sd[_sd.length-1];return'<button onclick="archiveMainSheet()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">АРХІВУВАТИ '+_n+'</button>';})();
         const _sbVerify=state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="showVerifyModal()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-blue" style="font-size:0.78em;padding:5px 10px">ВЕРИФІКАЦІЯ</button>':'';
@@ -6001,8 +6012,8 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             +_sbBtn('СТАТИСТИКА','btn-yellow',_sbOpen,"_arToggle('arShowStat')",_sbOpen?'':'Спершу відкрийте період',state.arShowStat&&_sbOpen)
             +(_sbArch||'').replace('<button ','<button data-side="1" ').replace('style="font-size:0.78em;padding:5px 10px"','style="font-size:0.78em;padding:5px 10px;width:100%"')
             +(_sbVerify||'').replace('style="font-size:0.78em;padding:5px 10px"','style="font-size:0.78em;padding:5px 10px;width:100%"')
-            +_sbBtn('ВИЛЬОТИ','btn-black',_sbOpen,"_arSetList(false)",_sbOpen?'':'Спершу відкрийте період',!state.arTargets&&_sbOpen)
-            +_sbBtn('ЦІЛІ','btn-black',_sbOpen,"_arSetList(true)",_sbOpen?'':'Спершу відкрийте період',state.arTargets&&_sbOpen)
+            +_sbBtn('ВИЛЬОТИ','btn-olive',_sbOpen,"_arSetList(false)",_sbOpen?'':'Спершу відкрийте період',!state.arTargets&&_sbOpen)
+            +_sbBtn('ЦІЛІ','btn-olive',_sbOpen,"_arSetList(true)",_sbOpen?'':'Спершу відкрийте період',state.arTargets&&_sbOpen)
             +`</div>`;
         h+=`<div class="p-4 space-y-4 arch-wrap">
             <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><div id="ar-hdr-right" style="display:flex;align-items:center;gap:12px">${_SHOW_FSFIX&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="restoreFsPoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-orange" style="font-size:0.78em;padding:5px 10px" title="Повернути по 0,5 бала за кожен ФС «пошкоджено»">ПОВЕРНУТИ ФС</button>':''}${_SHOW_RECALC&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="recalcArchivePoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black" style="font-size:0.78em;padding:5px 10px" title="Перерахувати стовпець J за нинішніми «е балами»">ПЕРЕРАХУВАТИ БАЛИ</button>':''}<span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em;${state.online?'':'display:none'}">за період</span></div></div>
