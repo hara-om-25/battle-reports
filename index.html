@@ -168,6 +168,7 @@
        наступний ряд продовжує ті самі лінії кінець у кінець. Усе місце рахує
        _sizeArchRot(): кожна кнопка — абсолютний якір у центрі своєї смуги */
     .arch-rot-box { position: relative; }
+    .arch-back { cursor: pointer; filter: brightness(0.7); }
     /* Підпис року — у порожньому лівому верхньому куті рамки, над першою смугою;
        клікам не заважає */
     .arch-year { position: absolute; left: 0; top: 0; margin: 0; font-size: 1.15rem; line-height: 1.2; pointer-events: none; }
@@ -584,7 +585,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-59';
+const APP_VER = 'v.26.09-60';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -595,6 +596,7 @@ let state = {
     arFilter: null,
     // перелік в АРХІВІ: false — вильоти, true — окремі цілі
     arTargets: false,
+    arFront: '',
     arShowSum: false,
     arShowList: false,
     arShowStat: false,
@@ -4899,6 +4901,14 @@ function recalcListFieldWidth() {
 // разом, щоб смуги різних років були однакові; коротші сидять по центру своєї.
 // Кожна група — окрема рамка рівно на ширину своїх кнопок, порожнього місця праворуч
 // у ній немає
+document.addEventListener('click', e => {
+    const c = e.target.closest && e.target.closest('.arch-groups .crate[data-back="1"]');
+    if (!c) return;
+    e.stopPropagation(); e.preventDefault();
+    state.arFront = c.dataset.y;
+    render();
+}, true);
+
 function _sizeArchRot() {
     document.querySelectorAll('.arch-groups').forEach(gr => {
         const boxes = [...gr.querySelectorAll('.arch-rot-box')];
@@ -4914,7 +4924,7 @@ function _sizeArchRot() {
         const cs = getComputedStyle(boxes[0].closest('.crate'));
         const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)
                    + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
-        const _shift = Math.max(0, ...[...gr.querySelectorAll('.crate')].map(c => parseFloat(c.style.marginLeft) || 0));
+        const _shift = Math.max(0, ...[...gr.querySelectorAll('.crate')].map(c => parseFloat(c.style.left) || 0));
         const top = gr.closest('.arch-top') || gr, side = top.querySelector('.arch-side');
         const avail = top.clientWidth - (side ? side.offsetWidth + 16 : 0) - padX - _shift;
         const W = avail >= bbox + pitch ? avail : top.clientWidth - padX - _shift;
@@ -4934,6 +4944,12 @@ function _sizeArchRot() {
             box.style.width = Math.ceil(bbox + (cols - 1) * pitch + (rows - 1) * drift) + 'px';
             box.style.height = Math.ceil(bbox + (rows - 1) * down + 8) + 'px';
         });
+    });
+    // рамки лежать стопкою (position:absolute), тож розмір стопки задаємо самі
+    document.querySelectorAll('.arch-groups').forEach(gr => {
+        const cr = [...gr.querySelectorAll('.crate')];
+        gr.style.height = Math.max(0, ...cr.map(c => c.offsetHeight)) + 'px';
+        gr.style.width = Math.max(0, ...cr.map(c => c.offsetLeft + c.offsetWidth)) + 'px';
     });
     // «за період» стоїть по правому краю найширшої рамки року, а не сторінки
     const _hr = document.getElementById('ar-hdr-right');
@@ -5574,7 +5590,11 @@ function render() {
         const _arItems=state.archiveSheets.map(s=>{const _dl=/^\d/.test(s)?s:(s.match(/\d{1,2}[-.\/]\d{1,2}[-.\/]\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';if(!state.online&&!_archCacheHas(s))return{y:_sheetYear(s),h:`<span class="arch-rot"><span class="arch-rot-in"><button disabled class="btn-stencil btn-archive" style="opacity:0.45;cursor:not-allowed">${esc(_dl)}</button></span></span>`};return{y:_sheetYear(s),h:`<span class="arch-rot"><span class="arch-rot-in"><button onclick="loadArchiveSheet('${esc(s)}')" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil btn-archive ${_act}">${esc(_dl)}</button></span></span>`};});
         // Кнопки одного року — в одній рамці з підписом року; порядок років і кнопок зберігається
         const _arGrp=new Map();_arItems.forEach(o=>{if(!_arGrp.has(o.y))_arGrp.set(o.y,[]);_arGrp.get(o.y).push(o.h);});
-        const _arBtns=_arGrp.size?'<div class="arch-groups flex flex-col gap-4 items-start">'+[..._arGrp].sort((a,b)=>(b[0]||'').localeCompare(a[0]||'')).map(([y,h],_i,_a)=>`<div class="crate p-4" style="flex:0 0 auto;width:fit-content;margin-left:${(_a.length-1-_i)*0+(_i===0&&_a.length>1?120:0)}px"><div class="arch-rot-box">${y?`<h3 class="arch-year stencil-shadow" style="color:var(--yellow)">${y}</h3>`:''}${h.join('')}</div></div>`).join('')+'</div>':'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p></div>';
+        const _arSorted=[..._arGrp].sort((a,b)=>(b[0]||'').localeCompare(a[0]||''));
+        // Рамки років лежать стопкою: передня зсунута праворуч, задня видна ліворуч.
+        // Клік по задній виводить її наперед (стан state.arFront)
+        const _arFront=_arSorted.some(g=>g[0]===state.arFront)?state.arFront:(_arSorted[0]?_arSorted[0][0]:'');
+        const _arBtns=_arGrp.size?'<div class="arch-groups" style="position:relative">'+_arSorted.map(([y,h])=>{const _fr=_arSorted.length<2||y===_arFront;return `<div class="crate p-4${_fr?'':' arch-back'}" data-y="${y}" data-back="${_fr?0:1}" style="position:absolute;top:0;left:${_fr&&_arSorted.length>1?120:0}px;z-index:${_fr?2:1};width:fit-content"><div class="arch-rot-box">${y?`<h3 class="arch-year stencil-shadow" style="color:var(--yellow)">${y}</h3>`:''}${h.join('')}</div></div>`;}).join('')+'</div>':'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p></div>';
         const _row=(label,val,suf='')=>`<p class="stencil" style="color:var(--text);margin:1px 0">${label} <span style="color:var(--yellow)">— ${val}${suf}</span></p>`;
         // Те саме, але натискається: рядок вмикає фільтр переліку вильотів,
         // а сам світиться кольором своєї групи. k — вид фільтра, v — значення,
