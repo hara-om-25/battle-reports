@@ -168,7 +168,9 @@
        наступний ряд продовжує ті самі лінії кінець у кінець. Усе місце рахує
        _sizeArchRot(): кожна кнопка — абсолютний якір у центрі своєї смуги */
     .arch-rot-box { position: relative; }
+    .arch-groups .crate { transition: left 0.3s ease, filter 0.3s ease, transform 0.17s ease, box-shadow 0.17s ease; }
     .arch-back { cursor: pointer; filter: brightness(0.7); }
+    .arch-groups .crate.arch-lift { transform: scale(1.02); box-shadow: 0 10px 24px rgba(0,0,0,0.6); }
     /* Підпис року — у порожньому лівому верхньому куті рамки, над першою смугою;
        клікам не заважає */
     .arch-year { position: absolute; left: 0; top: 0; margin: 0; font-size: 1.15rem; line-height: 1.2; pointer-events: none; }
@@ -585,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-60';
+const APP_VER = 'v.26.09-61';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -4905,8 +4907,18 @@ document.addEventListener('click', e => {
     const c = e.target.closest && e.target.closest('.arch-groups .crate[data-back="1"]');
     if (!c) return;
     e.stopPropagation(); e.preventDefault();
+    const gr = c.parentElement;
+    const f = gr.querySelector('.crate[data-back="0"]');
     state.arFront = c.dataset.y;
-    render();
+    if (!f) { render(); return; }
+    // ковзання: передня йде назад ліворуч, задня виходить наперед і вправо,
+    // а сама піднімається (масштаб + тінь) і осідає
+    const shift = parseFloat(f.style.left) || 0;
+    f.style.left = '0px'; f.style.zIndex = 1; f.dataset.back = '1'; f.classList.add('arch-back');
+    c.style.left = shift + 'px'; c.style.zIndex = 2; c.dataset.back = '0'; c.classList.remove('arch-back');
+    c.classList.add('arch-lift');
+    setTimeout(() => c.classList.remove('arch-lift'), 170);
+    setTimeout(_sizeArchRot, 330);
 }, true);
 
 function _sizeArchRot() {
