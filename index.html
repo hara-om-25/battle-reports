@@ -565,7 +565,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-49';
+const APP_VER = 'v.26.09-50';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2778,7 +2778,9 @@ function _arRowParts(r) {
     const _rest=[..._resChanges(r,tgts,ress),..._osNote(r)].filter(Boolean);
     const _mkNote=a=>a.length?[`${_vY('верифікатор замінив')} ${a.join(_vY(', '))}`]:[];
     const notes=_mkNote(_swaps.concat(_rest));
-    const notesTg=_mkNote(_rest);
+    // у переліку ЦІЛЕЙ зміну результату підписує картка самої цілі (_tgCard),
+    // а не та, де стоїть загальна примітка вильота
+    const notesTg=_mkNote(_osNote(r).filter(Boolean));
     const _swKeys = _swap1 ? Object.keys(_swap1).map(Number) : [];
     return { parts: parts, notes: notes, notesTg: notesTg, tgts: tgts, ress: ress, swap: _swap1,
              // власних позицій у переліку: цілі, а де їх немає — сам результат.
@@ -5815,12 +5817,18 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         // у ній бути не може. Гуртовий напис із «3 од.» лишився
                         // в переліку ВИЛЬОТІВ, де всі три цілі на одній картці
                         const _swN=_sw?`${_vY('верифікатор замінив')} ${_vW(P.tgts[j]||'')} ${_vY('на')} ${_vW(_sw.name)}`:'';
+                        // зміна результату саме цієї цілі: старий закреслений угорі, а тут
+                        // сказано, хто це зробив
+                        const _rcN=(()=>{const nr=r.v&&r.v.vres&&r.v.list[j]==='ok'?String(r.v.vres[j]||'').trim().toLowerCase():'';
+                            const was=String((P.ress||[])[j]||'').trim().toLowerCase();
+                            return(nr&&nr!==was)?`${_vY('верифікатор замінив')} ${_vK(was||'—')} ${_vY('на')} ${_vK(nr)}`:'';})();
                         const _notes=(j===P.noteAt)?P.notesTg:[];
                         return `<div class="record-card text-sm${_nte.flag?' flagged-bg':''}" ondblclick="toggleArchiveFlag(${r.srow||0},${j})" style="position:relative;padding-left:62px;${_lbl?'padding-right:170px;':''}font-size:calc(0.875rem + 1px)">`
                             +`<div style="position:absolute;left:4px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center"><span onclick="showEditArchiveRecord(${r.srow||0},${j})" ondblclick="event.stopPropagation()" class="stencil" style="color:var(--yellow);font-size:1.6em;line-height:1;cursor:pointer" title="Редагувати виліт">${o.n}</span></div>`
                             +(_nte.memo?`<p class="stencil" style="color:#e08a2e;font-size:0.88em;white-space:pre-wrap">${esc(_nte.memo)}</p>`:'')
                             +`<p class="stencil" style="color:var(--text)">${_line}</p>`
                             +(_swN?`<p class="stencil" style="color:var(--text)">${_swN}</p>`:'')
+                            +(_rcN?`<p class="stencil" style="color:var(--text)">${_rcN}</p>`:'')
                             +(_tv==='pack'?`<p class="stencil" style="color:var(--text)">${_packNote(_pkTo,true)}</p>`:'')
                             +_notes.map(_n=>`<p class="stencil" style="color:var(--text)">${_n}</p>`).join('')
                             +(_meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${_meta}</p>`:'')
