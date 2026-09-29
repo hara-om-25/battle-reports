@@ -584,7 +584,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-54';
+const APP_VER = 'v.26.09-55';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5749,7 +5749,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                     :`Уражено орієнтовно на <span style="color:var(--text)">${_arTotal}</span> ${_bal(_arTotal)}`;
                 const _shRptBlock=_R.length>0?`<div id="ar-sum" class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ${esc(state.selArchive)}</h3><span class="stencil" style="color:var(--khaki)">${_shHdr}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyArchiveSheetReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_shRptLines.map(_rptColor).join('\n')}</div></div>`:'';
                 _arTop=(_allMode||!(state.arShowSum||state.arShowStat||state.arShowList))?'':`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px"><h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">${esc(state.selArchive)}</h1>${_arHeader}</div>`;
-                _arContent=`${_tgMode||!state.arShowSum?'':_shRptBlock}${!state.arShowStat?'':`<h2 id="ar-stat" onclick="state.arFilter=null;state.tgFilter=null;render()" class="stencil-shadow text-xl px-2" style="color:var(--yellow);cursor:pointer">СТАТИСТИКА</h2>${_statsBlock}`}`;
+                _arContent=`${!state.arShowSum?'':_shRptBlock}${!state.arShowStat?'':`<h2 id="ar-stat" onclick="state.arFilter=null;state.tgFilter=null;render()" class="stencil-shadow text-xl px-2" style="color:var(--yellow);cursor:pointer">СТАТИСТИКА</h2>${_statsBlock}`}`;
                 const _shown=_R.filter(_arMatch).length;
                 let _tgGroups='';
                 if(_tgMode){
