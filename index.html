@@ -564,7 +564,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-45';
+const APP_VER = 'v.26.09-46';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -575,6 +575,8 @@ let state = {
     arFilter: null,
     // перелік в АРХІВІ: false — вильоти, true — окремі цілі
     arTargets: false,
+    arShowSum: true,
+    arShowStat: true,
     // натиснутий рядок статистики в переліку ЦІЛЕЙ
     tgFilter: null,
     // результат звіряння по кожному архіву окремо: {аркуш: {left, fix}}, де
@@ -2672,12 +2674,9 @@ function _tgMatch(o) {
 }
 
 // Перемикання переліку АРХІВУ: вильоти <-> цілі
-function _arScroll(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const nav = document.querySelector('nav');
-    const off = nav ? nav.getBoundingClientRect().bottom + 8 : 8;
-    window.scrollTo({ top: window.scrollY + el.getBoundingClientRect().top - off, behavior: 'smooth' });
+function _arToggle(k) {
+    state[k] = !state[k];
+    render();
 }
 function _arSetList(tg) {
     if (!!state.arTargets === tg) return;
@@ -5709,7 +5708,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                     :`Уражено орієнтовно на <span style="color:var(--text)">${_arTotal}</span> ${_bal(_arTotal)}`;
                 const _shRptBlock=state.archiveRecs.length>0?`<div id="ar-sum" class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ${esc(state.selArchive)}</h3><span class="stencil" style="color:var(--khaki)">${_shHdr}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyArchiveSheetReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_shRptLines.map(_rptColor).join('\n')}</div></div>`:'';
                 _arTop=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px"><h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">${esc(state.selArchive)}</h1>${_arHeader}</div>`;
-                _arContent=`${_tgMode?'':_shRptBlock}<h2 id="ar-stat" onclick="state.arFilter=null;state.tgFilter=null;render()" class="stencil-shadow text-xl px-2" style="color:var(--yellow);cursor:pointer">СТАТИСТИКА</h2>${_statsBlock}`;
+                _arContent=`${_tgMode||!state.arShowSum?'':_shRptBlock}${!state.arShowStat?'':`<h2 id="ar-stat" onclick="state.arFilter=null;state.tgFilter=null;render()" class="stencil-shadow text-xl px-2" style="color:var(--yellow);cursor:pointer">СТАТИСТИКА</h2>${_statsBlock}`}`;
                 const _shown=state.archiveRecs.filter(_arMatch).length;
                 let _tgGroups='';
                 if(_tgMode){
@@ -5976,8 +5975,8 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         const _sbArch=(()=>{if(!state.records.length||!state.online)return'';const _f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};const _sd=[...new Set(state.records.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_f(a)<_f(b)?-1:1);const[_d1,_m1,_y1]=_sd[0].split('.'),[_d2,_m2,_y2]=_sd[_sd.length-1].split('.');const _n=(_sd[0]===_sd[_sd.length-1])?_sd[0]:(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1:(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1:_sd[0]+' — '+_sd[_sd.length-1];return'<button onclick="archiveMainSheet()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">АРХІВУВАТИ '+_n+'</button>';})();
         const _sbVerify=state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="showVerifyModal()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-blue" style="font-size:0.78em;padding:5px 10px">ВЕРИФІКАЦІЯ</button>':'';
         const _sbCol=`<div class="arch-side" style="display:flex;flex-direction:column;gap:8px;flex:0 0 auto;min-width:170px">`
-            +_sbBtn('ПІДСУМКИ','btn-black',_sbOpen,"_arScroll('ar-sum')",_sbOpen?'':'Спершу відкрийте період')
-            +_sbBtn('СТАТИСТИКА','btn-yellow',_sbOpen,"_arScroll('ar-stat')",_sbOpen?'':'Спершу відкрийте період')
+            +_sbBtn('ПІДСУМКИ','btn-black',_sbOpen,"_arToggle('arShowSum')",_sbOpen?'':'Спершу відкрийте період',state.arShowSum&&_sbOpen?';outline:2px solid #e8e8e8':'')
+            +_sbBtn('СТАТИСТИКА','btn-yellow',_sbOpen,"_arToggle('arShowStat')",_sbOpen?'':'Спершу відкрийте період',state.arShowStat&&_sbOpen?';outline:2px solid #e8e8e8':'')
             +(_sbArch||'').replace('<button ','<button data-side="1" ').replace('style="font-size:0.78em;padding:5px 10px"','style="font-size:0.78em;padding:5px 10px;width:100%"')
             +(_sbVerify||'').replace('style="font-size:0.78em;padding:5px 10px"','style="font-size:0.78em;padding:5px 10px;width:100%"')
             +_sbBtn('ВИЛЬОТИ','btn-black',_sbOpen,"_arSetList(false)",_sbOpen?'':'Спершу відкрийте період',!state.arTargets&&_sbOpen?';outline:2px solid var(--yellow)':'')
