@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-62';
+const APP_VER = 'v.26.09-63';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1443,7 +1443,7 @@ function showAlert(msg) {
 // що зберігається на пристрої, тож працює й без мережі
 function showPrices() {
     const _rows = Object.entries(state.scoreTable || {})
-        .map(([a, sc]) => ({ a: a, n: (sc.fullName && sc.fullName !== a) ? sc.fullName : '', z: sc.znyshcheno, p: sc.poshkodzheno }))
+        .map(([a, sc]) => { const d = sc.descr !== undefined ? sc.descr : ((sc.fullName && sc.fullName !== a) ? sc.fullName : ''); return { a: a, n: d === a ? '' : d, z: sc.znyshcheno, p: sc.poshkodzheno }; })
         .sort((x, y) => x.a.localeCompare(y.a, 'uk'));
     const _ov = document.createElement('div');
     _ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
@@ -4081,7 +4081,9 @@ async function loadDataFromAPI() {
                 state.scoreTable[scoreRows[i][0]] = {
                     znyshcheno: _num(scoreRows[i][1]),
                     poshkodzheno: _num(scoreRows[i][2]),
-                    fullName: scoreRows[i][3] || scoreRows[i][0]
+                    fullName: scoreRows[i][3] || scoreRows[i][0],
+                    // опис для вікна «е бали»: колонка E, а коли порожня — D
+                    descr: String(scoreRows[i][4] || '').trim() || String(scoreRows[i][3] || '').trim()
                 };
             }
         }
