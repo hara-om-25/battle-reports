@@ -564,7 +564,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-42';
+const APP_VER = 'v.26.09-43';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5522,7 +5522,7 @@ function render() {
         const _arItems=state.archiveSheets.map(s=>{const _dl=/^\d/.test(s)?s:(s.match(/\d{1,2}[-.\/]\d{1,2}[-.\/]\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';if(!state.online&&!_archCacheHas(s))return{y:_sheetYear(s),h:`<span class="arch-rot"><span class="arch-rot-in"><button disabled class="btn-stencil btn-archive" style="opacity:0.45;cursor:not-allowed">${esc(_dl)}</button></span></span>`};return{y:_sheetYear(s),h:`<span class="arch-rot"><span class="arch-rot-in"><button onclick="loadArchiveSheet('${esc(s)}')" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil btn-archive ${_act}">${esc(_dl)}</button></span></span>`};});
         // Кнопки одного року — в одній рамці з підписом року; порядок років і кнопок зберігається
         const _arGrp=new Map();_arItems.forEach(o=>{if(!_arGrp.has(o.y))_arGrp.set(o.y,[]);_arGrp.get(o.y).push(o.h);});
-        const _arBtns=_arGrp.size?'<div class="arch-groups flex flex-wrap gap-4 items-start">'+[..._arGrp].map(([y,h])=>`<div class="crate p-4" style="flex:0 0 auto;width:fit-content"><div class="arch-rot-box">${y?`<h3 class="arch-year stencil-shadow" style="color:var(--yellow)">${y}</h3>`:''}${h.join('')}</div></div>`).join('')+'</div>':'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p></div>';
+        const _arBtns=_arGrp.size?'<div class="arch-groups flex flex-wrap gap-4 items-start">'+[..._arGrp].sort((a,b)=>(b[0]||'').localeCompare(a[0]||'')).map(([y,h])=>`<div class="crate p-4" style="flex:0 0 auto;width:fit-content"><div class="arch-rot-box">${y?`<h3 class="arch-year stencil-shadow" style="color:var(--yellow)">${y}</h3>`:''}${h.join('')}</div></div>`).join('')+'</div>':'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p></div>';
         const _row=(label,val,suf='')=>`<p class="stencil" style="color:var(--text);margin:1px 0">${label} <span style="color:var(--yellow)">— ${val}${suf}</span></p>`;
         // Те саме, але натискається: рядок вмикає фільтр переліку вильотів,
         // а сам світиться кольором своєї групи. k — вид фільтра, v — значення,
