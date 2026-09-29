@@ -550,7 +550,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-29';
+const APP_VER = 'v.26.09-30';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1167,13 +1167,23 @@ function _initVerMark() {
         const btn = nav && nav.querySelector('button.logout');
         if (!nav || !btn) { v.style.visibility = 'hidden'; return; }
         v.style.visibility = '';
-        const w = v.offsetWidth, vw = document.documentElement.clientWidth;
+        const w = v.offsetWidth, h = v.offsetHeight, vw = document.documentElement.clientWidth;
         const b = btn.getBoundingClientRect();
         // по центру кнопки ВИЙТИ, під самим меню; на вузькому екрані кнопка
         // стоїть скраю, тож напис притримуємо в межах екрана
-        const x = b.left + (b.width - w) / 2;
-        v.style.left = Math.round(Math.min(Math.max(x, 4), Math.max(4, vw - w - 4))) + 'px';
-        v.style.top = Math.round(nav.getBoundingClientRect().bottom + 12) + 'px';
+        const x = Math.min(Math.max(b.left + (b.width - w) / 2, 4), Math.max(4, vw - w - 4));
+        const y = nav.getBoundingClientRect().bottom + 12;
+        // На вузькому екрані вміст починається одразу під меню, і напис ліг би
+        // просто на текст. Тому щоразу міряємо, чи не накриває він котрийсь
+        // ящик, — накриває, отже його тут просто немає
+        let hit = false;
+        document.querySelectorAll('#app .crate:not(nav), #app .lists-cols').forEach(el => {
+            const r = el.getBoundingClientRect();
+            if (r.width && r.left < x + w && r.right > x && r.top < y + h && r.bottom > y) hit = true;
+        });
+        if (hit) { v.style.visibility = 'hidden'; return; }
+        v.style.left = Math.round(x) + 'px';
+        v.style.top = Math.round(y) + 'px';
     };
     window.addEventListener('resize', place, { passive: true });
     window.addEventListener('scroll', place, { passive: true });
@@ -1385,6 +1395,50 @@ function showAlert(msg) {
     _ok.addEventListener('touchstart', function() { this.style.background='#5ab558'; }, {passive:true});
     _ok.addEventListener('touchend', function() { this.style.background=''; });
 }
+// Налаштування: одна кнопка в меню, а за нею дії, яким не місце на видноті.
+// Те, що зараз неможливе (немає мережі, не відкрито періоду), лишається в
+// переліку, але пригашене й пояснює, чого бракує
+function showSettings() {
+    const _ov = document.createElement('div');
+    _ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    const _bx = document.createElement('div');
+    _bx.style.cssText = 'background:var(--surface);border:1px solid var(--olive-dark);box-shadow:4px 4px 0 var(--olive-dark);padding:24px 28px 20px;max-width:420px;width:100%;font-family:Tektur,monospace;color:var(--text)';
+    const _ti = document.createElement('div');
+    _ti.style.cssText = 'color:var(--yellow);font-size:0.7em;letter-spacing:0.15em;margin-bottom:14px;font-weight:700';
+    _ti.textContent = 'НАЛАШТУВАННЯ';
+    _bx.appendChild(_ti);
+    const _close = () => { if (_ov.parentNode) document.body.removeChild(_ov); };
+    const _rows = [
+        { t: 'АРХІВАЦІЯ', on: state.online && state.records.length > 0,
+          why: state.online ? 'Немає чого архівувати: у ГОЛОВНІЙ порожньо' : 'Потрібна мережа',
+          go: () => archiveMainSheet() },
+        { t: 'ВЕРИФІКАЦІЯ', on: state.online && !!state.selArchive,
+          why: state.online ? 'Спершу відкрийте період в АРХІВІ' : 'Потрібна мережа',
+          go: () => showVerifyModal() },
+        { t: 'СПИСКИ', on: true, why: '',
+          go: () => { state.page = 'lists'; render(); } }
+    ];
+    _rows.forEach(o => {
+        const b = document.createElement('button');
+        b.className = 'btn-stencil';
+        b.style.cssText = 'display:block;width:100%;text-align:left;padding:8px 14px;margin-bottom:10px;font-size:0.9em'
+            + (o.on ? '' : ';opacity:0.45;cursor:default');
+        b.textContent = o.t;
+        if (!o.on) b.title = o.why;
+        b.addEventListener('click', () => { if (!o.on) return; _close(); o.go(); });
+        _bx.appendChild(b);
+    });
+    const _x = document.createElement('button');
+    _x.className = 'btn-stencil';
+    _x.style.cssText = 'float:right;padding:4px 22px;font-size:0.85em;margin-top:6px';
+    _x.textContent = 'ЗАКРИТИ';
+    _x.addEventListener('click', _close);
+    _bx.appendChild(_x);
+    _ov.appendChild(_bx);
+    _ov.addEventListener('click', e => { if (e.target === _ov) _close(); });
+    document.body.appendChild(_ov);
+}
+
 function showConfirm(title, msg, onOk) {
     var _ov=document.createElement('div');
     _ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
@@ -4062,6 +4116,21 @@ function icoCross(px, w) { return _ico(px, _icoPath('M5 4L19 20', 0, w) + _icoPa
 function icoPlus(px)  { return _ico(px, _icoPath('M12 4L12 20') + _icoPath('M4 12L20 12')); }
 function icoUp(px)    { return _ico(px, _icoPath('M12 21L12 4.5') + _icoPath('M5 11.5L12 4.5L19 11.5')); }
 function icoPencil(px){ return _ico(px, _icoPath('M4.5 19.5L4.5 15.5L15.5 4.5L19.5 8.5L8.5 19.5Z') + _icoPath('M12.5 7.5L16.5 11.5')); }
+// Шестерня: вісім зубців прямими відрізками й кругла втулка. Зубці лежать
+// у межах 2..22 з 24 одиниць — стільки ж, скільки в решти значків із запасом
+// під товщину лінії
+function icoGear(px) {
+    const d = 'M10.10 5.53 L9.94 2.20 L14.06 2.20 L13.90 5.53 L15.20 6.07 L17.43 3.59'
+        + ' L20.41 6.57 L17.93 8.80 L18.47 10.10 L21.80 9.94 L21.80 14.06 L18.47 13.90'
+        + ' L17.93 15.20 L20.41 17.43 L17.43 20.41 L15.20 17.93 L13.90 18.47 L14.06 21.80'
+        + ' L9.94 21.80 L10.10 18.47 L8.80 17.93 L6.57 20.41 L3.59 17.43 L6.07 15.20'
+        + ' L5.53 13.90 L2.20 14.06 L2.20 9.94 L5.53 10.10 L6.07 8.80 L3.59 6.57'
+        + ' L6.57 3.59 L8.80 6.07 Z';
+    // втулка — коло двома дугами, як у спінера
+    const hub = '<path d="M12 8.6A3.4 3.4 0 1 1 11.99 8.6" stroke="currentColor"'
+        + ' stroke-width="' + _ICO_W + '" vector-effect="non-scaling-stroke" fill="none"/>';
+    return _ico(px, _icoPath(d) + hub);
+}
 function icoTrash(px) { return _ico(px, _icoPath('M4 7.5L20 7.5') + _icoPath('M9.5 7.5L9.5 4.5L14.5 4.5L14.5 7.5') + _icoPath('M6.5 7.5L7.5 20L16.5 20L17.5 7.5')); }
 
 // Кругова стрілка тієї ж товщини й стилю, що й Тейваз. viewBox навмисне
@@ -5271,7 +5340,7 @@ function render() {
                 <button onclick="state.page='form';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='form'?'active':''}">ФОРМА</button>
                 <button onclick="state.page='reports';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='reports'?'active':''}">ЗВІТИ</button>
                 <button onclick="state.page='lists';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='lists'?'active':''}">СПИСКИ</button>
-                <button onclick="manualPush()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="font-size:${state.queue.length?'1.05em':'1.5em'};font-weight:${state.queue.length?'700':'400'};letter-spacing:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box;border-width:1px;box-shadow:0 4px 0 #2a2404,0 6px 12px rgba(0,0,0,0.4)${state.queue.length?';background:#8a4a2a;color:#fff;box-shadow:0 4px 0 #3d1c08,0 6px 12px rgba(0,0,0,0.4)':''}" title="${state.queue.length?state.queue.length+' незбережених записів — натисніть, щоб синхронізувати':'Записати та синхронізувати дані в таблицю'}">${state.syncing?spinnerSvg(23):(state.queue.length||tiwazSvg(23))}</button><button onclick="goToArchive()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn-archive ${state.page==='archive'?'active':''}">АРХІВ</button><button onclick="logout()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn logout">ВИЙТИ</button>
+                <button onclick="manualPush()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="font-size:${state.queue.length?'1.05em':'1.5em'};font-weight:${state.queue.length?'700':'400'};letter-spacing:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box;border-width:1px;box-shadow:0 4px 0 #2a2404,0 6px 12px rgba(0,0,0,0.4)${state.queue.length?';background:#8a4a2a;color:#fff;box-shadow:0 4px 0 #3d1c08,0 6px 12px rgba(0,0,0,0.4)':''}" title="${state.queue.length?state.queue.length+' незбережених записів — натисніть, щоб синхронізувати':'Записати та синхронізувати дані в таблицю'}">${state.syncing?spinnerSvg(23):(state.queue.length||tiwazSvg(23))}</button><button onclick="goToArchive()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn-archive ${state.page==='archive'?'active':''}">АРХІВ</button><button onclick="showSettings()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box;border-width:1px;box-shadow:0 4px 0 #2a2404,0 6px 12px rgba(0,0,0,0.4)" title="Налаштування">${icoGear(23)}</button><button onclick="logout()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn logout">ВИЙТИ</button>
             </div>
         </div>
     </nav>`;
