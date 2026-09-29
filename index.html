@@ -564,7 +564,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-43';
+const APP_VER = 'v.26.09-45';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2672,6 +2672,18 @@ function _tgMatch(o) {
 }
 
 // Перемикання переліку АРХІВУ: вильоти <-> цілі
+function _arScroll(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const nav = document.querySelector('nav');
+    const off = nav ? nav.getBoundingClientRect().bottom + 8 : 8;
+    window.scrollTo({ top: window.scrollY + el.getBoundingClientRect().top - off, behavior: 'smooth' });
+}
+function _arSetList(tg) {
+    if (!!state.arTargets === tg) return;
+    toggleArTargets();
+}
+
 function toggleArTargets() {
     // Переліки різної довжини, тож після перемальовування сторінка поїхала б
     // під пальцем. Запам'ятовуємо, де стояла кнопка, і повертаємо її туди ж
@@ -4876,7 +4888,9 @@ function _sizeArchRot() {
         const cs = getComputedStyle(boxes[0].closest('.crate'));
         const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)
                    + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
-        const W = gr.clientWidth - padX;
+        const top = gr.closest('.arch-top') || gr, side = top.querySelector('.arch-side');
+        const avail = top.clientWidth - (side ? side.offsetWidth + 16 : 0) - padX;
+        const W = avail >= bbox + pitch ? avail : top.clientWidth - padX;
         boxes.forEach(box => {
             const ws = [...box.querySelectorAll('.arch-rot')], N = ws.length;
             let rows = 1, per = 1;
@@ -5522,7 +5536,7 @@ function render() {
         const _arItems=state.archiveSheets.map(s=>{const _dl=/^\d/.test(s)?s:(s.match(/\d{1,2}[-.\/]\d{1,2}[-.\/]\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';if(!state.online&&!_archCacheHas(s))return{y:_sheetYear(s),h:`<span class="arch-rot"><span class="arch-rot-in"><button disabled class="btn-stencil btn-archive" style="opacity:0.45;cursor:not-allowed">${esc(_dl)}</button></span></span>`};return{y:_sheetYear(s),h:`<span class="arch-rot"><span class="arch-rot-in"><button onclick="loadArchiveSheet('${esc(s)}')" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil btn-archive ${_act}">${esc(_dl)}</button></span></span>`};});
         // Кнопки одного року — в одній рамці з підписом року; порядок років і кнопок зберігається
         const _arGrp=new Map();_arItems.forEach(o=>{if(!_arGrp.has(o.y))_arGrp.set(o.y,[]);_arGrp.get(o.y).push(o.h);});
-        const _arBtns=_arGrp.size?'<div class="arch-groups flex flex-wrap gap-4 items-start">'+[..._arGrp].sort((a,b)=>(b[0]||'').localeCompare(a[0]||'')).map(([y,h])=>`<div class="crate p-4" style="flex:0 0 auto;width:fit-content"><div class="arch-rot-box">${y?`<h3 class="arch-year stencil-shadow" style="color:var(--yellow)">${y}</h3>`:''}${h.join('')}</div></div>`).join('')+'</div>':'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p></div>';
+        const _arBtns=_arGrp.size?'<div class="arch-groups flex flex-col gap-4 items-start">'+[..._arGrp].sort((a,b)=>(b[0]||'').localeCompare(a[0]||'')).map(([y,h])=>`<div class="crate p-4" style="flex:0 0 auto;width:fit-content"><div class="arch-rot-box">${y?`<h3 class="arch-year stencil-shadow" style="color:var(--yellow)">${y}</h3>`:''}${h.join('')}</div></div>`).join('')+'</div>':'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p></div>';
         const _row=(label,val,suf='')=>`<p class="stencil" style="color:var(--text);margin:1px 0">${label} <span style="color:var(--yellow)">— ${val}${suf}</span></p>`;
         // Те саме, але натискається: рядок вмикає фільтр переліку вильотів,
         // а сам світиться кольором своєї групи. k — вид фільтра, v — значення,
@@ -5693,9 +5707,9 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _shHdr=_anyV
                     ?`Верифіковано уражень на <span style="color:var(--text)">${_shVSum}</span> ${_bal(_shVSum)}`
                     :`Уражено орієнтовно на <span style="color:var(--text)">${_arTotal}</span> ${_bal(_arTotal)}`;
-                const _shRptBlock=state.archiveRecs.length>0?`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ${esc(state.selArchive)}</h3><span class="stencil" style="color:var(--khaki)">${_shHdr}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyArchiveSheetReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_shRptLines.map(_rptColor).join('\n')}</div></div>`:'';
+                const _shRptBlock=state.archiveRecs.length>0?`<div id="ar-sum" class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div style="display:flex;align-items:center;gap:1.5em;flex-wrap:wrap"><h3 class="stencil-shadow" style="color:var(--yellow)">ПІДСУМКИ ЗА ${esc(state.selArchive)}</h3><span class="stencil" style="color:var(--khaki)">${_shHdr}</span></div><div class="flex gap-2 flex-wrap"><button onclick="copyArchiveSheetReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-black">КОПІЮВАТИ</button></div></div><div class="report-box">${_shRptLines.map(_rptColor).join('\n')}</div></div>`:'';
                 _arTop=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:0 8px 4px"><h1 class="stencil-shadow text-3xl" style="color:var(--yellow)">${esc(state.selArchive)}</h1>${_arHeader}</div>`;
-                _arContent=`${_tgMode?'':_shRptBlock}<h2 onclick="state.arFilter=null;state.tgFilter=null;render()" class="stencil-shadow text-xl px-2" style="color:var(--yellow);cursor:pointer">СТАТИСТИКА</h2>${_statsBlock}`;
+                _arContent=`${_tgMode?'':_shRptBlock}<h2 id="ar-stat" onclick="state.arFilter=null;state.tgFilter=null;render()" class="stencil-shadow text-xl px-2" style="color:var(--yellow);cursor:pointer">СТАТИСТИКА</h2>${_statsBlock}`;
                 const _shown=state.archiveRecs.filter(_arMatch).length;
                 let _tgGroups='';
                 if(_tgMode){
@@ -5957,9 +5971,21 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 +'<button onclick="copyVerifyFix()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
                 +'</div><div class="report-box">'+L.map(x=>_vfLine(x,true)).join('\n')+'</div></div>';
         })();
+        const _sbBtn=(t,cls,on,oc,tip,extra)=>`<button ${on?`onclick="${oc}" `:'disabled '}onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil ${cls}" style="font-size:0.78em;padding:5px 10px;width:100%${on?'':';opacity:0.45;cursor:not-allowed'}${extra||''}"${tip?` title="${tip}"`:''}>${t}</button>`;
+        const _sbOpen=!!state.selArchive&&!state.filterPeriodOpen;
+        const _sbArch=(()=>{if(!state.records.length||!state.online)return'';const _f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};const _sd=[...new Set(state.records.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_f(a)<_f(b)?-1:1);const[_d1,_m1,_y1]=_sd[0].split('.'),[_d2,_m2,_y2]=_sd[_sd.length-1].split('.');const _n=(_sd[0]===_sd[_sd.length-1])?_sd[0]:(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1:(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1:_sd[0]+' — '+_sd[_sd.length-1];return'<button onclick="archiveMainSheet()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">АРХІВУВАТИ '+_n+'</button>';})();
+        const _sbVerify=state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="showVerifyModal()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-blue" style="font-size:0.78em;padding:5px 10px">ВЕРИФІКАЦІЯ</button>':'';
+        const _sbCol=`<div class="arch-side" style="display:flex;flex-direction:column;gap:8px;flex:0 0 auto;min-width:170px">`
+            +_sbBtn('ПІДСУМКИ','btn-black',_sbOpen,"_arScroll('ar-sum')",_sbOpen?'':'Спершу відкрийте період')
+            +_sbBtn('СТАТИСТИКА','btn-yellow',_sbOpen,"_arScroll('ar-stat')",_sbOpen?'':'Спершу відкрийте період')
+            +(_sbArch||'').replace('<button ','<button data-side="1" ').replace('style="font-size:0.78em;padding:5px 10px"','style="font-size:0.78em;padding:5px 10px;width:100%"')
+            +(_sbVerify||'').replace('style="font-size:0.78em;padding:5px 10px"','style="font-size:0.78em;padding:5px 10px;width:100%"')
+            +_sbBtn('ВИЛЬОТИ','btn-black',_sbOpen,"_arSetList(false)",_sbOpen?'':'Спершу відкрийте період',!state.arTargets&&_sbOpen?';outline:2px solid var(--yellow)':'')
+            +_sbBtn('ЦІЛІ','btn-black',_sbOpen,"_arSetList(true)",_sbOpen?'':'Спершу відкрийте період',state.arTargets&&_sbOpen?';outline:2px solid var(--yellow)':'')
+            +`</div>`;
         h+=`<div class="p-4 space-y-4 arch-wrap">
-            <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><div style="display:flex;align-items:center;gap:12px">${state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="showVerifyModal()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-blue" style="font-size:0.78em;padding:5px 10px">ВЕРИФІКАЦІЯ</button>':''}${_SHOW_FSFIX&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="restoreFsPoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-orange" style="font-size:0.78em;padding:5px 10px" title="Повернути по 0,5 бала за кожен ФС «пошкоджено»">ПОВЕРНУТИ ФС</button>':''}${_SHOW_RECALC&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="recalcArchivePoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black" style="font-size:0.78em;padding:5px 10px" title="Перерахувати стовпець J за нинішніми «е балами»">ПЕРЕРАХУВАТИ БАЛИ</button>':''}${(()=>{if(!state.records.length||!state.online)return'';const _f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};const _sd=[...new Set(state.records.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_f(a)<_f(b)?-1:1);const[_d1,_m1,_y1]=_sd[0].split('.'),[_d2,_m2,_y2]=_sd[_sd.length-1].split('.');const _n=(_sd[0]===_sd[_sd.length-1])?_sd[0]:(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1:(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1:_sd[0]+' — '+_sd[_sd.length-1];return'<button onclick="archiveMainSheet()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">АРХІВУВАТИ '+_n+'</button>';})()}<span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em;${state.online?'':'display:none'}">за період</span></div></div>
-            ${!state.filterPeriodOpen?(state.archiveLoading&&!state.selArchive?'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p></div>':_arBtns):''}
+            <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><div style="display:flex;align-items:center;gap:12px">${_SHOW_FSFIX&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="restoreFsPoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-orange" style="font-size:0.78em;padding:5px 10px" title="Повернути по 0,5 бала за кожен ФС «пошкоджено»">ПОВЕРНУТИ ФС</button>':''}${_SHOW_RECALC&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="recalcArchivePoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black" style="font-size:0.78em;padding:5px 10px" title="Перерахувати стовпець J за нинішніми «е балами»">ПЕРЕРАХУВАТИ БАЛИ</button>':''}<span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em;${state.online?'':'display:none'}">за період</span></div></div>
+            ${!state.filterPeriodOpen?'<div class="arch-top flex flex-wrap gap-4 items-start">'+(state.archiveLoading&&!state.selArchive?'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p></div>':_arBtns)+_sbCol+'</div>':''}
             ${!state.online?(Object.keys(_archKeys()).length?'<div class="crate p-4"><p class="stencil text-center py-3" style="color:var(--khaki)">Архіви показуються з пам\'яті пристрою. Нових даних без з\'єднання не буде, редагування недоступне</p></div>':'<div class="crate p-4"><p class="stencil text-center py-3" style="color:#c05a3e">Архівів на пристрої немає — відкрийте їх хоч раз із мережею</p></div>'):''}
             ${state.online?_periodPickerHtml:''}
             ${!state.filterPeriodOpen?_arTop:''}
