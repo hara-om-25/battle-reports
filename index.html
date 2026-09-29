@@ -163,6 +163,15 @@
       border-color: #666;
       color: var(--text);
     }
+    /* Кнопки періодів АРХІВУ повернуті на 45° проти годинникової. Поворот не
+       міняє місця, яке кнопка займає в розкладці, тож кожна сидить у обгортці,
+       розмір якої підганяє _sizeArchRot() під повернутий габарит */
+    .arch-rot { position: relative; display: inline-block; flex: 0 0 auto; }
+    .arch-rot-in {
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      white-space: nowrap;
+    }
     .btn-submit {
       background: var(--olive-dark);
       border-color: var(--olive);
@@ -550,7 +559,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-38';
+const APP_VER = 'v.26.09-39';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -4828,7 +4837,19 @@ function recalcListFieldWidth() {
 }
 
 // Поки не підвантажився Tektur, ширина напису інша — після завантаження міряємо ще раз
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(_sizeListCols);
+// Повернута на 45° кнопка займає квадрат зі стороною (ширина + висота) / √2, а
+// розкладка про поворот не знає — міряємо саму кнопку й даємо обгортці цей
+// квадрат (плюс запас під тінь), інакше сусіди наїжджали б одна на одну
+function _sizeArchRot() {
+    document.querySelectorAll('.arch-rot').forEach(w => {
+        const b = w.querySelector('button');
+        if (!b) return;
+        const side = Math.ceil((b.offsetWidth + b.offsetHeight) / Math.SQRT2) + 8;
+        w.style.width = side + 'px';
+        w.style.height = side + 'px';
+    });
+}
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { _sizeListCols(); _sizeArchRot(); });
 
 // Кнопки вікна РЕДАГУВАННЯ робимо квадратними. Тінь під кнопкою не рахується —
 // вона малюється поза межами самої кнопки. Виняток — «+» та ЗБЕРЕГТИ (data-sq="0").
@@ -5451,7 +5472,7 @@ function render() {
     }
     
     if(state.page==='archive') {
-        const _arBtns=state.archiveSheets.map(s=>{const _dl=/^\d/.test(s)?s:(s.match(/\d{1,2}[-.\/]\d{1,2}[-.\/]\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';if(!state.online&&!_archCacheHas(s))return `<button disabled class="btn-stencil btn-archive" style="opacity:0.45;cursor:not-allowed">${esc(_dl)}</button>`;return `<button onclick="loadArchiveSheet('${esc(s)}')" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil btn-archive ${_act}">${esc(_dl)}</button>`;}).join('')||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p>';
+        const _arBtns=state.archiveSheets.map(s=>{const _dl=/^\d/.test(s)?s:(s.match(/\d{1,2}[-.\/]\d{1,2}[-.\/]\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';if(!state.online&&!_archCacheHas(s))return `<span class="arch-rot"><span class="arch-rot-in"><button disabled class="btn-stencil btn-archive" style="opacity:0.45;cursor:not-allowed">${esc(_dl)}</button></span></span>`;return `<span class="arch-rot"><span class="arch-rot-in"><button onclick="loadArchiveSheet('${esc(s)}')" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil btn-archive ${_act}">${esc(_dl)}</button></span></span>`;}).join('')||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає архівних звітів</p>';
         const _row=(label,val,suf='')=>`<p class="stencil" style="color:var(--text);margin:1px 0">${label} <span style="color:var(--yellow)">— ${val}${suf}</span></p>`;
         // Те саме, але натискається: рядок вмикає фільтр переліку вильотів,
         // а сам світиться кольором своєї групи. k — вид фільтра, v — значення,
@@ -6071,6 +6092,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
     app.innerHTML = h;
     _syncListsBarTop();
     _sizeListCols();
+    _sizeArchRot();
 }
     </script>
 <script>
