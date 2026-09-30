@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-63';
+const APP_VER = 'v.26.09-64';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1498,21 +1498,21 @@ function showSettings() {
     _bx.appendChild(_ti);
     const _close = () => { if (_ov.parentNode) document.body.removeChild(_ov); };
     const _rows = [
-        { t: 'АРХІВАЦІЯ', on: state.online && state.records.length > 0,
+        { t: 'АРХІВАЦІЯ', c: 'btn-danger', on: state.online && state.records.length > 0,
           why: state.online ? 'Немає чого архівувати: у ГОЛОВНІЙ порожньо' : 'Потрібна мережа',
           go: () => archiveMainSheet() },
-        { t: 'ВЕРИФІКАЦІЯ', on: state.online && !!state.selArchive,
+        { t: 'ВЕРИФІКАЦІЯ', c: 'btn-blue', on: state.online && !!state.selArchive,
           why: state.online ? 'Спершу відкрийте період в АРХІВІ' : 'Потрібна мережа',
           go: () => showVerifyModal() },
-        { t: 'СПИСКИ', on: true, why: '',
+        { t: 'СПИСКИ', c: 'btn-yellow', on: true, why: '',
           go: () => { state.page = 'lists'; render(); } },
-        { t: 'е бали', on: Object.keys(state.scoreTable || {}).length > 0,
+        { t: 'е бали', c: 'btn-olive', on: Object.keys(state.scoreTable || {}).length > 0,
           why: 'Прайс ще не завантажено — відкрийте застосунок із мережею',
           go: () => showPrices() }
     ];
     _rows.forEach(o => {
         const b = document.createElement('button');
-        b.className = 'btn-stencil';
+        b.className = 'btn-stencil ' + o.c;
         b.style.cssText = 'display:block;width:100%;text-align:left;padding:8px 14px;margin-bottom:10px;font-size:0.9em'
             + (o.on ? '' : ';opacity:0.45;cursor:default');
         b.textContent = o.t;
