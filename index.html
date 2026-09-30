@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-64';
+const APP_VER = 'v.26.09-65';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1487,6 +1487,61 @@ function showPrices() {
     document.body.appendChild(_ov);
 }
 
+// Назва періоду, який зараз лежить у ГОЛОВНІЙ (за датами самих записів): «24-30.09.2026»
+function _mainPeriodName() {
+    if (!state.records.length) return '';
+    const _f = s => { const [d, m, y] = s.split('.'); return (y || '') + (m || '').padStart(2, '0') + (d || '').padStart(2, '0'); };
+    const _sd = [...new Set(state.records.map(r => getDateOnly(r.datetime)).filter(Boolean))].sort((a, b) => _f(a) < _f(b) ? -1 : 1);
+    if (!_sd.length) return '';
+    const [_d1, _m1, _y1] = _sd[0].split('.'), [_d2, _m2, _y2] = _sd[_sd.length - 1].split('.');
+    return (_sd[0] === _sd[_sd.length - 1]) ? _sd[0]
+        : (_m1 === _m2 && _y1 === _y2) ? _d1 + '-' + _d2 + '.' + _m1 + '.' + _y1
+        : (_y1 === _y2) ? _d1 + '.' + _m1 + '-' + _d2 + '.' + _m2 + '.' + _y1
+        : _sd[0] + ' \u2014 ' + _sd[_sd.length - 1];
+}
+
+// ВЕРИФІКАЦІЯ з налаштувань: спершу вибір періоду, потім звичайне вікно верифікації
+function showVerifyPeriodPicker() {
+    const _ov = document.createElement('div');
+    _ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    const _bx = document.createElement('div');
+    _bx.style.cssText = 'background:var(--surface);border:1px solid var(--olive-dark);box-shadow:4px 4px 0 var(--olive-dark);padding:24px 28px 20px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;font-family:Tektur,monospace;color:var(--text)';
+    const _ti = document.createElement('div');
+    _ti.style.cssText = 'color:var(--yellow);font-size:0.7em;letter-spacing:0.15em;margin-bottom:14px;font-weight:700';
+    _ti.textContent = 'ВЕРИФІКАЦІЯ — ОБЕРІТЬ ПЕРІОД';
+    _bx.appendChild(_ti);
+    const _close = () => { if (_ov.parentNode) document.body.removeChild(_ov); };
+    const _sheets = [...(state.archiveSheets || [])].reverse();
+    if (!_sheets.length) {
+        const p = document.createElement('div');
+        p.style.cssText = 'color:var(--text-dim);margin-bottom:12px';
+        p.textContent = 'Архівних періодів немає';
+        _bx.appendChild(p);
+    }
+    _sheets.forEach(name => {
+        const b = document.createElement('button');
+        b.className = 'btn-stencil btn-blue';
+        b.style.cssText = 'display:block;width:100%;text-align:left;padding:8px 14px;margin-bottom:10px;font-size:0.9em';
+        b.textContent = name;
+        b.addEventListener('click', async () => {
+            _close();
+            state.page = 'archive';
+            await loadArchiveSheet(name);
+            showVerifyModal();
+        });
+        _bx.appendChild(b);
+    });
+    const _x = document.createElement('button');
+    _x.className = 'btn-stencil';
+    _x.style.cssText = 'float:right;padding:4px 22px;font-size:0.85em;margin-top:6px';
+    _x.textContent = 'ЗАКРИТИ';
+    _x.addEventListener('click', _close);
+    _bx.appendChild(_x);
+    _ov.appendChild(_bx);
+    _ov.addEventListener('click', e => { if (e.target === _ov) _close(); });
+    document.body.appendChild(_ov);
+}
+
 function showSettings() {
     const _ov = document.createElement('div');
     _ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
@@ -1498,12 +1553,12 @@ function showSettings() {
     _bx.appendChild(_ti);
     const _close = () => { if (_ov.parentNode) document.body.removeChild(_ov); };
     const _rows = [
-        { t: 'АРХІВАЦІЯ', c: 'btn-danger', on: state.online && state.records.length > 0,
+        { t: state.records.length ? 'АРХІВУВАТИ ' + _mainPeriodName() : 'АРХІВАЦІЯ', c: 'btn-danger', on: state.online && state.records.length > 0,
           why: state.online ? 'Немає чого архівувати: у ГОЛОВНІЙ порожньо' : 'Потрібна мережа',
           go: () => archiveMainSheet() },
-        { t: 'ВЕРИФІКАЦІЯ', c: 'btn-blue', on: state.online && !!state.selArchive,
-          why: state.online ? 'Спершу відкрийте період в АРХІВІ' : 'Потрібна мережа',
-          go: () => showVerifyModal() },
+        { t: 'ВЕРИФІКАЦІЯ', c: 'btn-blue', on: state.online && (state.archiveSheets || []).length > 0,
+          why: state.online ? 'Архівних періодів немає' : 'Потрібна мережа',
+          go: () => showVerifyPeriodPicker() },
         { t: 'СПИСКИ', c: 'btn-yellow', on: true, why: '',
           go: () => { state.page = 'lists'; render(); } },
         { t: 'е бали', c: 'btn-olive', on: Object.keys(state.scoreTable || {}).length > 0,
@@ -6109,13 +6164,9 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         })();
         const _sbBtn=(t,cls,on,oc,tip,pr)=>`<button ${on?`onclick="${oc}" `:'disabled '}onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil ${cls}${pr?' active':''}" style="font-size:0.78em;padding:5px 10px;width:100%${on?'':';cursor:not-allowed'}"${tip?` title="${tip}"`:''}>${t}</button>`;
         const _sbOpen=!state.filterPeriodOpen;
-        const _sbArch=(()=>{if(!state.records.length||!state.online)return'';const _f=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};const _sd=[...new Set(state.records.map(r=>getDateOnly(r.datetime)).filter(Boolean))].sort((a,b)=>_f(a)<_f(b)?-1:1);const[_d1,_m1,_y1]=_sd[0].split('.'),[_d2,_m2,_y2]=_sd[_sd.length-1].split('.');const _n=(_sd[0]===_sd[_sd.length-1])?_sd[0]:(_m1===_m2&&_y1===_y2)?_d1+'-'+_d2+'.'+_m1+'.'+_y1:(_y1===_y2)?_d1+'.'+_m1+'-'+_d2+'.'+_m2+'.'+_y1:_sd[0]+' — '+_sd[_sd.length-1];return'<button onclick="archiveMainSheet()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">АРХІВУВАТИ '+_n+'</button>';})();
-        const _sbVerify=state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="showVerifyModal()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-blue" style="font-size:0.78em;padding:5px 10px">ВЕРИФІКАЦІЯ</button>':'';
         const _sbCol=`<div class="arch-side" style="margin-left:auto;display:flex;flex-direction:column;gap:8px;flex:0 0 auto;min-width:170px">`
             +_sbBtn('ПІДСУМКИ','btn-black',_sbOpen,"_arToggle('arShowSum')",'',state.arShowSum&&_sbOpen)
             +_sbBtn('СТАТИСТИКА','btn-yellow',_sbOpen,"_arToggle('arShowStat')",'',state.arShowStat&&_sbOpen)
-            +(_sbArch||'').replace('<button ','<button data-side="1" ').replace('style="font-size:0.78em;padding:5px 10px"','style="font-size:0.78em;padding:5px 10px;width:100%"')
-            +(_sbVerify||'').replace('style="font-size:0.78em;padding:5px 10px"','style="font-size:0.78em;padding:5px 10px;width:100%"')
             +_sbBtn('ВИЛЬОТИ','btn-olive',_sbOpen,"_arSetList(false)",'',state.arShowList&&!state.arTargets&&_sbOpen)
             +_sbBtn('ЦІЛІ','btn-olive',_sbOpen,"_arSetList(true)",'',state.arShowList&&state.arTargets&&_sbOpen)
             +`</div>`;
