@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-96';
+const APP_VER = 'v.26.09-97';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2105,6 +2105,8 @@ function _tgtStat(r, j, swap) {
         const os = r.v && r.v.os;
         if (os && _vType((r.target || '').split(', ')[j] || '') === 'ОС'
             && (os.k !== (parseInt(r.qty200) || 0) || os.w !== (parseInt(r.qty300) || 0))) return 'rep';
+        // верифікатор дав інші бали, ніж наш прайс, — теж втручання
+        if (_tgDiffPts(r, j)) return 'rep';
         return 'ok';
     }
     // «верифіковано раніше» — удар зарахований сусідній цілі, а не відхилений
@@ -2907,6 +2909,7 @@ function _tgVerdict(o) {
     const osCh = !!os && (os.k !== (parseInt(r.qty200) || 0) || os.w !== (parseInt(r.qty300) || 0))
         && _vType(P.tgts[j] || '') === 'ОС';
     if (sw || (v === 'ok' && (resCh || osCh))) return 'repl';
+    if (v === 'ok' && _tgDiffPts(r, j)) return 'repl';
     if (v === 'ok') return 'ok';
     // верифікатор сам написав, що цей удар уже зарахував, — дублююча, не відхилена
     if (v === 'no') return _tgDupOf(r, j, P) ? 'pack' : 'no';
