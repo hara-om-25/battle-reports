@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-83';
+const APP_VER = 'v.26.09-84';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6308,7 +6308,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         // переліком: самих чисел у підсумковому вікні мало, треба бачити, які саме
         const _vlHtml=(()=>{
             const sheets=_vSheets().filter(sh=>((state.vAll[sh]||{}).left||[]).length);
-            if(!sheets.length)return '';
+            if(!sheets.length)return _vSheets().length?'<div class="crate p-4"><h3 class="stencil-shadow" style="color:var(--yellow)">РЯДКИ ФАЙЛУ, ЩО НЕ ЛЯГЛИ</h3><p class="stencil" style="color:var(--khaki);margin-top:8px">Таких рядків немає: усе, що верифікатор оцінив у періоді, лягло у вильоти</p></div>':'';
             const _tot=sheets.reduce((n,sh)=>n+state.vAll[sh].left.length,0);
             const _cp=(t,k)=>t?'<span class="cp '+k+'" onclick="_cpTxt(this)">'+esc(t)+'</span>':'';
             const _body=sheets.map(sh=>_svcHead(sh)+_vlSorted(state.vAll[sh].left).map(x=>[_cp(x.dt,'cp-b'),esc(x.tgt),_cp(x.coord,'cp-g'),esc(x.res),
@@ -6324,7 +6324,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         // верифікацію. Тут лише підказка, таблицю застосунок не чіпає
         const _vfHtml=(()=>{
             const sheets=_vSheets().filter(sh=>((state.vAll[sh]||{}).fix||[]).length);
-            if(!sheets.length)return '';
+            if(!sheets.length)return _vSheets().length?'<div class="crate p-4"><h3 class="stencil-shadow" style="color:var(--yellow)">ЩО ПОПРАВИТИ В ТАБЛИЦІ</h3><p class="stencil" style="color:var(--khaki);margin-top:8px">Підказок немає: серед рядків, що не лягли, жодного не знайшлося за координатою й ціллю в таблиці</p></div>':'';
             const _all=sheets.reduce((a,sh)=>a.concat(state.vAll[sh].fix),[]);
             const _ok=_all.filter(x=>!x.why).length;
             const _hdr=[_ok?'однозначних '+_ok:'',(_all.length-_ok)?'неоднозначних '+(_all.length-_ok):'']
@@ -6357,7 +6357,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 _svcUnv=_vuBlock(_vuRows,true);
                 _sheetOrder([...state.allArchiveRecs,...state.records]);
             }
-            const _svcBlocks=[_svcUnv,_vdHtml,state.online?_vlHtml:'',state.online?_vfHtml:''].filter(Boolean);
+            const _svcBlocks=[state.online?_vlHtml:'',_svcUnv,_vdHtml,state.online?_vfHtml:''].filter(Boolean);
             h+=`<div class="p-4 space-y-4 arch-wrap"><h1 class="stencil-shadow text-3xl px-2" style="color:var(--yellow)">СЕРВІС</h1>`
                 +(_svcBlocks.length?_svcBlocks.join(''):'<div class="crate p-4"><p class="stencil text-center py-3" style="color:var(--text-dim)">Нічого перевіряти: службових переліків зараз немає</p></div>')
                 +`</div>`;
