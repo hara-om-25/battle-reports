@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-79';
+const APP_VER = 'v.26.09-80';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -3812,10 +3812,28 @@ function _vuBlock(rows, noCopy) {
         + '<h3 class="stencil-shadow" style="color:var(--yellow)">ВИЛЬОТИ ВІДСУТНІ У ФАЙЛІ ВЕРИФІКАЦІЇ</h3>'
         + '<span class="stencil" style="color:var(--khaki)">' + esc(hdr) + '</span>'
         + (noCopy ? '' : '<button onclick="copyVerifyUnv()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>')
-        + '</div><div class="report-box">' + rows.map(o => _vuLine(o, true)).join('\n') + '</div></div>';
+        + '</div><div class="report-box">' + (noCopy ? _vuGrouped(rows) : rows.map(o => _vuLine(o, true)).join('\n')) + '</div></div>';
 }
 
-function _vuLine(o, cp) {
+// Рядки по аркушах: над кожною групою з новою датою стоїть назва аркуша —
+// жовта й крупніша, а в самих рядках її вже немає
+function _vuGrouped(rows) {
+    let out = '', prev = null, buf = [];
+    const flush = () => { if (buf.length) out += buf.join('\n'); buf = []; };
+    rows.forEach(o => {
+        const sh = o.r.sheet || '';
+        if (sh !== prev) {
+            flush();
+            out += '<div class="stencil-shadow" style="color:var(--yellow);font-size:1.3em;margin:12px 0 4px">' + esc(sh) + '</div>';
+            prev = sh;
+        }
+        buf.push(_vuLine(o, true, true));
+    });
+    flush();
+    return out;
+}
+
+function _vuLine(o, cp, noSheet) {
     const r = o.r;
     const _c = (t, k) => !t ? '' : cp ? '<span class="cp ' + k + '" onclick="_cpTxt(this)">' + esc(t) + '</span>' : t;
     const _e = t => cp ? esc(t) : t;
@@ -3826,7 +3844,7 @@ function _vuLine(o, cp) {
     const p = _pt(r.points);
     // Найперше — номер рядка аркуша, як і в сусідніх переліках: саме за ним
     // шукають запис у таблиці. Номер вильоту поруч, щоб знайти його й на екрані
-    const head = (r.sheet ? r.sheet + ', ' : '') + (r.srow ? 'рядок ' + r.srow : '') + (o.n ? (r.srow ? ' (виліт ' : 'виліт ') + o.n + (r.srow ? ')' : '') : '');
+    const head = (r.sheet && !noSheet ? r.sheet + ', ' : '') + (r.srow ? 'рядок ' + r.srow : '') + (o.n ? (r.srow ? ' (виліт ' : 'виліт ') + o.n + (r.srow ? ')' : '') : '');
     return [_e(head), _coord, _e(_tg), _c(_vNorm(r.datetime), 'cp-r'),
             _e(p + ' ' + _bal(p))].filter(Boolean).join(' | ');
 }
