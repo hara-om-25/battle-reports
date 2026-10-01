@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-77';
+const APP_VER = 'v.26.09-78';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -3789,6 +3789,32 @@ function _vfSorted() {
 // Наші вильоти, на які у файлі не виявилося жодного рядка. Список збирає
 // відмальовування архіву — там уже пораховані номери карток
 let _vuRows = [];
+// Номер вильота в межах свого аркуша (за часом, як на картках АРХІВУ).
+// Потрібен службовим перелікам, де записи з різних аркушів, тож лічимо по аркушах
+const _vdNum = new Map();
+function _sheetOrder(recs) {
+    _vdNum.clear();
+    const by = {};
+    recs.forEach(r => { (by[r.sheet || ''] = by[r.sheet || ''] || []).push(r); });
+    const f = s => { const [d, m, y] = String(s).split('.'); return (y || '') + (m || '').padStart(2, '0') + (d || '').padStart(2, '0'); };
+    Object.values(by).forEach(list => {
+        const dates = [...new Set(list.map(r => getDateOnly(r.datetime)))].sort((a, b) => f(a) < f(b) ? -1 : 1);
+        let n = 0;
+        dates.forEach(d => _byTime(list.filter(x => getDateOnly(x.datetime) === d)).forEach(x => _vdNum.set(x, ++n)));
+    });
+}
+
+function _vuBlock(rows) {
+    if (!rows.length) return '';
+    const pts = _pt(rows.reduce((s, o) => s + (parseFloat(o.r.points) || 0), 0));
+    const hdr = rows.length + ' ' + _vyl(rows.length) + ', ' + pts + ' ' + _bal(pts);
+    return '<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
+        + '<h3 class="stencil-shadow" style="color:var(--yellow)">ВИЛЬОТИ ВІДСУТНІ У ФАЙЛІ ВЕРИФІКАЦІЇ</h3>'
+        + '<span class="stencil" style="color:var(--khaki)">' + esc(hdr) + '</span>'
+        + '<button onclick="copyVerifyUnv()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
+        + '</div><div class="report-box">' + rows.map(o => _vuLine(o, true)).join('\n') + '</div></div>';
+}
+
 function _vuLine(o, cp) {
     const r = o.r;
     const _c = (t, k) => !t ? '' : cp ? '<span class="cp ' + k + '" onclick="_cpTxt(this)">' + esc(t) + '</span>' : t;
@@ -3800,7 +3826,7 @@ function _vuLine(o, cp) {
     const p = _pt(r.points);
     // Найперше — номер рядка аркуша, як і в сусідніх переліках: саме за ним
     // шукають запис у таблиці. Номер вильоту поруч, щоб знайти його й на екрані
-    const head = (r.srow ? 'рядок ' + r.srow : '') + (o.n ? (r.srow ? ' (виліт ' : 'виліт ') + o.n + (r.srow ? ')' : '') : '');
+    const head = (r.sheet ? r.sheet + ', ' : '') + (r.srow ? 'рядок ' + r.srow : '') + (o.n ? (r.srow ? ' (виліт ' : 'виліт ') + o.n + (r.srow ? ')' : '') : '');
     return [_e(head), _coord, _e(_tg), _c(_vNorm(r.datetime), 'cp-r'),
             _e(p + ' ' + _bal(p))].filter(Boolean).join(' | ');
 }
@@ -3819,7 +3845,8 @@ function _vdLine(o, cp) {
     const what = !o.drone && !o.ammo ? _e('немає дрона й боєприпасу')
         : !o.drone ? _e('немає дрона, боєприпас ') + _c(o.ammo, 'cp-o')
         : _e('немає боєприпасу, дрон ') + _c(o.drone, 'cp-y');
-    return [_e((o.sheet || '') + (o.srow ? ', рядок ' + o.srow : '')), _coord,
+    const _n = _vdNum.get(o);
+    return [_e((o.sheet || '') + (o.srow ? ', рядок ' + o.srow : '') + (_n ? ' (виліт ' + _n + ')' : '')), _coord,
             _c(_vNorm(o.datetime), 'cp-r'), what].filter(Boolean).join(' | ');
 }
 function copyNoDrone() {
@@ -6206,6 +6233,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             // тільки на загальній сторінці АРХІВ: перелік стосується всіх
             // аркушів разом, тож в окремому архіві йому робити нічого
             if(!state.allArchiveLoaded||(state.page!=='service'&&(state.selArchive||state.filterPeriodOpen)))return '';
+            _sheetOrder([...state.allArchiveRecs,...state.records]);
             _vdRows=[...state.allArchiveRecs,...state.records].filter(r=>!r.drone||!r.ammo);
             if(!_vdRows.length)return '';
             const _nd=_vdRows.filter(r=>!r.drone).length,_na=_vdRows.filter(r=>!r.ammo).length;
@@ -6259,10 +6287,18 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         // СЕРВІС: службові переліки в одному місці. Новий такий перелік —
         // це ще один блок у _svcBlocks (він сам ховається, коли порожній)
         if(state.page==='service'){
-            const _svcBlocks=[_vdHtml,state.online?_vuHtml:'',state.online?_vlHtml:'',state.online?_vfHtml:''].filter(Boolean);
-            const _svcPer=[...(state.archiveSheets||[])].reverse().map(n=>`<button onclick="loadArchiveSheet('${esc(n)}')" class="btn-stencil btn-archive${state.selArchive===n?' active':''}" style="margin:0 8px 8px 0;font-size:0.85em;padding:5px 10px">${esc(n)}</button>`).join('');
+            // вильоти без вердикту — з усіх аркушів, де звіряння вже було
+            let _svcUnv='';
+            if(state.online&&state.allArchiveLoaded){
+                _sheetOrder(state.allArchiveRecs);
+                const _vSheets=new Set(state.allArchiveRecs.filter(r=>r.v&&r.v.state).map(r=>r.sheet));
+                _vuRows=state.allArchiveRecs.filter(r=>_vSheets.has(r.sheet)&&!(r.v&&r.v.state)&&(parseFloat(r.points)||0))
+                    .map(r=>({r:r,n:_vdNum.get(r)||0}));
+                _svcUnv=_vuBlock(_vuRows);
+                _sheetOrder([...state.allArchiveRecs,...state.records]);
+            }
+            const _svcBlocks=[_vdHtml,_svcUnv,state.online?_vlHtml:'',state.online?_vfHtml:''].filter(Boolean);
             h+=`<div class="p-4 space-y-4 arch-wrap"><h1 class="stencil-shadow text-3xl px-2" style="color:var(--yellow)">СЕРВІС</h1>`
-                +`<div class="crate p-4"><div class="stencil mb-3" style="color:var(--khaki)">ПЕРІОД ДЛЯ ПЕРЕЛІКІВ ПО ВЕРИФІКАЦІЇ${state.selArchive?': <span style="color:var(--yellow)">'+esc(state.selArchive)+'</span>':' — не обрано'}</div>${_svcPer||'<span class="stencil" style="color:var(--text-dim)">Архівних періодів немає</span>'}</div>`
                 +(_svcBlocks.length?_svcBlocks.join(''):'<div class="crate p-4"><p class="stencil text-center py-3" style="color:var(--text-dim)">Нічого перевіряти: службових переліків зараз немає</p></div>')
                 +`</div>`;
         } else
