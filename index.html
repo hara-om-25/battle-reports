@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-92';
+const APP_VER = 'v.26.09-93';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2172,6 +2172,7 @@ function _rptColor(s) {
         .replace(/^(Прогнозовано уражень на )(\d[\d.]*)/, '$1<span style="color:var(--yellow)">$2</span>')
         .replace(/^(Верифіковано уражень на )(\d[\d.]*)/, '$1<span style="color:var(--green-label)">$2</span>')
         .replace(/^(Додано верифікатором )(\d[\d.]*)/, '$1<span style="color:var(--blue-label)">$2</span>')
+        .replace(/^(Розбіжність з прогнозом )([+\u2212])/, (m, w, sg) => w + '<span style="color:' + (sg === '+' ? 'var(--green-label)' : 'var(--red-label)') + '">' + sg + '</span>')
         .replace(/^(Скасовано )(\d[\d.]*)/, '$1<span style="color:var(--red-label)">$2</span>')
         .replace(/^(В грошовому еквіваленті уражено приблизно на )(\d[\d\s]*?)( грн)/, '$1<span style="color:var(--green-label)">$2</span>$3')
         .replace(/^(Засобів витрачено на )(\d[\d\s]*?)( грн)/, '$1<span style="color:var(--red-label)">$2</span>$3');
@@ -3756,6 +3757,9 @@ function _pushVerifyLines(lines, recs) {
     lines.push('Верифіковано уражень на ' + _pt(sum) + ' ' + _bal(_pt(sum)) + '.');
     if (_pt(add)) lines.push('Додано верифікатором ' + _pt(add) + ' ' + _bal(_pt(add)) + '.');
     if (_pt(canc)) lines.push('Скасовано ' + _pt(canc) + ' ' + _bal(_pt(canc)) + '.');
+    // різниця між прогнозом і верифікованим: додане мінус скасоване
+    const _net = _pt(add - canc);
+    if (_net) lines.push('Розбіжність з прогнозом ' + (_net > 0 ? '+' : '\u2212') + Math.abs(_net) + ' ' + _bal(Math.abs(_net)) + '.');
     if (_pt(unv)) lines.push('Не звірено уражень на ' + _pt(unv) + ' ' + _bal(_pt(unv)) + '.');
     return true;
 }
