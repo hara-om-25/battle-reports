@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-68';
+const APP_VER = 'v.26.09-69';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2052,7 +2052,23 @@ function _statTail(o) {
     if (o.no) p.push('відхилено ' + o.no);
     if (o.dup) p.push('дублюючих ' + o.dup);
     if (o.unv) p.push('не звірено ' + o.unv);
-    return p.length ? ' (' + p.join(', ') + ')' : '';
+    // скільки балів верифікатор зняв (червоний мінус) і додав (зелений плюс)
+    const d = [];
+    if (_pt(o.c || 0)) d.push('\u2212' + _pt(o.c));
+    if (_pt(o.a || 0)) d.push('+' + _pt(o.a));
+    return (p.length ? ' (' + p.join(', ') + ')' : '') + (d.length ? ' ' + d.join(', ') : '');
+}
+
+// Наскільки верифікатор розійшовся з нами на цілі j вильоту r: бали його
+// мінус бали за нашим прайсом. Без вердикту чи без ціни — нуль
+function _tgDiffPts(r, j) {
+    if (!r.v || !r.v.state) return 0;
+    const P = _arRowParts(r);
+    if (!String(P.tgts[j] || '').trim()) return 0;
+    const own = _tgOwn(r, j, P);
+    const pts = _tgPts({ r: r, j: j, p: P });
+    if (own === null || pts === null || pts === undefined) return 0;
+    return pts - own;
 }
 
 // Лічильники в дужках доповіді фарбуються тими самими барвами, що й підписи
@@ -2064,7 +2080,9 @@ function _rptColor(s) {
                   'замінено': 'var(--blue-label)', 'дублюючих': '#e08a2e',
                   'не звірено': 'var(--yellow)' };
     return String(s).replace(/(верифіковано|замінено|відхилено|дублюючих|не звірено)(\s+\d+)/g,
-        (m, w, n) => '<span style="color:' + clr[w] + '">' + w + n + '</span>');
+        (m, w, n) => '<span style="color:' + clr[w] + '">' + w + n + '</span>')
+        .replace(/\u2212(\d+(?:\.\d+)?)/g, '<span style="color:var(--red-label)">\u2212$1</span>')
+        .replace(/ \+(\d+(?:\.\d+)?)/g, ' <span style="color:var(--green-label)">+$1</span>');
 }
 
 function generateArchiveReport(recs, periodLabel) {
@@ -2074,7 +2092,7 @@ function generateArchiveReport(recs, periodLabel) {
     const osSum300 = recs.reduce((s, r) => s + (parseInt(r.qty300) || 0), 0);
     // без звіряння лічильники не показуємо зовсім
     const anyV = recs.some(r => r.v && r.v.state);
-    const _mk = () => ({ ok: 0, rep: 0, no: 0, dup: 0, unv: 0 });
+    const _mk = () => ({ ok: 0, rep: 0, no: 0, dup: 0, unv: 0, a: 0, c: 0 });
     const os200 = _mk(), os300 = _mk();
     // мапа замін вильоту — та сама, що й у переліках: {номер цілі: нова ціль}
     const _swOf = r => (r.v && r.v.repl && r.v.repl.length) ? (_arRowParts(r).swap || null) : null;
@@ -2085,6 +2103,19 @@ function generateArchiveReport(recs, periodLabel) {
         if (!s) return;
         os200[s] += parseInt(r.qty200) || 0;
         os300[s] += parseInt(r.qty300) || 0;
+        // скільки балів верифікатор додав чи зняв на цій цілі, розкладаємо
+        // між ОС 200 і ОС 300 за тим, що саме він змінив у кількостях
+        const _d = _tgDiffPts(r, oi);
+        if (_d) {
+            const _osP = Object.entries(state.scoreTable).find(([a]) => a.toLowerCase() === 'ос');
+            const Z = _osP ? _osP[1].znyshcheno : 0, W = _osP ? _osP[1].poshkodzheno : 0;
+            const q200 = parseInt(r.qty200) || 0, q300 = parseInt(r.qty300) || 0;
+            const os = r.v && r.v.os;
+            let w1 = os ? Math.abs((os.k - q200) * Z) : 0, w2 = os ? Math.abs((os.w - q300) * W) : 0;
+            if (w1 + w2 <= 0) { w1 = q200 * Z; w2 = q300 * W; }
+            const f1 = (w1 + w2) > 0 ? w1 / (w1 + w2) : 1;
+            [[os200, _d * f1], [os300, _d * (1 - f1)]].forEach(([o, x]) => { if (x > 0) o.a += x; else o.c -= x; });
+        }
     });
     const otherGrouped = {};
     recs.forEach(r => {
@@ -2102,7 +2133,7 @@ function generateArchiveReport(recs, periodLabel) {
                 const key=dispName.toUpperCase()+' '+res;
                 if(!otherGrouped[key])otherGrouped[key]={d:dispName,r:res,n:0,v:_mk()};
                 otherGrouped[key].n++;
-                if(anyV){const s=_tgtStat(r,idx,_sw);if(s)otherGrouped[key].v[s]++;}
+                if(anyV){const s=_tgtStat(r,idx,_sw);if(s)otherGrouped[key].v[s]++;const _d=_tgDiffPts(r,idx);if(_d){if(_d>0)otherGrouped[key].v.a+=_d;else otherGrouped[key].v.c-=_d;}}
             }
         });
     });
