@@ -486,7 +486,7 @@
        праворуч ЗБЕРЕГТИ на все, що лишилось */
     .edit-bottom { display: flex; gap: 20px; align-items: flex-end; margin-top: 14px; }
     .edit-bottom .save-row { flex: 1 1 0; min-width: 0; }
-    .save-row { display: grid; gap: .5rem; grid-template-columns: 1fr 1fr; align-items: end; }
+    .save-row { display: grid; gap: .5rem; grid-template-columns: minmax(0,1fr) minmax(0,2fr); align-items: end; }
     /* ЧЕКУН: віджата — тьмяна й випукла, натиснута — яскрава й втоплена */
     .chk-btn.on { transform: translateY(4px); box-shadow: none; background: var(--yellow); border-color: #f4d942; }
     @media (max-width: 760px) {
@@ -591,7 +591,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-103';
+const APP_VER = 'v.26.10-104';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
