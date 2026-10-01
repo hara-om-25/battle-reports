@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-87';
+const APP_VER = 'v.26.09-88';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -943,7 +943,9 @@ function _vlExtra(sh, x, cp) {
     const _c = (t, k) => !t ? '' : cp ? '<span class="cp ' + k + '" onclick="_cpTxt(this)">' + esc(t) + '</span>' : t;
     const _e = t => cp ? esc(t) : t;
     const out = [];
-    if (x.ammo) out.push(_e('БК у файлі ') + _c(x.ammo, 'cp-o'));
+    // у клітинці БК буває кілька записів у стовпчик — зводимо в один рядок через кому
+    const _am = String(x.ammo || '').replace(/\([^)]*\)/g, '\n').split(/[\n,;]+/).map(t => t.trim()).filter(Boolean).join(', ');
+    if (_am) out.push(_e('БК у файлі ') + _c(_am, 'cp-o'));
     const nb = _vlNear(sh, x);
     if (nb) {
         const r = nb.r;
@@ -2836,6 +2838,10 @@ function _vAmmoQty(x) {
 }
 // Назви одного боєприпасу у файлі й у нас пишуть по-різному: «УЯ-95-1.5»
 // проти «УЯ 95-1.5». Для порівняння лишаємо самі літери й цифри
+// БК як написано у файлі, але в один рядок через кому й без «(1 шт.)»
+function _vAmmoRaw(x) {
+    return _vNorm(x).replace(/\([^)]*\)/g, '\n').split(/[\n,;]+/).map(t => t.trim()).filter(Boolean).join(', ');
+}
 function _vAmmoKey(x) { return _vName(x).replace(/[^0-9A-ZА-ЯІЇЄҐ]/g, ''); }
 
 // Сила результату: знищено — найсильніший. Ту саму ціль на тій самій
@@ -3263,7 +3269,7 @@ async function runVerification(file) {
                 res: _vNorm(r[C.res]),
                 // боєприпас є тільки у файлах нового вигляду
                 ammo: C.ammo >= 0 ? _vAmmoKey(_vAmmo(r[C.ammo])) : '',
-                ammoRaw: C.ammo >= 0 ? _vNorm(r[C.ammo]).replace(/\s*\([^)]*\)/g, '') : '',
+                ammoRaw: C.ammo >= 0 ? _vAmmoRaw(r[C.ammo]) : '',
                 // скільки наших заходів покриває цей рядок файлу
                 ammoQty: C.ammo >= 0 ? _vAmmoQty(r[C.ammo]) : 1,
                 // скільки одиниць покриває рядок: верифікатор може замінити
@@ -6353,7 +6359,6 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             return '<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
                 +'<h3 class="stencil-shadow" style="color:var(--yellow)">РЯДКИ ФАЙЛУ, ЩО НЕ ЛЯГЛИ</h3>'
                 +'<span class="stencil" style="color:var(--khaki)">'+esc('не знайдено '+_tot)+'</span>'
-                +'<button onclick="copyVerifyLeft()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
                 +'</div><div class="report-box">'+_body+'</div></div>';
         })();
         // Рядки, які не лягли через час: виліт знайшовся за координатою й
