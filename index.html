@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-78';
+const APP_VER = 'v.26.09-79';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -3804,14 +3804,14 @@ function _sheetOrder(recs) {
     });
 }
 
-function _vuBlock(rows) {
+function _vuBlock(rows, noCopy) {
     if (!rows.length) return '';
     const pts = _pt(rows.reduce((s, o) => s + (parseFloat(o.r.points) || 0), 0));
     const hdr = rows.length + ' ' + _vyl(rows.length) + ', ' + pts + ' ' + _bal(pts);
     return '<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
         + '<h3 class="stencil-shadow" style="color:var(--yellow)">ВИЛЬОТИ ВІДСУТНІ У ФАЙЛІ ВЕРИФІКАЦІЇ</h3>'
         + '<span class="stencil" style="color:var(--khaki)">' + esc(hdr) + '</span>'
-        + '<button onclick="copyVerifyUnv()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
+        + (noCopy ? '' : '<button onclick="copyVerifyUnv()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>')
         + '</div><div class="report-box">' + rows.map(o => _vuLine(o, true)).join('\n') + '</div></div>';
 }
 
@@ -6294,10 +6294,10 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _vSheets=new Set(state.allArchiveRecs.filter(r=>r.v&&r.v.state).map(r=>r.sheet));
                 _vuRows=state.allArchiveRecs.filter(r=>_vSheets.has(r.sheet)&&!(r.v&&r.v.state)&&(parseFloat(r.points)||0))
                     .map(r=>({r:r,n:_vdNum.get(r)||0}));
-                _svcUnv=_vuBlock(_vuRows);
+                _svcUnv=_vuBlock(_vuRows,true);
                 _sheetOrder([...state.allArchiveRecs,...state.records]);
             }
-            const _svcBlocks=[_vdHtml,_svcUnv,state.online?_vlHtml:'',state.online?_vfHtml:''].filter(Boolean);
+            const _svcBlocks=[_svcUnv,_vdHtml,state.online?_vlHtml:'',state.online?_vfHtml:''].filter(Boolean);
             h+=`<div class="p-4 space-y-4 arch-wrap"><h1 class="stencil-shadow text-3xl px-2" style="color:var(--yellow)">СЕРВІС</h1>`
                 +(_svcBlocks.length?_svcBlocks.join(''):'<div class="crate p-4"><p class="stencil text-center py-3" style="color:var(--text-dim)">Нічого перевіряти: службових переліків зараз немає</p></div>')
                 +`</div>`;
