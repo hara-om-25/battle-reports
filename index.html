@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-82';
+const APP_VER = 'v.26.09-83';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -907,6 +907,22 @@ function _saveVerify() {
 }
 // Переліки відкритого архіву. Кожен аркуш тримає свої: звірили сім архівів —
 // у кожного лишилися власні підказки
+// Службові переліки по верифікації збираються з усіх перевірених аркушів
+// (state.vAll), а не лише з вибраного, — на СЕРВІСІ вибраного періоду немає
+function _vSheets() {
+    const order = state.archiveSheets || [];
+    return Object.keys(state.vAll || {}).sort((a, b) => {
+        const ia = order.indexOf(a), ib = order.indexOf(b);
+        return (ia < 0 ? 1e9 : ia) - (ib < 0 ? 1e9 : ib);
+    });
+}
+function _svcHead(sh) {
+    return '<div class="stencil-shadow" style="color:var(--yellow);font-size:1.3em;margin:12px 0 4px">' + esc(sh) + '</div>';
+}
+function _vlSorted(L) { return [...L].sort((a, b) => a.dt < b.dt ? -1 : 1); }
+function _vfSort(L) { return [...L].sort((a, b) => (a.why ? 1 : 0) - (b.why ? 1 : 0) || a.row - b.row); }
+function _vlLineT(x) { return [x.dt, x.tgt, x.coord, x.res, x.verdict + (x.pts ? ' ' + x.pts : ''), x.why].filter(Boolean).join(' | '); }
+
 function _vlList() { return ((state.vAll || {})[state.selArchive] || {}).left || []; }
 function _vfList() { return ((state.vAll || {})[state.selArchive] || {}).fix || []; }
 
@@ -3678,12 +3694,15 @@ function _pushVerifyLines(lines, recs) {
 
 // Перелік рядків файлу, що не лягли — у буфер, щоб було з чим іти до верифікатора
 function copyVerifyLeft() {
-    const L = _vlList();
-    if (!L.length) return;
-    const lines = [...L].sort((a, b) => a.dt < b.dt ? -1 : 1)
-        .map(x => [x.dt, x.tgt, x.coord, x.res, x.verdict + (x.pts ? ' ' + x.pts : ''), x.why]
-        .filter(Boolean).join(' | '));
-    navigator.clipboard.writeText(lines.join('\n')).catch(() => {});
+    const out = [];
+    _vSheets().forEach(sh => {
+        const L = (state.vAll[sh] || {}).left || [];
+        if (!L.length) return;
+        out.push(sh);
+        _vlSorted(L).forEach(x => out.push(_vlLineT(x)));
+    });
+    if (!out.length) return;
+    navigator.clipboard.writeText(out.join('\n')).catch(() => {});
 }
 
 // Координата в переліках ВИЛЬОТІВ і ЦІЛЕЙ. Клік кладе її в буфер — цього
@@ -3941,9 +3960,15 @@ function copyVerifyUnv() {
 }
 
 function copyVerifyFix() {
-    const L = _vfSorted();
-    if (!L.length) return;
-    navigator.clipboard.writeText(L.map(_vfLine).join('\n')).catch(() => {});
+    const out = [];
+    _vSheets().forEach(sh => {
+        const L = (state.vAll[sh] || {}).fix || [];
+        if (!L.length) return;
+        out.push(sh);
+        _vfSort(L).forEach(x => out.push(_vfLine(x)));
+    });
+    if (!out.length) return;
+    navigator.clipboard.writeText(out.join('\n')).catch(() => {});
 }
 
 // Бали вильота за нинішньою таблицею «е бали». Логіка та сама, що й у формі:
@@ -6282,33 +6307,34 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         // Рядки файлу верифікації, які не лягли в жоден виліт. Показуємо
         // переліком: самих чисел у підсумковому вікні мало, треба бачити, які саме
         const _vlHtml=(()=>{
-            const L=_vlList();
-            if(!L.length)return '';
-            const _s=[...L].sort((a,b)=>a.dt<b.dt?-1:1);
-            const _hdr='не знайдено '+L.length;
+            const sheets=_vSheets().filter(sh=>((state.vAll[sh]||{}).left||[]).length);
+            if(!sheets.length)return '';
+            const _tot=sheets.reduce((n,sh)=>n+state.vAll[sh].left.length,0);
             const _cp=(t,k)=>t?'<span class="cp '+k+'" onclick="_cpTxt(this)">'+esc(t)+'</span>':'';
-            const _lines=_s.map(x=>[_cp(x.dt,'cp-b'),esc(x.tgt),_cp(x.coord,'cp-g'),esc(x.res),
-                esc(x.verdict+(x.pts?' '+x.pts:'')),esc(x.why)].filter(Boolean).join(' | '));
+            const _body=sheets.map(sh=>_svcHead(sh)+_vlSorted(state.vAll[sh].left).map(x=>[_cp(x.dt,'cp-b'),esc(x.tgt),_cp(x.coord,'cp-g'),esc(x.res),
+                esc(x.verdict+(x.pts?' '+x.pts:'')),esc(x.why)].filter(Boolean).join(' | ')).join('\n')).join('');
             return '<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
                 +'<h3 class="stencil-shadow" style="color:var(--yellow)">РЯДКИ ФАЙЛУ, ЩО НЕ ЛЯГЛИ</h3>'
-                +'<span class="stencil" style="color:var(--khaki)">'+esc(_hdr)+'</span>'
+                +'<span class="stencil" style="color:var(--khaki)">'+esc('не знайдено '+_tot)+'</span>'
                 +'<button onclick="copyVerifyLeft()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
-                +'</div><div class="report-box">'+_lines.join('\n')+'</div></div>';
+                +'</div><div class="report-box">'+_body+'</div></div>';
         })();
         // Рядки, які не лягли через час: виліт знайшовся за координатою й
         // ціллю, але в таблиці стоїть не той час, яким його подавали на
         // верифікацію. Тут лише підказка, таблицю застосунок не чіпає
         const _vfHtml=(()=>{
-            const L=_vfSorted();
-            if(!L.length)return '';
-            const _ok=L.filter(x=>!x.why).length;
-            const _hdr=[_ok?'однозначних '+_ok:'',(L.length-_ok)?'неоднозначних '+(L.length-_ok):'']
+            const sheets=_vSheets().filter(sh=>((state.vAll[sh]||{}).fix||[]).length);
+            if(!sheets.length)return '';
+            const _all=sheets.reduce((a,sh)=>a.concat(state.vAll[sh].fix),[]);
+            const _ok=_all.filter(x=>!x.why).length;
+            const _hdr=[_ok?'однозначних '+_ok:'',(_all.length-_ok)?'неоднозначних '+(_all.length-_ok):'']
                 .filter(Boolean).join(', ');
+            const _body=sheets.map(sh=>_svcHead(sh)+_vfSort(state.vAll[sh].fix).map(x=>_vfLine(x,true)).join('\n')).join('');
             return '<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
                 +'<h3 class="stencil-shadow" style="color:var(--yellow)">ЩО ПОПРАВИТИ В ТАБЛИЦІ</h3>'
                 +'<span class="stencil" style="color:var(--khaki)">'+esc(_hdr)+'</span>'
                 +'<button onclick="copyVerifyFix()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
-                +'</div><div class="report-box">'+L.map(x=>_vfLine(x,true)).join('\n')+'</div></div>';
+                +'</div><div class="report-box">'+_body+'</div></div>';
         })();
         const _sbBtn=(t,cls,on,oc,tip,pr)=>`<button ${on?`onclick="${oc}" `:'disabled '}onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil ${cls}${pr?' active':''}" style="font-size:0.78em;padding:5px 10px;width:100%${on?'':';cursor:not-allowed'}"${tip?` title="${tip}"`:''}>${t}</button>`;
         const _sbOpen=!state.filterPeriodOpen;
