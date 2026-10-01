@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-81';
+const APP_VER = 'v.26.09-82';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6342,8 +6342,6 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             ${!state.online?(Object.keys(_archKeys()).length?'<div class="crate p-4"><p class="stencil text-center py-3" style="color:var(--khaki)">Архіви показуються з пам\'яті пристрою. Нових даних без з\'єднання не буде, редагування недоступне</p></div>':'<div class="crate p-4"><p class="stencil text-center py-3" style="color:#c05a3e">Архівів на пристрої немає — відкрийте їх хоч раз із мережею</p></div>'):''}
             ${state.online?_periodPickerHtml:''}
             ${!state.filterPeriodOpen?_arTop:''}
-            ${state.online?_vlHtml:''}
-            ${state.online?_vfHtml:''}
             ${state.filterPeriodOpen?(state.online?(state.filterPeriodShown?_periodResultHtml:''):''):(state.selArchive?_arContent:_allSection)}
             ${!state.filterPeriodOpen&&state.arShowList?_arFlights:''}
         </div>`;
