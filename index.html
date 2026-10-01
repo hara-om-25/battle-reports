@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-97';
+const APP_VER = 'v.26.09-98';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2922,9 +2922,17 @@ function _tgVerdict(o) {
 // верифікатор розійшовся з нами саме на ній. Ціна береться з «е бали»,
 // тобто **поточна**: в архіві з часів іншого прайса різниця буде рахуватись
 // за нинішніми цінами
+// Прайс чинний з 12.09.2026. Раніші вильоти закриті за старими цінами, а
+// порівнювати їх із нинішніми не можна: вийде вигадана «різниця»
+const _PRICE_FROM = Date.UTC(2026, 8, 12);
+function _newPrices(r) {
+    const m = getDateOnly(r.datetime).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    return !!m && Date.UTC(+m[3], +m[2] - 1, +m[1]) >= _PRICE_FROM;
+}
 function _tgOwn(r, j, P) {
     const nm = (P.tgts[j] || '').trim();
     if (!nm) return null;
+    if (!_newPrices(r)) return null;
     const ab = _abbrOfName(nm);
     if (!state.scoreTable[ab]) return null;
     const n = calculatePoints(ab, r.qty200, r.qty300, String(P.ress[j] || '').trim());
