@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-88';
+const APP_VER = 'v.26.09-89';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -944,8 +944,9 @@ function _vlExtra(sh, x, cp) {
     const _e = t => cp ? esc(t) : t;
     const out = [];
     // у клітинці БК буває кілька записів у стовпчик — зводимо в один рядок через кому
-    const _am = String(x.ammo || '').replace(/\([^)]*\)/g, '\n').split(/[\n,;]+/).map(t => t.trim()).filter(Boolean).join(', ');
-    if (_am) out.push(_e('БК у файлі ') + _c(_am, 'cp-o'));
+    // назви помаранчеві, коми між ними — білі (звичайний колір рядка)
+    const _am = String(x.ammo || '').replace(/\([^)]*\)/g, '\n').split(/[\n,;]+/).map(t => t.trim()).filter(Boolean);
+    if (_am.length) out.push(_e('БК у файлі ') + _am.map(t => _c(t, 'cp-o')).join(_e(', ')));
     const nb = _vlNear(sh, x);
     if (nb) {
         const r = nb.r;
