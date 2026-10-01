@@ -207,7 +207,7 @@
        віджата чи вимкнена = тьмяна. Тьмяна натиснута кнопка — неправильно */
     .arch-side .btn-stencil.active, .arch-side .btn-stencil:active {
       transform: translateY(4px);
-      box-shadow: 0 0 12px rgba(244,217,66,0.55);
+      box-shadow: none;
     }
     .arch-side .btn-black.active, .arch-side .btn-black:active { background: #6a6d62; border-color: #a9a794; color: #fff; }
     .arch-side .btn-yellow { background: #8a7510; border-color: #a8901a; box-shadow: 0 4px 0 #5a4c08, 0 6px 12px rgba(0,0,0,0.4); }
@@ -488,7 +488,7 @@
     .edit-bottom .save-row { flex: 1 1 0; min-width: 0; }
     .save-row { display: grid; gap: .5rem; grid-template-columns: 1fr 1fr; align-items: end; }
     /* ЧЕКУН: віджата — тьмяна й випукла, натиснута — яскрава й втоплена */
-    .chk-btn.on { transform: translateY(4px); box-shadow: 0 0 12px rgba(244,217,66,0.55); background: var(--yellow); border-color: #f4d942; }
+    .chk-btn.on { transform: translateY(4px); box-shadow: none; background: var(--yellow); border-color: #f4d942; }
     @media (max-width: 760px) {
       .edit-bottom { flex-wrap: wrap; gap: 14px; }
       .edit-bottom .save-row { flex: 1 1 100%; }
@@ -591,7 +591,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-102';
+const APP_VER = 'v.26.10-103';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
