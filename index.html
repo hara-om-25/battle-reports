@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-69';
+const APP_VER = 'v.26.09-70';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5813,6 +5813,11 @@ function render() {
                 // Пару вже знайшов _markPacks — тут лишається дізнатись, під
                 // яким номером той виліт малюється
                 const _packNum=x=>(x.v&&x.v.packOf)?_arOrder.indexOf(x.v.packOf)+1:0;
+                // Номер вильота в межах свого звіту: у кожному звіті нумерація
+                // починається спочатку. Потрібен і ВИЛЬОТАМ, і ЦІЛЯМ
+                const _repNoAll=new Map();
+                {const _c={};_arOrder.forEach(r=>{const k=parseInt(r.reportNum)||0;
+                    _c[k]=(_c[k]||0)+1;_repNoAll.set(r,{rep:k,num:_c[k]});});}
                 // Перелік цілей потрібен і статистиці, і самим карткам,
                 // тож збираємо його тут, один раз. Виліт без цілі — збитий
                 // дрон, розряджена АКБ, втрата відеосигналу — у переліку
@@ -5860,7 +5865,9 @@ function render() {
                         const _cc=String(r.coordinates||'').split(',');
                         const _coordCell=_coordSpan(_cc[0].trim())
                             +(_cc.length>1?esc(', '+_cc.slice(1).join(',').trim()):'');
-                        const meta=[_cpS(_vNorm(r.datetime),'cp-hl'),_coordCell,esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
+                        const _rn0=_repNoAll.get(r)||{rep:0,num:0};
+                        const meta=[_rn0.rep?'Звіт №'+_rn0.rep:'',_rn0.num?'Виліт №'+_rn0.num:'',
+                            _cpS(_vNorm(r.datetime),'cp-hl'),_coordCell,esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
                         const _unv=(_anyV&&!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
                         // нотатка й акцент — такі самі, як на картках ЗВІТІВ
