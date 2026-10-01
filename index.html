@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-95';
+const APP_VER = 'v.26.09-96';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2233,7 +2233,7 @@ function generateArchiveReport(recs, periodLabel) {
                 const _tP=tgtTrim.split(' '),_tL=_tP[_tP.length-1];
                 const abbrDisp=/^\d+$/.test(_tL)?_tP.slice(0,-1).join(' '):tgtTrim;
                 const _sce=Object.entries(state.scoreTable).find(([a,sc])=>a.toLowerCase()===abbrDisp.toLowerCase()||(sc.fullName&&sc.fullName.toLowerCase()===abbrDisp.toLowerCase()));
-                const dispName=_sce?_sce[1].fullName:abbrDisp;
+                const dispName=_sce?(_sce[1].hName||_sce[1].fullName):abbrDisp;
                 const key=dispName.toUpperCase()+' '+res;
                 if(!otherGrouped[key])otherGrouped[key]={d:dispName,r:res,n:0,v:_mk()};
                 otherGrouped[key].n++;
@@ -4372,6 +4372,8 @@ async function loadDataFromAPI() {
                     poshkodzheno: _num(scoreRows[i][2]),
                     fullName: scoreRows[i][3] || scoreRows[i][0],
                     // опис для вікна «е бали»: колонка E, а коли порожня — D
+                    // назва цілі в ПІДСУМКАХ доповіді — колонка H
+                    hName: String(scoreRows[i][7] || '').trim(),
                     descr: String(scoreRows[i][4] || '').trim() || String(scoreRows[i][3] || '').trim(),
                     // колонки F/G — попередній прайс (до 12.09.2026); порожньо = позиції раніше не було
                     oldZ: String(scoreRows[i][5] === undefined ? '' : scoreRows[i][5]).trim() === '' ? null : _num(scoreRows[i][5]),
