@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-73';
+const APP_VER = 'v.26.09-74';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2063,8 +2063,8 @@ function _statTail(o) {
     if (o.unv) p.push('не звірено ' + o.unv);
     // скільки балів верифікатор зняв (червоний мінус) і додав (зелений плюс)
     const d = [];
-    if (_pt(o.c || 0)) d.push('\u2212' + _pt(o.c));
-    if (_pt(o.a || 0)) d.push('+' + _pt(o.a));
+    if (_pt(o.c || 0)) d.push('скасовано ' + _pt(o.c) + ' ' + _bal(_pt(o.c)));
+    if (_pt(o.a || 0)) d.push('додано ' + _pt(o.a) + ' ' + _bal(_pt(o.a)));
     return (p.length ? ' (' + p.join(', ') + ')' : '') + (d.length ? ' ' + d.join(', ') : '');
 }
 
@@ -2090,8 +2090,8 @@ function _rptColor(s) {
                   'не звірено': 'var(--yellow)' };
     return String(s).replace(/(верифіковано|замінено|відхилено|дублюючих|не звірено)(\s+\d+)/g,
         (m, w, n) => '<span style="color:' + clr[w] + '">' + w + n + '</span>')
-        .replace(/\u2212(\d+(?:\.\d+)?)/g, '<span style="color:var(--red-label)">\u2212$1</span>')
-        .replace(/ \+(\d+(?:\.\d+)?)/g, ' <span style="color:var(--green-label)">+$1</span>')
+        .replace(/скасовано (\d[\d.]*) (бал\S*?)(?=[,;.)]|$)/g, '<span style="color:var(--red-label)">скасовано $1 $2</span>')
+        .replace(/додано (\d[\d.]*) (бал\S*?)(?=[,;.)]|$)/g, '<span style="color:var(--green-label)">додано $1 $2</span>')
         // підсумкові рядки: прогноз жовтим, верифіковане й додане зеленим,
         // скасоване червоним, у грошах уражене зеленим, витрачене червоним
         .replace(/^(Прогнозовано уражень на )(\d[\d.]*)/, '$1<span style="color:var(--yellow)">$2</span>')
