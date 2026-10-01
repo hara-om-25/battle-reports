@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-67';
+const APP_VER = 'v.26.09-68';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2026,7 +2026,18 @@ function _tgtStat(r, j, swap) {
     // стоїть ЗАМІНЕНО — у доповіді має бути так само, інакше з дужок виходить,
     // ніби виліт не зарахували
     if (swap && swap[j]) return 'rep';
-    if (v === 'ok') return 'ok';
+    if (v === 'ok') {
+        // як і картка цілі (_tgVerdict): інший результат або інші 200/300 —
+        // це теж втручання верифікатора, тож ціль «замінена», а не просто
+        // верифікована
+        const nv = (r.v && r.v.vres) ? String(r.v.vres[j] || '').trim().toLowerCase() : '';
+        const was = String((r.result || '').split(', ')[j] || '').trim().toLowerCase();
+        if (nv && nv !== was) return 'rep';
+        const os = r.v && r.v.os;
+        if (os && _vType((r.target || '').split(', ')[j] || '') === 'ОС'
+            && (os.k !== (parseInt(r.qty200) || 0) || os.w !== (parseInt(r.qty300) || 0))) return 'rep';
+        return 'ok';
+    }
     // «верифіковано раніше» — удар зарахований сусідній цілі, а не відхилений
     if (v === 'no') return _tgDupSaid(r, j) ? 'dup' : 'no';
     // виліт скасовано як дублюючий: його цілі верифікатор не розглядав окремо
