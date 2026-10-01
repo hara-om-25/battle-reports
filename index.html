@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-76';
+const APP_VER = 'v.26.09-77';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1573,6 +1573,8 @@ function showSettings() {
           go: () => showVerifyPeriodPicker() },
         { t: 'СПИСКИ', c: 'btn-yellow', on: true, why: '',
           go: () => { state.page = 'lists'; render(); } },
+        { t: 'СЕРВІС', c: 'btn-black', on: true, why: '',
+          go: () => goToArchive('service') },
         { t: 'е бали', c: 'btn-green', on: Object.keys(state.scoreTable || {}).length > 0,
           why: 'Прайс ще не завантажено — відкрийте застосунок із мережею',
           go: () => showPrices() }
@@ -2330,13 +2332,13 @@ function _sortArchiveSheets(list) {
 function _startPage() {
     try {
         const p = localStorage.getItem('br_page');
-        return ['form', 'reports', 'archive', 'lists'].includes(p) ? p : 'form';
+        return ['form', 'reports', 'archive', 'lists', 'service'].includes(p) ? p : 'form';
     } catch (e) { return 'form'; }
 }
-function _afterStartPage() { if (state.page === 'archive') goToArchive(); }
+function _afterStartPage() { if (state.page === 'archive' || state.page === 'service') goToArchive(state.page); }
 
-async function goToArchive() {
-    state.page = 'archive';
+async function goToArchive(page) {
+    state.page = page || 'archive';
     // Офлайн: показуємо лише збережені локально назви архівів
     if (!state.online || !navigator.onLine) {
         state.online = false;
@@ -5650,7 +5652,7 @@ function _pckConfirm(){
 
 function render() {
     const app = document.getElementById('app');
-    try { if (state.user && ['form', 'reports', 'archive', 'lists'].includes(state.page)) localStorage.setItem('br_page', state.page); } catch (e) {}
+    try { if (state.user && ['form', 'reports', 'archive', 'lists', 'service'].includes(state.page)) localStorage.setItem('br_page', state.page); } catch (e) {}
     
     if (state.page === 'login' || !state.user) {
         app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><div class="crate p-8 max-w-md w-full text-center"><h1 class="stencil-shadow text-3xl mb-4" style="color: var(--yellow)">ХАРА ОМ</h1><p class="stencil mb-2" style="color: var(--khaki)">GOOGLE ТАБЛИЦЯ</p><input id="_sheetUrlInp" class="field mb-4" style="text-align:left;font-size:0.8em" placeholder="https://docs.google.com/spreadsheets/d/..." value="${esc(localStorage.getItem('sheetId')||'')}"/><button onclick="applySheetAndLogin()" class="btn-stencil btn-yellow-dim w-full text-lg">🔐 УВІЙТИ ЧЕРЕЗ GOOGLE</button>${_offlineResumeBtn()}</div></div>`;
@@ -5783,7 +5785,7 @@ function render() {
         h += `<div class="p-4 space-y-4 lists-wrap" style="padding-left:8px;padding-right:8px"><h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">СПИСКИ</h1><div class="crate p-4 lists-bar${state.listFieldW?' fit':''}"><div class="flex gap-2 mb-2 flex-wrap"><button onclick="clearInput()" class="btn-stencil btn-danger" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoCross(28)}</button><input type="text" value="${esc(state.inputVal)}" onchange="state.inputVal=this.value" placeholder="Редагування..." class="field ${state.listFieldW?'lists-edit':'flex-1'}" style="${state.listFieldW?`width:${state.listFieldW}px`:'min-width: 120px'}" /><button onclick="addItem()" class="btn-stencil btn-green" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoPlus(33)}</button><button onclick="editItem()" class="btn-stencil btn-blue" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoPencil(28)}</button><button onclick="deleteItem()" class="btn-stencil btn-black" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoTrash(28)}</button></div></div><div id="lists-cols" class="lists-cols">${renderListSection('drones','ДРОНИ')}${renderListSection('ammo','БОЄПРИПАС')}${renderListSection('results','РЕЗУЛЬТАТИ')}</div></div>`;
     }
     
-    if(state.page==='archive') {
+    if(state.page==='archive'||state.page==='service') {
         const _arItems=state.archiveSheets.map(s=>{const _dl=/^\d/.test(s)?s:(s.match(/\d{1,2}[-.\/]\d{1,2}[-.\/]\d{2,4}/)||[s])[0];const _act=state.selArchive===s?'active':'';if(!state.online&&!_archCacheHas(s))return{y:_sheetYear(s),h:`<span class="arch-rot"><span class="arch-rot-in"><button disabled class="btn-stencil btn-archive" style="opacity:0.45;cursor:not-allowed">${esc(_dl)}</button></span></span>`};return{y:_sheetYear(s),h:`<span class="arch-rot"><span class="arch-rot-in"><button onclick="loadArchiveSheet('${esc(s)}')" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="btn-stencil btn-archive ${_act}">${esc(_dl)}</button></span></span>`};});
         // Кнопки одного року — в одній рамці з підписом року; порядок років і кнопок зберігається
         const _arGrp=new Map();_arItems.forEach(o=>{if(!_arGrp.has(o.y))_arGrp.set(o.y,[]);_arGrp.get(o.y).push(o.h);});
@@ -6203,7 +6205,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         const _vdHtml=(()=>{
             // тільки на загальній сторінці АРХІВ: перелік стосується всіх
             // аркушів разом, тож в окремому архіві йому робити нічого
-            if(!state.allArchiveLoaded||state.selArchive||state.filterPeriodOpen)return '';
+            if(!state.allArchiveLoaded||(state.page!=='service'&&(state.selArchive||state.filterPeriodOpen)))return '';
             _vdRows=[...state.allArchiveRecs,...state.records].filter(r=>!r.drone||!r.ammo);
             if(!_vdRows.length)return '';
             const _nd=_vdRows.filter(r=>!r.drone).length,_na=_vdRows.filter(r=>!r.ammo).length;
@@ -6254,6 +6256,16 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             +_sbBtn('ВИЛЬОТИ','btn-olive',_sbOpen,"_arSetList(false)",'',state.arShowList&&!state.arTargets&&_sbOpen)
             +_sbBtn('ЦІЛІ','btn-olive',_sbOpen,"_arSetList(true)",'',state.arShowList&&state.arTargets&&_sbOpen)
             +`</div>`;
+        // СЕРВІС: службові переліки в одному місці. Новий такий перелік —
+        // це ще один блок у _svcBlocks (він сам ховається, коли порожній)
+        if(state.page==='service'){
+            const _svcBlocks=[_vdHtml,state.online?_vuHtml:'',state.online?_vlHtml:'',state.online?_vfHtml:''].filter(Boolean);
+            const _svcPer=[...(state.archiveSheets||[])].reverse().map(n=>`<button onclick="loadArchiveSheet('${esc(n)}')" class="btn-stencil btn-archive${state.selArchive===n?' active':''}" style="margin:0 8px 8px 0;font-size:0.85em;padding:5px 10px">${esc(n)}</button>`).join('');
+            h+=`<div class="p-4 space-y-4 arch-wrap"><h1 class="stencil-shadow text-3xl px-2" style="color:var(--yellow)">СЕРВІС</h1>`
+                +`<div class="crate p-4"><div class="stencil mb-3" style="color:var(--khaki)">ПЕРІОД ДЛЯ ПЕРЕЛІКІВ ПО ВЕРИФІКАЦІЇ${state.selArchive?': <span style="color:var(--yellow)">'+esc(state.selArchive)+'</span>':' — не обрано'}</div>${_svcPer||'<span class="stencil" style="color:var(--text-dim)">Архівних періодів немає</span>'}</div>`
+                +(_svcBlocks.length?_svcBlocks.join(''):'<div class="crate p-4"><p class="stencil text-center py-3" style="color:var(--text-dim)">Нічого перевіряти: службових переліків зараз немає</p></div>')
+                +`</div>`;
+        } else
         h+=`<div class="p-4 space-y-4 arch-wrap">
             <div class="flex justify-between items-center px-2"><h1 onclick="state.selArchive=null;state.filterPeriodOpen=false;state.filterPeriodShown=false;render()" class="stencil-shadow text-3xl" style="color:var(--yellow);cursor:pointer">АРХІВ</h1><div id="ar-hdr-right" style="display:flex;align-items:center;gap:12px">${_SHOW_FSFIX&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="restoreFsPoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-orange" style="font-size:0.78em;padding:5px 10px" title="Повернути по 0,5 бала за кожен ФС «пошкоджено»">ПОВЕРНУТИ ФС</button>':''}${_SHOW_RECALC&&state.online&&state.selArchive&&!state.filterPeriodOpen?'<button onclick="recalcArchivePoints()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black" style="font-size:0.78em;padding:5px 10px" title="Перерахувати стовпець J за нинішніми «е балами»">ПЕРЕРАХУВАТИ БАЛИ</button>':''}<span onclick="state.filterPeriodOpen=!state.filterPeriodOpen;state.filterPeriodShown=false;render()" onmousedown="this.style.color='var(--olive-bright)'" onmouseup="this.style.color=''" ontouchstart="this.style.color='var(--olive-bright)'" ontouchend="this.style.color=''" class="stencil" style="color:var(--khaki);cursor:pointer;font-size:1.1em;${state.online?'':'display:none'}">за період</span></div></div>
             ${!state.filterPeriodOpen?'<div class="arch-top flex flex-wrap gap-4 items-start">'+(state.archiveLoading&&!state.selArchive?'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Завантаження...</p></div>':_arBtns)+_sbCol+'</div>':''}
