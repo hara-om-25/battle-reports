@@ -484,7 +484,9 @@
        праворуч ЗБЕРЕГТИ на все, що лишилось */
     .edit-bottom { display: flex; gap: 20px; align-items: flex-end; margin-top: 14px; }
     .edit-bottom .save-row { flex: 1 1 0; min-width: 0; }
-    .save-row { display: grid; gap: .5rem; grid-template-columns: 1fr; align-items: end; }
+    .save-row { display: grid; gap: .5rem; grid-template-columns: 1fr 1fr; align-items: end; }
+    /* ЧЕКУН: за замовчуванням віджата (випукла), натиснута — втоплена й темніша */
+    .chk-btn.on { transform: translateY(4px); box-shadow: inset 0 3px 7px rgba(0,0,0,0.75); background: #7a6810; border-color: #5a4c08; }
     @media (max-width: 760px) {
       .edit-bottom { flex-wrap: wrap; gap: 14px; }
       .edit-bottom .save-row { flex: 1 1 100%; }
@@ -587,7 +589,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-100';
+const APP_VER = 'v.26.10-101';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -691,11 +693,28 @@ function _noteOf(r, j) {
     return { memo: (n && n.memo) || '', flag: !!(n && n.flag) };
 }
 
+// «ЧЕКУН» — позначка всього вильоту: +1 бал і помаранчевий напис після БК.
+// Ключ завжди вильотний (без номера цілі), навіть коли правка йде з переліку ЦІЛЕЙ
+function _chkOf(r) {
+    const n = (state.notes && state.notes[_noteKey(r)]) || null;
+    return !!(n && n.chk);
+}
+function _setChk(r, on) {
+    if (!state.notes) state.notes = {};
+    const k = _noteKey(r), o = state.notes[k] || {};
+    if (!!o.chk === !!on) return;
+    state.notes[k] = { memo: o.memo || '', flag: !!o.flag, chk: !!on, ts: Date.now() };
+    _notesTouch();
+}
+function _anyChk() { return Object.values(state.notes || {}).some(n => n && n.chk); }
+function _chkTag(r) { return _chkOf(r) ? '<span style="color:#e08a2e">чекун</span>' : ''; }
+
 function _setNote(uid, memo, flag) {
     if (!state.notes) state.notes = {};
     // Стерту нотатку не викидаємо, а лишаємо порожнім рядком із часом: інакше
     // вона повернулася б з іншого пристрою, де її ще не стирали
-    state.notes[uid] = { memo: memo || '', flag: !!flag, ts: Date.now() };
+    const _o = state.notes[uid] || {};
+    state.notes[uid] = { memo: memo || '', flag: !!flag, chk: !!_o.chk, ts: Date.now() };
     _notesTouch();
 }
 
@@ -705,7 +724,7 @@ function _setNote(uid, memo, flag) {
 // та, де щось написано. Так нічого не зникає мовчки
 const NOTES_SHEET = 'НОТАТКИ';
 let _notesTimer = null;
-function _noteEmpty(n) { return !n || (!n.memo && !n.flag); }
+function _noteEmpty(n) { return !n || (!n.memo && !n.flag && !n.chk); }
 
 // Пишемо не одразу: подвійний дотик ставить акцент, і черга таких дотиків
 // не має обертатися чергою запитів
@@ -726,7 +745,7 @@ async function _notesEnsureSheet(e) {
             body: JSON.stringify({ requests: [{ addSheet: { properties: { title: NOTES_SHEET } } }] })
         }).then(r => r.json());
         if (resp.error && !String(resp.error.message).toLowerCase().includes('already exists')) return false;
-        await apiUpdate(NOTES_SHEET + '!A1:D1', [['ключ', 'нотатка', 'акцент', 'оновлено']], true);
+        await apiUpdate(NOTES_SHEET + '!A1:E1', [['ключ', 'нотатка', 'акцент', 'оновлено', 'чекун']], true);
         return true;
     } catch (e2) { return false; }
 }
@@ -735,15 +754,15 @@ async function _notesPush() {
     if (!state.online || !state.token) return;
     const keys = Object.keys(state.notes || {});
     try {
-        if (!keys.length) { await apiClear(NOTES_SHEET + '!A2:D'); return; }
+        if (!keys.length) { await apiClear(NOTES_SHEET + '!A2:E'); return; }
         const rows = keys.map(k => {
             const n = state.notes[k] || {};
-            return [k, n.memo || '', n.flag ? 'так' : '', String(n.ts || 0)];
+            return [k, n.memo || '', n.flag ? 'так' : '', String(n.ts || 0), n.chk ? 'так' : ''];
         });
         // спершу запис, і лише потім стирається хвіст нижче — аркуш не буває
         // порожнім, тож обірваний запис нічого не забирає
-        await apiUpdate(NOTES_SHEET + '!A2:D' + (rows.length + 1), rows, true);
-        await apiClear(NOTES_SHEET + '!A' + (rows.length + 2) + ':D');
+        await apiUpdate(NOTES_SHEET + '!A2:E' + (rows.length + 1), rows, true);
+        await apiClear(NOTES_SHEET + '!A' + (rows.length + 2) + ':E');
     } catch (e) {
         if (await _notesEnsureSheet(e)) { _notesTimer = setTimeout(function () { _notesPush(); }, 200); return; }
         /* не вийшло — віддамо наступного разу, локально все на місці */
@@ -753,7 +772,7 @@ async function _notesPush() {
 async function _notesPull() {
     if (!state.online || !state.token) return;
     let rows;
-    try { rows = await apiGet(NOTES_SHEET + '!A2:D'); }
+    try { rows = await apiGet(NOTES_SHEET + '!A2:E'); }
     catch (e) { if (await _notesEnsureSheet(e)) rows = []; else return; }
     if (!state.notes) state.notes = {};
     const seen = {};
@@ -762,7 +781,7 @@ async function _notesPull() {
         const k = String((row && row[0]) || '').trim();
         if (!k) return;
         seen[k] = true;
-        const rem = { memo: (row[1] || ''), flag: !!String(row[2] || '').trim(), ts: parseInt(row[3], 10) || 0 };
+        const rem = { memo: (row[1] || ''), flag: !!String(row[2] || '').trim(), chk: !!String(row[4] || '').trim(), ts: parseInt(row[3], 10) || 0 };
         const loc = state.notes[k];
         const lts = (loc && loc.ts) || 0;
         if (rem.ts > lts || (rem.ts === lts && _noteEmpty(loc) && !_noteEmpty(rem))) {
@@ -4204,6 +4223,7 @@ async function recalcArchivePoints() {
 // і для зведення по всіх, і для того, що прочитано з пристрою
 function _parseArchiveRows(rows, name) {
     const out = [];
+    const _hasChk = _anyChk();
     for (let i = 1; i < (rows || []).length; i++) {
         const row = rows[i] || [];
         if (row[0] || row[2] || row[5] || row[6] || row[7] || row[8]) {
@@ -4224,6 +4244,8 @@ function _parseArchiveRows(rows, name) {
                 vnote: row[13] || '', vcomm: row[14] || '',
                 sheet: name, srow: i + 1
             });
+            // чекун: у формулу аркуша бал не вписати, тож +1 додаємо тут
+            if (_hasChk && _chkOf(out[out.length - 1])) out[out.length - 1].points += 1;
         }
     }
     return out;
@@ -5018,7 +5040,8 @@ function showEditRecordModal(idx, arch, noteJ) {
         selTargetName: '',
         memo: _nt.memo,
         flag: _nt.flag,
-        _orig: JSON.stringify({targets:_pairs,coordinates:r.coordinates||'',qty200:r.qty200||0,qty300:r.qty300||0,drone:r.drone||'',ammo:r.ammo||'',hour:_hh,minute:_mm,day:_dd,month:_mo,year:_yy,memo:_nt.memo,flag:_nt.flag})
+        chk: _chkOf(r),
+        _orig: JSON.stringify({targets:_pairs,coordinates:r.coordinates||'',qty200:r.qty200||0,qty300:r.qty300||0,drone:r.drone||'',ammo:r.ammo||'',hour:_hh,minute:_mm,day:_dd,month:_mo,year:_yy,memo:_nt.memo,flag:_nt.flag,chk:_chkOf(r)})
     };
     renderEditRecordModal();
 }
@@ -5039,7 +5062,7 @@ function selectEditTarget(n){
 function renderEditRecordModal() {
     const er = state.editRecord;
     if (!er) return;
-    const _dirty = !er._orig || JSON.stringify({targets:er.targets,coordinates:er.coordinates,qty200:er.qty200,qty300:er.qty300,drone:er.drone,ammo:er.ammo,hour:er.hour,minute:er.minute,day:er.day,month:er.month,year:er.year,memo:er.memo||'',flag:!!er.flag})!==er._orig;
+    const _dirty = !er._orig || JSON.stringify({targets:er.targets,coordinates:er.coordinates,qty200:er.qty200,qty300:er.qty300,drone:er.drone,ammo:er.ammo,hour:er.hour,minute:er.minute,day:er.day,month:er.month,year:er.year,memo:er.memo||'',flag:!!er.flag,chk:!!er.chk})!==er._orig;
     const _dim = _dirty ? ''  : 'opacity:0.35;filter:saturate(0.25)';
     const _getEA = (nm) => { const _p=nm.trim().split(' '),_l=_p[_p.length-1],_r=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):nm.trim(),_u=_r.toUpperCase(); return Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})(); };
 const tgtList = er.targets.length > 0
@@ -5094,7 +5117,7 @@ const tgtList = er.targets.length > 0
     const yyOpts = _rOpts(_yFrom, Math.max(_yNow + 1, parseInt(er.year, 10) || 0), er.year, 4);
     const q200opts = [9,8,7,6,5,4,3,2,1,0].map(n=>`<option value="${n}" ${er.qty200===n?'selected':''}>${n}</option>`).join('');
     const q300opts = [9,8,7,6,5,4,3,2,1,0].map(n=>`<option value="${n}" ${er.qty300===n?'selected':''}>${n}</option>`).join('');
-    document.getElementById('modal').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box edit-wide" style="max-height:90vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 class="stencil-shadow text-xl" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div style="display:flex;gap:6px"><button id="edit-save-top" onclick="saveEditRecord()" onmousedown="this.style.background='#5ab558'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#5ab558'" ontouchend="this.style.background=''" class="btn-stencil btn-green" style="width:42px;padding:6px 0;display:inline-flex;align-items:center;justify-content:center;font-size:0.9em;${_dim}">${icoCheck(28)}</button><button onclick="closeModal()" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil" style="width:42px;padding:6px 0;display:inline-flex;align-items:center;justify-content:center;font-size:0.9em;opacity:0.6">${icoCross(28)}</button></div></div><div class="edit-cols"><div class="edit-col-left"><label class="label block mb-1">ЦІЛІ</label><select onchange="state.editRecord.newTarget=this.value;state.editRecord.selTargetName='';renderEditRecordModal(true)" class="field" style="margin-bottom:6px"><option value="">Ціль...</option>${scoreOpts}</select>${_erTgtList}<div style="display:flex;align-items:center;border:2px solid var(--surface-light);border-radius:2px;background:rgba(0,0,0,0.3)"><select onchange="state.editRecord.newResult=this.value;renderEditRecordModal(true)" class="field" style="flex:1;min-width:0;border:none;background-color:transparent;outline:none"><option value="">Результат...</option>${resOpts}</select><button onclick="addEditTarget()" onmousedown="this.style.background='#5ab558'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#5ab558'" ontouchend="this.style.background=''" data-sq="0" class="btn-stencil btn-green" style="flex:0 0 auto;margin:4px 4px 4px 0;padding:0;display:inline-flex;align-items:center;justify-content:center">${icoPlus(18)}</button></div><div class="space-y-1" style="margin-top:.5rem">${tgtList}</div><div class="edit-memo"><label class="label block mb-1" onclick="clearMemo()" style="cursor:pointer" title="Натисніть, щоб очистити нотатку">MEMO</label><div style="display:flex;align-items:center;border:2px solid var(--surface-light);border-radius:2px;background:rgba(0,0,0,0.3)"><textarea id="er_memo" rows="1" oninput="saveEditModalState();checkEditDirty();_memoUndoVis();_memoGrow()" placeholder="Нотатка до вильоту..." style="flex:1;min-width:0;border:none;background:transparent;color:var(--text);padding:10px 12px;font-family:inherit;font-size:inherit;outline:none;resize:none">${esc(er.memo||'')}</textarea><button id="er_memo_undo" onclick="restoreMemo()" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil" style="flex:0 0 auto;margin:4px 4px 4px 0;padding:4px 6px;font-size:12px;align-items:center;justify-content:center;display:${(er._memoBak&&!er.memo)?'flex':'none'}" title="Відновити нотатку">${spinnerSvg(18,true)}</button></div></div></div><div class="space-y-3 edit-col-right"><div class="mgrs-row"><div style="min-width:0"><label class="label block mb-1">MGRS</label><div style="display:flex;align-items:center;border:2px solid var(--surface-light);border-radius:2px;background:rgba(0,0,0,0.3)"><input id="er_coord" type="text" oninput="saveEditModalState();checkEditDirty()" value="${esc(er.coordinates)}" placeholder="36U UA 24232 91610" style="flex:1;min-width:0;border:none;background:transparent;color:var(--text);padding:10px 12px;text-align:center;font-family:inherit;font-size:inherit;outline:none"/><button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();const el=document.getElementById('er_coord');if(el){el.value=v;el.dispatchEvent(new Event('input'));}}).catch(()=>{})" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil" style="flex:0 0 auto;margin:4px 4px 4px 0;padding:4px 6px;display:inline-flex;align-items:center;justify-content:center" title="Вставити з буфера">${icoUp(18)}</button></div></div></div><div class="qty-row"><div style="min-width:0"><label class="label block mb-1">200</label><select${_hasOs200?'':' disabled'} onchange="state.editRecord.qty200=parseInt(this.value);checkEditDirty()" class="field" style="${_hasOs200?'':'opacity:0.35'}">${q200opts}</select></div><div style="min-width:0"><label class="label block mb-1">300</label><select${_hasOs300?'':' disabled'} onchange="state.editRecord.qty300=parseInt(this.value);checkEditDirty()" class="field" style="${_hasOs300?'':'opacity:0.35'}">${q300opts}</select></div></div><div><label class="label block mb-1">ДРОН</label><select onchange="state.editRecord.drone=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${droneOpts}</select></div><div><label id="er_ammo_lbl" class="label block mb-1">БОЄПРИПАС</label><select onchange="state.editRecord.ammo=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${ammoOpts}</select></div></div></div><div class="edit-bottom"><div class="edit-dt"><div class="edit-date"><label class="label block mb-1">ДД.ММ.РРРР</label><div class="dt-sel"><select onchange="state.editRecord.day=this.value;checkEditDirty()" class="field">${ddOpts}</select><select onchange="state.editRecord.month=this.value;checkEditDirty()" class="field">${moOpts}</select><select onchange="state.editRecord.year=this.value;checkEditDirty()" class="field">${yyOpts}</select></div></div><div class="edit-time"><label class="label block mb-1">ЧЧ:ММ</label><div class="dt-sel"><select onchange="state.editRecord.hour=this.value;checkEditDirty()" class="field">${hhOpts}</select><select onchange="state.editRecord.minute=this.value;checkEditDirty()" class="field">${mmOpts}</select></div></div></div><div class="save-row"><div style="min-width:0;align-self:end"><button id="edit-save-bottom" data-sq="0" onclick="saveEditRecord()" onmousedown="this.style.background='#5ab558'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#5ab558'" ontouchend="this.style.background=''" class="btn-stencil btn-green w-full" style="${_dim}">ЗБЕРЕГТИ</button></div></div></div>`;
+    document.getElementById('modal').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal-box edit-wide" style="max-height:90vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 class="stencil-shadow text-xl" style="color: var(--yellow)">РЕДАГУВАННЯ</h2><div style="display:flex;gap:6px"><button id="edit-save-top" onclick="saveEditRecord()" onmousedown="this.style.background='#5ab558'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#5ab558'" ontouchend="this.style.background=''" class="btn-stencil btn-green" style="width:42px;padding:6px 0;display:inline-flex;align-items:center;justify-content:center;font-size:0.9em;${_dim}">${icoCheck(28)}</button><button onclick="closeModal()" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil" style="width:42px;padding:6px 0;display:inline-flex;align-items:center;justify-content:center;font-size:0.9em;opacity:0.6">${icoCross(28)}</button></div></div><div class="edit-cols"><div class="edit-col-left"><label class="label block mb-1">ЦІЛІ</label><select onchange="state.editRecord.newTarget=this.value;state.editRecord.selTargetName='';renderEditRecordModal(true)" class="field" style="margin-bottom:6px"><option value="">Ціль...</option>${scoreOpts}</select>${_erTgtList}<div style="display:flex;align-items:center;border:2px solid var(--surface-light);border-radius:2px;background:rgba(0,0,0,0.3)"><select onchange="state.editRecord.newResult=this.value;renderEditRecordModal(true)" class="field" style="flex:1;min-width:0;border:none;background-color:transparent;outline:none"><option value="">Результат...</option>${resOpts}</select><button onclick="addEditTarget()" onmousedown="this.style.background='#5ab558'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#5ab558'" ontouchend="this.style.background=''" data-sq="0" class="btn-stencil btn-green" style="flex:0 0 auto;margin:4px 4px 4px 0;padding:0;display:inline-flex;align-items:center;justify-content:center">${icoPlus(18)}</button></div><div class="space-y-1" style="margin-top:.5rem">${tgtList}</div><div class="edit-memo"><label class="label block mb-1" onclick="clearMemo()" style="cursor:pointer" title="Натисніть, щоб очистити нотатку">MEMO</label><div style="display:flex;align-items:center;border:2px solid var(--surface-light);border-radius:2px;background:rgba(0,0,0,0.3)"><textarea id="er_memo" rows="1" oninput="saveEditModalState();checkEditDirty();_memoUndoVis();_memoGrow()" placeholder="Нотатка до вильоту..." style="flex:1;min-width:0;border:none;background:transparent;color:var(--text);padding:10px 12px;font-family:inherit;font-size:inherit;outline:none;resize:none">${esc(er.memo||'')}</textarea><button id="er_memo_undo" onclick="restoreMemo()" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil" style="flex:0 0 auto;margin:4px 4px 4px 0;padding:4px 6px;font-size:12px;align-items:center;justify-content:center;display:${(er._memoBak&&!er.memo)?'flex':'none'}" title="Відновити нотатку">${spinnerSvg(18,true)}</button></div></div></div><div class="space-y-3 edit-col-right"><div class="mgrs-row"><div style="min-width:0"><label class="label block mb-1">MGRS</label><div style="display:flex;align-items:center;border:2px solid var(--surface-light);border-radius:2px;background:rgba(0,0,0,0.3)"><input id="er_coord" type="text" oninput="saveEditModalState();checkEditDirty()" value="${esc(er.coordinates)}" placeholder="36U UA 24232 91610" style="flex:1;min-width:0;border:none;background:transparent;color:var(--text);padding:10px 12px;text-align:center;font-family:inherit;font-size:inherit;outline:none"/><button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();const el=document.getElementById('er_coord');if(el){el.value=v;el.dispatchEvent(new Event('input'));}}).catch(()=>{})" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil" style="flex:0 0 auto;margin:4px 4px 4px 0;padding:4px 6px;display:inline-flex;align-items:center;justify-content:center" title="Вставити з буфера">${icoUp(18)}</button></div></div></div><div class="qty-row"><div style="min-width:0"><label class="label block mb-1">200</label><select${_hasOs200?'':' disabled'} onchange="state.editRecord.qty200=parseInt(this.value);checkEditDirty()" class="field" style="${_hasOs200?'':'opacity:0.35'}">${q200opts}</select></div><div style="min-width:0"><label class="label block mb-1">300</label><select${_hasOs300?'':' disabled'} onchange="state.editRecord.qty300=parseInt(this.value);checkEditDirty()" class="field" style="${_hasOs300?'':'opacity:0.35'}">${q300opts}</select></div></div><div><label class="label block mb-1">ДРОН</label><select onchange="state.editRecord.drone=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${droneOpts}</select></div><div><label id="er_ammo_lbl" class="label block mb-1">БОЄПРИПАС</label><select onchange="state.editRecord.ammo=this.value;checkEditDirty()" class="field"><option value="">Виберіть...</option>${ammoOpts}</select></div></div></div><div class="edit-bottom"><div class="edit-dt"><div class="edit-date"><label class="label block mb-1">ДД.ММ.РРРР</label><div class="dt-sel"><select onchange="state.editRecord.day=this.value;checkEditDirty()" class="field">${ddOpts}</select><select onchange="state.editRecord.month=this.value;checkEditDirty()" class="field">${moOpts}</select><select onchange="state.editRecord.year=this.value;checkEditDirty()" class="field">${yyOpts}</select></div></div><div class="edit-time"><label class="label block mb-1">ЧЧ:ММ</label><div class="dt-sel"><select onchange="state.editRecord.hour=this.value;checkEditDirty()" class="field">${hhOpts}</select><select onchange="state.editRecord.minute=this.value;checkEditDirty()" class="field">${mmOpts}</select></div></div></div><div class="save-row"><div style="min-width:0;align-self:end"><button id="edit-chk" data-sq="0" onclick="toggleEditChk()" class="btn-stencil btn-yellow chk-btn${er.chk?' on':''}" title="Чекун: +1 бал до вильоту">ЧЕКУН</button></div><div style="min-width:0;align-self:end"><button id="edit-save-bottom" data-sq="0" onclick="saveEditRecord()" onmousedown="this.style.background='#5ab558'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#5ab558'" ontouchend="this.style.background=''" class="btn-stencil btn-green w-full" style="${_dim}">ЗБЕРЕГТИ</button></div></div></div>`;
     _memoGrow();   // висота поля має відповідати тексту вже при відкритті
     _syncEditRowHeights();
     _squareEditButtons();
@@ -5124,11 +5147,20 @@ function _syncEditPlusSize() {
 }
 
 
+function toggleEditChk() {
+    const er = state.editRecord;
+    if (!er) return;
+    er.chk = !er.chk;
+    const b = document.getElementById('edit-chk');
+    if (b) b.classList.toggle('on', !!er.chk);
+    checkEditDirty();
+}
+
 function checkEditDirty() {
     saveEditModalState();
     const er = state.editRecord;
     if (!er || !er._orig) return;
-    const dirty = JSON.stringify({targets:er.targets,coordinates:er.coordinates,qty200:er.qty200,qty300:er.qty300,drone:er.drone,ammo:er.ammo,hour:er.hour,minute:er.minute,day:er.day,month:er.month,year:er.year,memo:er.memo||'',flag:!!er.flag})!==er._orig;
+    const dirty = JSON.stringify({targets:er.targets,coordinates:er.coordinates,qty200:er.qty200,qty300:er.qty300,drone:er.drone,ammo:er.ammo,hour:er.hour,minute:er.minute,day:er.day,month:er.month,year:er.year,memo:er.memo||'',flag:!!er.flag,chk:!!er.chk})!==er._orig;
     const btn = document.getElementById('edit-save-top');
     if (btn) { btn.style.opacity = dirty ? ''  : '0.35'; btn.style.filter = dirty ? ''  : 'saturate(0.25)'; }
     const btn2 = document.getElementById('edit-save-bottom'); if (btn2) { btn2.style.opacity = dirty ? ''  : '0.35'; btn2.style.filter = dirty ? ''  : 'saturate(0.25)'; }
@@ -5477,7 +5509,7 @@ async function saveEditRecord() {
     const _osE=state.scoreTable['ОС']||{znyshcheno:0,poshkodzheno:0};
     let _ptsE=0;
     er.targets.forEach(t=>{const _p=t.name.trim().split(' '),_l=_p[_p.length-1],_r=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.name.trim(),_u=_r.toUpperCase();const _ab=Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})();if(_ab==='ОС'){if(t.result==='знищено')_ptsE+=_osE.znyshcheno*(parseInt(er.qty200)||0)+_osE.poshkodzheno*(parseInt(er.qty300)||0);else if(t.result==='пошкоджено')_ptsE+=_osE.poshkodzheno*(parseInt(er.qty300)||0);}else{const _sc=state.scoreTable[_ab];if(_sc)_ptsE+=t.result==='знищено'?_sc.znyshcheno:t.result==='пошкоджено'?_sc.poshkodzheno:0;}});
-    r.points=Math.round(_ptsE*100)/100;
+    r.points=Math.round((_ptsE+(er.chk?1:0))*100)/100;
     // Дата й час вильоту: беремо обране в полях, секунди лишаємо як були.
     // Дату теж правлять — у старих записах вона буває не та, а то й порожня
     if (er.hour != null && er.minute != null) {
@@ -5490,6 +5522,7 @@ async function saveEditRecord() {
     }
     if (!r.uid) r.uid = _contentUid(r);
     _setNote(_noteKey(r, er.noteJ), er.memo || '', er.flag);   // нотатка й позначка — лише локально
+    _setChk(r, er.chk);
     saveLocal();   // інакше стерте MEMO живе тільки до перезавантаження й вертається
     // Архівний виліт: пишемо прямо в його рядок аркуша, стовпці A-I та K.
     // Стовпець J не чіпаємо взагалі — там формула аркуша, яка рахує бали
@@ -5512,7 +5545,7 @@ async function saveEditRecord() {
             // інакше на екрані світилося б наше число, а в таблиці інше
             try {
                 const _j = await apiGet(er.arch.sheet + '!J' + er.arch.srow);
-                r.points = _num((_j[0] || [])[0]);
+                r.points = _num((_j[0] || [])[0]) + (er.chk ? 1 : 0);
             } catch (e2) { /* не прочиталося — лишаємо як було */ }
         }
         catch (e) {
@@ -5656,7 +5689,7 @@ function formatRecord(r, num) {
     const _mc = (f, txt) => txt
         ? `<span class="cp cp-hl" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()" style="color:${_c(f,'inherit')}">${esc(txt)}</span>`
         : '';
-    const meta = [_mc('time',_rTime),_mc('coordinates',r.coordinates),_mc('drone',r.drone),_mc('ammo',r.ammo)].filter(Boolean).join(ysep);
+    const meta = [_mc('time',_rTime),_mc('coordinates',r.coordinates),_mc('drone',r.drone),_mc('ammo',r.ammo),_chkTag(r)].filter(Boolean).join(ysep);
     const _gone = !!r._ghost;
     const _nt = _noteOf(r);
     // помаранчева рамка «не синхронізовано» має пріоритет над жовтим акцентом
@@ -6092,7 +6125,7 @@ function render() {
                             +(_cc.length>1?esc(', '+_cc.slice(1).join(',').trim()):'');
                         const _rn0=_repNoAll.get(r)||{rep:0,num:0};
                         const meta=[_rn0.rep?'Звіт №'+_rn0.rep:'',_rn0.num?'Виліт №'+_rn0.num:'',
-                            _cpS(_vNorm(r.datetime),'cp-hl'),_coordCell,esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
+                            _cpS(_vNorm(r.datetime),'cp-hl'),_coordCell,esc(r.drone),esc(r.ammo),_chkTag(r)].filter(Boolean).join(_ysep);
                         // виліт із балами, який лишився без жодного вердикту
                         const _unv=(_anyV&&!(r.v&&r.v.state)&&(parseFloat(r.points)||0))?' not-verified':'';
                         // нотатка й акцент — такі самі, як на картках ЗВІТІВ
@@ -6223,7 +6256,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         const _meta=[_rn.rep?'Звіт №'+_rn.rep:'',_rn.num?'Виліт №'+_rn.num:'',
                             _cpS(_vNorm(r.datetime),'cp-hl')].filter(Boolean).join(_ysep);
                         const _meta2=[_coordSpan(_cc[0].trim())+(_cc.length>1?esc(', '+_cc.slice(1).join(',').trim()):''),
-                            esc(r.drone),esc(r.ammo)].filter(Boolean).join(_ysep);
+                            esc(r.drone),esc(r.ammo),_chkTag(r)].filter(Boolean).join(_ysep);
                         // Дублююча ціль: кажемо прямо, кому вона зарахована.
                         // Пару знайшов _markPacks, номер беремо з тієї самої
                         // нумерації, що стоїть у рядку нижче, — щоб було з чим
