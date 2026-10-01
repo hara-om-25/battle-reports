@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-94';
+const APP_VER = 'v.26.09-95';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6406,7 +6406,6 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             return '<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
                 +'<h3 class="stencil-shadow" style="color:var(--yellow)">ЩО ПОПРАВИТИ В ТАБЛИЦІ</h3>'
                 +'<span class="stencil" style="color:var(--khaki)">'+esc(_hdr)+'</span>'
-                +'<button onclick="copyVerifyFix()" onmousedown="this.classList.add(\'active\')" onmouseup="this.classList.remove(\'active\')" ontouchstart="this.classList.add(\'active\')" ontouchend="this.classList.remove(\'active\')" class="btn-stencil btn-black">КОПІЮВАТИ</button>'
                 +'</div><div class="report-box">'+_body+'</div></div>';
         })();
         const _sbBtn=(t,cls,on,oc,tip,pr)=>`<button ${on?`onclick="${oc}" `:'disabled '}onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil ${cls}${pr?' active':''}" style="font-size:0.78em;padding:5px 10px;width:100%${on?'':';cursor:not-allowed'}"${tip?` title="${tip}"`:''}>${t}</button>`;
