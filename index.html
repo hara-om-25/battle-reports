@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-75';
+const APP_VER = 'v.26.09-76';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1125,9 +1125,10 @@ function resumeOffline() {
     state.token = localStorage.getItem('token');
     state.online = false;
     state.loaded = true;
-    state.page = 'form';
+    state.page = _startPage();
     localStorage.setItem('email', o);   // щоб наступний запуск одразу відкрив дані
     render();
+    _afterStartPage();
 }
 
 // Кнопка повернення на початок сторінки. Живе поза #app, тож перемальовування
@@ -1247,8 +1248,9 @@ window.onload = () => {
         state.user = savedEmail;
         state.token = savedToken;
         state.loaded = true;
-        state.page = 'form';
+        state.page = _startPage();
         render();
+        _afterStartPage();
         if (!navigator.onLine) _offlineMsg();
     } else {
         state.page = 'login';
@@ -1319,8 +1321,9 @@ async function verifyAndLoad() {
         // Немає мережі — стартуємо в офлайн-режимі з локальними даними
         if (_isNetErr(err) && localStorage.getItem('email')) {
             state.online = false;
-            state.loaded = true; state.page = 'form';
+            state.loaded = true; state.page = _startPage();
             render();
+            _afterStartPage();
             _offlineMsg();
             return;
         }
@@ -2321,6 +2324,16 @@ function _sortArchiveSheets(list) {
         return String(a).localeCompare(String(b));
     });
 }
+
+// Сторінка, на якій користувач був до оновлення: після перезавантаження
+// застосунок лишає його там, а не кидає на ФОРМУ
+function _startPage() {
+    try {
+        const p = localStorage.getItem('br_page');
+        return ['form', 'reports', 'archive', 'lists'].includes(p) ? p : 'form';
+    } catch (e) { return 'form'; }
+}
+function _afterStartPage() { if (state.page === 'archive') goToArchive(); }
 
 async function goToArchive() {
     state.page = 'archive';
@@ -4260,18 +4273,20 @@ async function loadDataFromAPI() {
         };
         
         recalcListFieldWidth();
-        state.loaded = true; state.page = 'form';
+        state.loaded = true; state.page = _startPage();
         state.online = true;
         saveLocal();
         render();
+        _afterStartPage();
         _ensureLastArchive();
     } catch(err) {
         console.error('Завантаження failed:', err);
         // Немає мережі — не викидаємо користувача, працюємо з локальними даними
         if (_isNetErr(err)) {
             state.online = false;
-            state.loaded = true; state.page = 'form';
+            state.loaded = true; state.page = _startPage();
             render();
+            _afterStartPage();
             _offlineMsg();
             return;
         }
@@ -5635,6 +5650,7 @@ function _pckConfirm(){
 
 function render() {
     const app = document.getElementById('app');
+    try { if (state.user && ['form', 'reports', 'archive', 'lists'].includes(state.page)) localStorage.setItem('br_page', state.page); } catch (e) {}
     
     if (state.page === 'login' || !state.user) {
         app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><div class="crate p-8 max-w-md w-full text-center"><h1 class="stencil-shadow text-3xl mb-4" style="color: var(--yellow)">ХАРА ОМ</h1><p class="stencil mb-2" style="color: var(--khaki)">GOOGLE ТАБЛИЦЯ</p><input id="_sheetUrlInp" class="field mb-4" style="text-align:left;font-size:0.8em" placeholder="https://docs.google.com/spreadsheets/d/..." value="${esc(localStorage.getItem('sheetId')||'')}"/><button onclick="applySheetAndLogin()" class="btn-stencil btn-yellow-dim w-full text-lg">🔐 УВІЙТИ ЧЕРЕЗ GOOGLE</button>${_offlineResumeBtn()}</div></div>`;
