@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-98';
+const APP_VER = 'v.26.09-99';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2922,8 +2922,8 @@ function _tgVerdict(o) {
 // верифікатор розійшовся з нами саме на ній. Ціна береться з «е бали»,
 // тобто **поточна**: в архіві з часів іншого прайса різниця буде рахуватись
 // за нинішніми цінами
-// Прайс чинний з 12.09.2026. Раніші вильоти закриті за старими цінами, а
-// порівнювати їх із нинішніми не можна: вийде вигадана «різниця»
+// Прайс чинний з 12.09.2026. Раніші вильоти закриті за старими цінами
+// (колонки F/G прайса), тож і порівнювати їх треба зі старими
 const _PRICE_FROM = Date.UTC(2026, 8, 12);
 function _newPrices(r) {
     const m = getDateOnly(r.datetime).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
@@ -2932,11 +2932,25 @@ function _newPrices(r) {
 function _tgOwn(r, j, P) {
     const nm = (P.tgts[j] || '').trim();
     if (!nm) return null;
-    if (!_newPrices(r)) return null;
     const ab = _abbrOfName(nm);
-    if (!state.scoreTable[ab]) return null;
-    const n = calculatePoints(ab, r.qty200, r.qty300, String(P.ress[j] || '').trim());
-    return isNaN(n) ? null : n;
+    const sc = state.scoreTable[ab];
+    if (!sc) return null;
+    const res = String(P.ress[j] || '').trim();
+    if (_newPrices(r)) {
+        const n = calculatePoints(ab, r.qty200, r.qty300, res);
+        return isNaN(n) ? null : n;
+    }
+    // виліт до 12.09.2026 — за старим прайсом (колонки F/G); немає старої
+    // ціни — порівнювати нема з чим
+    const z = sc.oldZ, w = sc.oldP;
+    if (ab === 'ОС') {
+        const q2 = parseInt(r.qty200) || 0, q3 = parseInt(r.qty300) || 0;
+        if (res === 'знищено') return (z === null || z === undefined || w === null || w === undefined) ? null : z * q2 + w * q3;
+        if (res === 'пошкоджено') return (w === null || w === undefined) ? null : w * q3;
+        return 0;
+    }
+    const v = res === 'знищено' ? z : res === 'пошкоджено' ? w : 0;
+    return (v === null || v === undefined || isNaN(v)) ? null : v;
 }
 
 // Бали саме цієї цілі — там, де їх можна знати напевно: скільки дав
