@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-85';
+const APP_VER = 'v.26.09-86';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -919,9 +919,43 @@ function _vSheets() {
 function _svcHead(sh) {
     return '<div class="stencil-shadow" style="color:var(--yellow);font-size:1.3em;margin:12px 0 4px">' + esc(sh) + '</div>';
 }
+// Для рядка файлу, що не ліг: БК із самого файлу й, як підказка, дрон та БК
+// найближчого за часом вильоту того ж аркуша (до години). Це не збіг, а лише
+// натяк, який виліт, імовірно, потрібно виправити
+function _vlTs(s) {
+    const m = String(s || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})[,\s]+(\d{1,2}):(\d{2})/);
+    return m ? new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5]).getTime() : null;
+}
+function _vlNear(sh, x) {
+    const t = _vlTs(x.dt);
+    if (t === null) return null;
+    let best = null, bd = 61 * 60000;
+    (state.allArchiveRecs || []).forEach(r => {
+        if (r.sheet !== sh) return;
+        const tr = _vlTs(r.datetime);
+        if (tr === null) return;
+        const d = Math.abs(tr - t);
+        if (d < bd) { bd = d; best = r; }
+    });
+    return best ? { r: best, min: Math.round(bd / 60000), n: _vdNum.get(best) } : null;
+}
+function _vlExtra(sh, x, cp) {
+    const _c = (t, k) => !t ? '' : cp ? '<span class="cp ' + k + '" onclick="_cpTxt(this)">' + esc(t) + '</span>' : t;
+    const _e = t => cp ? esc(t) : t;
+    const out = [];
+    if (x.ammo) out.push(_e('БК у файлі ') + _c(x.ammo, 'cp-o'));
+    const nb = _vlNear(sh, x);
+    if (nb) {
+        const r = nb.r;
+        out.push(_e('імовірно виліт' + (r.srow ? ' (рядок ' + r.srow + ')' : '') + ' ±' + nb.min + ' хв: ')
+            + (r.drone ? _c(r.drone, 'cp-y') : _e('без дрона')) + _e(', ') + (r.ammo ? _c(r.ammo, 'cp-o') : _e('без БК')));
+    }
+    return out;
+}
+
 function _vlSorted(L) { return [...L].sort((a, b) => a.dt < b.dt ? -1 : 1); }
 function _vfSort(L) { return [...L].sort((a, b) => (a.why ? 1 : 0) - (b.why ? 1 : 0) || a.row - b.row); }
-function _vlLineT(x) { return [x.dt, x.tgt, x.coord, x.res, x.verdict + (x.pts ? ' ' + x.pts : ''), x.why].filter(Boolean).join(' | '); }
+function _vlLineT(x, sh) { return [x.dt, x.tgt, x.coord, x.res, x.verdict + (x.pts ? ' ' + x.pts : ''), ..._vlExtra(sh, x, false), x.why].filter(Boolean).join(' | '); }
 
 function _vlList() { return ((state.vAll || {})[state.selArchive] || {}).left || []; }
 function _vfList() { return ((state.vAll || {})[state.selArchive] || {}).fix || []; }
@@ -3228,6 +3262,7 @@ async function runVerification(file) {
                 res: _vNorm(r[C.res]),
                 // боєприпас є тільки у файлах нового вигляду
                 ammo: C.ammo >= 0 ? _vAmmoKey(_vAmmo(r[C.ammo])) : '',
+                ammoRaw: C.ammo >= 0 ? _vNorm(r[C.ammo]).replace(/\s*\([^)]*\)/g, '') : '',
                 // скільки наших заходів покриває цей рядок файлу
                 ammoQty: C.ammo >= 0 ? _vAmmoQty(r[C.ammo]) : 1,
                 // скільки одиниць покриває рядок: верифікатор може замінити
@@ -3634,7 +3669,7 @@ async function runVerification(file) {
         if (_pSel && (it.date < _pSel.from || it.date > _pSel.to)) return;
         left.push({
             dt: it.dt, tgt: it.tgt.name, coord: it.rawCoord, res: it.res,
-            verdict: it.verdict, pts: it.pts,
+            verdict: it.verdict, pts: it.pts, ammo: it.ammoRaw || '',
             why: 'не знайдено'
         });
     });
@@ -3700,7 +3735,7 @@ function copyVerifyLeft() {
         const L = (state.vAll[sh] || {}).left || [];
         if (!L.length) return;
         out.push(sh);
-        _vlSorted(L).forEach(x => out.push(_vlLineT(x)));
+        _vlSorted(L).forEach(x => out.push(_vlLineT(x, sh)));
     });
     if (!out.length) return;
     navigator.clipboard.writeText(out.join('\n')).catch(() => {});
@@ -6313,7 +6348,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             const _tot=sheets.reduce((n,sh)=>n+state.vAll[sh].left.length,0);
             const _cp=(t,k)=>t?'<span class="cp '+k+'" onclick="_cpTxt(this)">'+esc(t)+'</span>':'';
             const _body=sheets.map(sh=>_svcHead(sh)+_vlSorted(state.vAll[sh].left).map(x=>[_cp(x.dt,'cp-b'),esc(x.tgt),_cp(x.coord,'cp-g'),esc(x.res),
-                esc(x.verdict+(x.pts?' '+x.pts:'')),esc(x.why)].filter(Boolean).join(' | ')).join('\n')).join('');
+                esc(x.verdict+(x.pts?' '+x.pts:'')),..._vlExtra(sh,x,true),esc(x.why)].filter(Boolean).join(' | ')).join('\n')).join('');
             return '<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
                 +'<h3 class="stencil-shadow" style="color:var(--yellow)">РЯДКИ ФАЙЛУ, ЩО НЕ ЛЯГЛИ</h3>'
                 +'<span class="stencil" style="color:var(--khaki)">'+esc('не знайдено '+_tot)+'</span>'
