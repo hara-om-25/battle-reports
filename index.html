@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-86';
+const APP_VER = 'v.26.09-87';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -920,7 +920,7 @@ function _svcHead(sh) {
     return '<div class="stencil-shadow" style="color:var(--yellow);font-size:1.3em;margin:12px 0 4px">' + esc(sh) + '</div>';
 }
 // Для рядка файлу, що не ліг: БК із самого файлу й, як підказка, дрон та БК
-// найближчого за часом вильоту того ж аркуша (до години). Це не збіг, а лише
+// найближчого за часом вильоту того ж аркуша (до доби, різницю в часі видно). Це не збіг, а лише
 // натяк, який виліт, імовірно, потрібно виправити
 function _vlTs(s) {
     const m = String(s || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})[,\s]+(\d{1,2}):(\d{2})/);
@@ -929,7 +929,7 @@ function _vlTs(s) {
 function _vlNear(sh, x) {
     const t = _vlTs(x.dt);
     if (t === null) return null;
-    let best = null, bd = 61 * 60000;
+    let best = null, bd = 24 * 3600000 + 1;
     (state.allArchiveRecs || []).forEach(r => {
         if (r.sheet !== sh) return;
         const tr = _vlTs(r.datetime);
@@ -947,7 +947,8 @@ function _vlExtra(sh, x, cp) {
     const nb = _vlNear(sh, x);
     if (nb) {
         const r = nb.r;
-        out.push(_e('імовірно виліт' + (r.srow ? ' (рядок ' + r.srow + ')' : '') + ' ±' + nb.min + ' хв: ')
+        const _dm = nb.min >= 120 ? Math.floor(nb.min / 60) + ' год ' + (nb.min % 60) + ' хв' : nb.min + ' хв';
+        out.push(_e('найближчий виліт' + (r.srow ? ' (рядок ' + r.srow + ')' : '') + ' ±' + _dm + ': ')
             + (r.drone ? _c(r.drone, 'cp-y') : _e('без дрона')) + _e(', ') + (r.ammo ? _c(r.ammo, 'cp-o') : _e('без БК')));
     }
     return out;
