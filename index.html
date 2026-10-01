@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-90';
+const APP_VER = 'v.26.09-91';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2127,7 +2127,10 @@ function _statTail(o) {
     if (o.h) d.push(_pt(o.p || 0) + ' ' + _bal(_pt(o.p || 0)));
     if (_pt(o.a || 0)) d.push('додано ' + _pt(o.a) + ' ' + _bal(_pt(o.a)));
     if (_pt(o.c || 0)) d.push('скасовано ' + _pt(o.c) + ' ' + _bal(_pt(o.c)));
-    return (d.length ? ', ' + d.join(', ') : '') + (p.length ? ' (' + p.join(', ') + ')' : '');
+    // перше число — «на N балів» (разом з «шт»), решта — через кому
+    const _first = o.h ? ' на ' + d[0] : '';
+    const _rest = d.slice(o.h ? 1 : 0);
+    return _first + (_rest.length ? ', ' + _rest.join(', ') : '') + (p.length ? ' (' + p.join(', ') + ')' : '');
 }
 
 // Наскільки верифікатор розійшовся з нами на цілі j вильоту r: бали його
@@ -2161,7 +2164,7 @@ function _rptColor(s) {
                   'не звірено': 'var(--yellow)' };
     return String(s).replace(/(верифіковано|замінено|відхилено|дублюючих|не звірено)(\s+\d+)/g,
         (m, w, n) => w + n.replace(/\d+/, d => '<span style="color:' + clr[w] + '">' + d + '</span>'))
-        .replace(/(шт, )(\d[\d.]*) (бал\S*?)(?=,| \(|;|\.|$)/g, '$1<span style="color:var(--yellow)">$2 $3</span>')
+        .replace(/(шт на )(\d[\d.]*) (бал\S*?)(?=,| \(|;|\.|$)/g, '$1<span style="color:var(--yellow)">$2 $3</span>')
         .replace(/скасовано (\d[\d.]*) (бал\S*?)(?=[,;.)\s]|$)/g, '<span style="color:var(--red-label)">скасовано $1 $2</span>')
         .replace(/додано (\d[\d.]*) (бал\S*?)(?=[,;.)\s]|$)/g, '<span style="color:var(--green-label)">додано $1 $2</span>')
         // підсумкові рядки: прогноз жовтим, верифіковане й додане зеленим,
