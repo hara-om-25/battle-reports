@@ -587,7 +587,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.09-89';
+const APP_VER = 'v.26.09-90';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2121,15 +2121,26 @@ function _statTail(o) {
     if (o.no) p.push('відхилено ' + o.no);
     if (o.dup) p.push('дублюючих ' + o.dup);
     if (o.unv) p.push('не звірено ' + o.unv);
-    // скільки балів верифікатор зняв (червоний мінус) і додав (зелений плюс)
+    // після кількості: усього верифікованих балів групи (без скасованих, з доданими),
+    // далі додані й скасовані, а в дужках — рахунок вильотів за вердиктами
     const d = [];
-    if (_pt(o.c || 0)) d.push('скасовано ' + _pt(o.c) + ' ' + _bal(_pt(o.c)));
+    if (o.h) d.push(_pt(o.p || 0) + ' ' + _bal(_pt(o.p || 0)));
     if (_pt(o.a || 0)) d.push('додано ' + _pt(o.a) + ' ' + _bal(_pt(o.a)));
-    return (p.length ? ' (' + p.join(', ') + ')' : '') + (d.length ? ' ' + d.join(', ') : '');
+    if (_pt(o.c || 0)) d.push('скасовано ' + _pt(o.c) + ' ' + _bal(_pt(o.c)));
+    return (d.length ? ', ' + d.join(', ') : '') + (p.length ? ' (' + p.join(', ') + ')' : '');
 }
 
 // Наскільки верифікатор розійшовся з нами на цілі j вильоту r: бали його
 // мінус бали за нашим прайсом. Без вердикту чи без ціни — нуль
+// Бали, які верифікатор дав цілі j вильоту r (скасоване вже не входить, додане
+// входить). null — вердикту немає або бали невідомі
+function _tgVerPts(r, j) {
+    if (!r.v || !r.v.state) return null;
+    const P = _arRowParts(r);
+    if (!String(P.tgts[j] || '').trim()) return null;
+    const pts = _tgPts({ r: r, j: j, p: P });
+    return (pts === null || pts === undefined || isNaN(pts)) ? null : pts;
+}
 function _tgDiffPts(r, j) {
     if (!r.v || !r.v.state) return 0;
     const P = _arRowParts(r);
@@ -2150,8 +2161,9 @@ function _rptColor(s) {
                   'не звірено': 'var(--yellow)' };
     return String(s).replace(/(верифіковано|замінено|відхилено|дублюючих|не звірено)(\s+\d+)/g,
         (m, w, n) => w + n.replace(/\d+/, d => '<span style="color:' + clr[w] + '">' + d + '</span>'))
-        .replace(/скасовано (\d[\d.]*) (бал\S*?)(?=[,;.)]|$)/g, '<span style="color:var(--red-label)">скасовано $1 $2</span>')
-        .replace(/додано (\d[\d.]*) (бал\S*?)(?=[,;.)]|$)/g, '<span style="color:var(--green-label)">додано $1 $2</span>')
+        .replace(/(шт, )(\d[\d.]*) (бал\S*?)(?=,| \(|;|\.|$)/g, '$1<span style="color:var(--yellow)">$2 $3</span>')
+        .replace(/скасовано (\d[\d.]*) (бал\S*?)(?=[,;.)\s]|$)/g, '<span style="color:var(--red-label)">скасовано $1 $2</span>')
+        .replace(/додано (\d[\d.]*) (бал\S*?)(?=[,;.)\s]|$)/g, '<span style="color:var(--green-label)">додано $1 $2</span>')
         // підсумкові рядки: прогноз жовтим, верифіковане й додане зеленим,
         // скасоване червоним, у грошах уражене зеленим, витрачене червоним
         .replace(/^(Прогнозовано уражень на )(\d[\d.]*)/, '$1<span style="color:var(--yellow)">$2</span>')
@@ -2169,7 +2181,7 @@ function generateArchiveReport(recs, periodLabel) {
     const osSum300 = recs.reduce((s, r) => s + (parseInt(r.qty300) || 0), 0);
     // без звіряння лічильники не показуємо зовсім
     const anyV = recs.some(r => r.v && r.v.state);
-    const _mk = () => ({ ok: 0, rep: 0, no: 0, dup: 0, unv: 0, a: 0, c: 0 });
+    const _mk = () => ({ ok: 0, rep: 0, no: 0, dup: 0, unv: 0, a: 0, c: 0, p: 0, h: 0 });
     const os200 = _mk(), os300 = _mk();
     // мапа замін вильоту — та сама, що й у переліках: {номер цілі: нова ціль}
     const _swOf = r => (r.v && r.v.repl && r.v.repl.length) ? (_arRowParts(r).swap || null) : null;
@@ -2182,6 +2194,17 @@ function generateArchiveReport(recs, periodLabel) {
         os300[s] += parseInt(r.qty300) || 0;
         // скільки балів верифікатор додав чи зняв на цій цілі, розкладаємо
         // між ОС 200 і ОС 300 за тим, що саме він змінив у кількостях
+        const _vp = _tgVerPts(r, oi);
+        if (_vp !== null) {
+            const _osP0 = Object.entries(state.scoreTable).find(([a]) => a.toLowerCase() === 'ос');
+            const Z0 = _osP0 ? _osP0[1].znyshcheno : 0, W0 = _osP0 ? _osP0[1].poshkodzheno : 0;
+            const q2 = parseInt(r.qty200) || 0, q3 = parseInt(r.qty300) || 0, os0 = r.v && r.v.os;
+            let v1 = (os0 ? os0.k : q2) * Z0, v2 = (os0 ? os0.w : q3) * W0;
+            if (v1 + v2 <= 0) { v1 = q2 * Z0; v2 = q3 * W0; }
+            const g1 = (v1 + v2) > 0 ? v1 / (v1 + v2) : 1;
+            os200.p += _vp * g1; os300.p += _vp * (1 - g1);
+        }
+        if (s !== 'unv') { os200.h = 1; os300.h = 1; }
         const _d = _tgDiffPts(r, oi);
         if (_d) {
             const _osP = Object.entries(state.scoreTable).find(([a]) => a.toLowerCase() === 'ос');
@@ -2210,7 +2233,7 @@ function generateArchiveReport(recs, periodLabel) {
                 const key=dispName.toUpperCase()+' '+res;
                 if(!otherGrouped[key])otherGrouped[key]={d:dispName,r:res,n:0,v:_mk()};
                 otherGrouped[key].n++;
-                if(anyV){const s=_tgtStat(r,idx,_sw);if(s)otherGrouped[key].v[s]++;const _d=_tgDiffPts(r,idx);if(_d){if(_d>0)otherGrouped[key].v.a+=_d;else otherGrouped[key].v.c-=_d;}}
+                if(anyV){const s=_tgtStat(r,idx,_sw);if(s)otherGrouped[key].v[s]++;if(s&&s!=='unv')otherGrouped[key].v.h=1;const _vp=_tgVerPts(r,idx);if(_vp!==null)otherGrouped[key].v.p+=_vp;const _d=_tgDiffPts(r,idx);if(_d){if(_d>0)otherGrouped[key].v.a+=_d;else otherGrouped[key].v.c-=_d;}}
             }
         });
     });
