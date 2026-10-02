@@ -592,7 +592,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-111';
+const APP_VER = 'v.26.10-112';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -910,6 +910,17 @@ function _tblMove(fromId, toId) {
 function _switchTable(newId) {
     const oldId = SHEET_ID;
     if (!newId || newId === oldId) return true;
+    // Поки йде обмін із таблицею, перемикати не можна: частина запису лягла б
+    // в одну таблицю, а решта — в іншу
+    if (_apiBusy > 0 || state.syncing || state.archiveLoading || state.allArchiveLoading) {
+        showAlert('Зачекайте кілька секунд: іде обмін з таблицею. Потім перемкніть таблицю ще раз.');
+        return false;
+    }
+    // відкладений запис нотаток відбувся б уже в нову таблицю; нотатки лежать
+    // у кеші цієї таблиці й підуть у неї при наступному зчитуванні
+    if (_notesTimer) { clearTimeout(_notesTimer); _notesTimer = null; }
+    // усе, що є в пам'яті, лягає в кеш старої таблиці до того, як його заховано
+    try { saveLocal(); _saveVerify(); } catch (e) {}
     try { _tblMove(oldId, newId); }
     catch (e) { showAlert('Не вдалося перемкнути таблицю: на пристрої бракує місця.'); return false; }
     try { localStorage.setItem(LS_TBL_TAG, newId); } catch (e) {}
@@ -918,6 +929,21 @@ function _switchTable(newId) {
     state.archiveSheets = []; state.selArchive = null; state.archiveRecs = []; state.archiveLoading = false;
     state.allArchiveRecs = []; state.allArchiveLoaded = false; state.allArchiveLoading = false;
     state.vAll = {}; state.notes = {}; state.queue = []; state.listsSynced = null;
+    // усе, що стояло на екрані за даними старої таблиці
+    state.report = 1; state.selReport = null; state.selDate = null; state.selVylotyDate = null;
+    state.arFilter = null; state.tgFilter = null; state.arFront = '';
+    state.arShowSum = false; state.arShowList = false; state.arShowStat = false;
+    state.filterFrom = ''; state.filterTo = ''; state.zvityFilterFrom = ''; state.zvityFilterTo = '';
+    state.filterPeriodOpen = false; state.filterPeriodShown = false; state.zvityFilterOpen = false; state.zvityFilterShown = false;
+    state.form = {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:'', selTargetName:''};
+    _vuRows = []; _vdRows = [];
+    // кеш цієї таблиці міг лишитись від іншого акаунта — його дані чужі
+    try {
+        const d = JSON.parse(localStorage.getItem(LS_DATA) || 'null');
+        if (d && d.owner && state.user && d.owner !== state.user) {
+            localStorage.removeItem(LS_DATA); localStorage.removeItem(LS_QUEUE);
+        }
+    } catch (e) {}
     loadLocal();
     return true;
 }
@@ -1978,15 +2004,19 @@ function _isAuthErr(e) {
         || m.includes('invalid credentials');
 }
 // Один повтор після оновлення токена. fn щоразу читає state.token наново
+let _apiBusy = 0;   // скільки запитів до таблиці зараз у польоті
 async function _retryOnAuth(fn) {
+    _apiBusy++;
     try {
-        return await fn();
-    } catch (e) {
-        if (!_isAuthErr(e) || !state.user) throw e;
-        const tok = await _refreshToken();
-        if (!tok) throw e;
-        return await fn();
-    }
+        try {
+            return await fn();
+        } catch (e) {
+            if (!_isAuthErr(e) || !state.user) throw e;
+            const tok = await _refreshToken();
+            if (!tok) throw e;
+            return await fn();
+        }
+    } finally { _apiBusy--; }
 }
 
 async function apiGet(range) {
