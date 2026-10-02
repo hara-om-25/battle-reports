@@ -592,7 +592,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-107';
+const APP_VER = 'v.26.10-108';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -868,6 +868,74 @@ function _mergeList(remote, local, snap) {
     const out = remote.filter(v => gone.indexOf(v) === -1);
     local.forEach(v => { if (out.indexOf(v) === -1) out.push(v); });
     return out;
+}
+
+// ---- Кеш на пристрої окремий для кожної таблиці --------------------------
+// Списки, прайс, вильоти, нотатки, черга, архіви й переліки верифікації лежать
+// у localStorage. Раніше вони були спільні для всіх таблиць: після перемикання
+// на іншу таблицю (ТГ Грін) там лишались дані попередньої, а списки ще й
+// зливались із новими й могли потрапити назад у таблицю. Тепер перед
+// перемиканням усе це прибирається під ключ старої таблиці, а для нової
+// повертається те, що було збережено для неї раніше
+const LS_TBL_TAG = 'br_cache_sheet';
+function _tblKeys() {
+    const ks = [LS_DATA, LS_QUEUE, LS_VERIFY, LS_ARCH];
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf(LS_ARCH + ':') === 0) ks.push(k);
+    }
+    return ks;
+}
+function _tblMove(fromId, toId) {
+    // пишемо копію, і лише потім стираємо оригінал — обрив нічого не губить
+    const pf = 'br_tbl:' + fromId + '|';
+    _tblKeys().forEach(k => {
+        const v = localStorage.getItem(k);
+        if (v === null) return;
+        localStorage.setItem(pf + k, v);
+        localStorage.removeItem(k);
+    });
+    const pt = 'br_tbl:' + toId + '|';
+    const back = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf(pt) === 0) back.push(k);
+    }
+    back.forEach(k => {
+        localStorage.setItem(k.slice(pt.length), localStorage.getItem(k));
+        localStorage.removeItem(k);
+    });
+}
+// Перемикання таблиці: старий кеш ховаємо, новий піднімаємо й перечитуємо в пам'ять
+function _switchTable(newId) {
+    const oldId = SHEET_ID;
+    if (!newId || newId === oldId) return true;
+    try { _tblMove(oldId, newId); }
+    catch (e) { showAlert('Не вдалося перемкнути таблицю: на пристрої бракує місця.'); return false; }
+    try { localStorage.setItem(LS_TBL_TAG, newId); } catch (e) {}
+    state.records = []; state.counts = {}; state.scoreTable = {}; state.drones = []; state.ammo = [];
+    state.results = []; state.pvr = []; state.reportTitle = ''; state.costPerPoint = 0; state.droneCategories = null;
+    state.archiveSheets = []; state.selArchive = null; state.archiveRecs = []; state.archiveLoading = false;
+    state.allArchiveRecs = []; state.allArchiveLoaded = false; state.allArchiveLoading = false;
+    state.vAll = {}; state.notes = {}; state.queue = []; state.listsSynced = null;
+    loadLocal();
+    return true;
+}
+// На старті: кеш має належати таблиці, яка відкрита зараз
+function _tblStartup() {
+    try {
+        const tag = localStorage.getItem(LS_TBL_TAG);
+        if (tag && tag !== SHEET_ID) _tblMove(tag, SHEET_ID);
+        localStorage.setItem(LS_TBL_TAG, SHEET_ID);
+    } catch (e) { /* не вийшло — лишається як було */ }
+}
+// Переліки верифікації аркушів, яких у цій таблиці немає, нікому не потрібні
+function _pruneVerify() {
+    const have = state.archiveSheets || [];
+    if (!have.length || !state.vAll) return;
+    let ch = false;
+    Object.keys(state.vAll).forEach(k => { if (have.indexOf(k) < 0) { delete state.vAll[k]; ch = true; } });
+    if (ch) _saveVerify();
 }
 
 function saveLocal() {
@@ -1313,6 +1381,7 @@ function _initVerMark() {
 window.onload = () => {
     _initToTop();
     _initVerMark();
+    _tblStartup();
     _archMigrate();
     loadLocal();
     const savedToken = localStorage.getItem('token');
@@ -1741,7 +1810,7 @@ function applySheetAndLogin() {
     if(raw){
         const id=parseSheetId(raw);
         if(!id){showAlert('Хибне посилання на Google Таблицю!');return;}
-        if(id!==SHEET_ID){state.listsSynced=null;}   // інша таблиця — стара точка відліку не діє
+        if(id!==SHEET_ID && !_switchTable(id)) return;
         SHEET_ID=id;
         localStorage.setItem('sheetId',id);
     }
@@ -1805,8 +1874,8 @@ async function _loadSheetPicks() {
 
 function _pickSheet(id) {
     if (!id) { showAlert('У цьому рядку аркуша «start» немає ID таблиці.'); return; }
-    // інша таблиця — стара точка відліку списків не діє
-    if (id !== SHEET_ID) state.listsSynced = null;
+    // інша таблиця — її власний кеш, а не чужий
+    if (id !== SHEET_ID && !_switchTable(id)) return;
     SHEET_ID = id;
     localStorage.setItem('sheetId', id);
     _sheetHistAdd(id, '');
@@ -1818,7 +1887,7 @@ function _saveSheetModal() {
     const raw=el?el.value.trim():'';
     const id=parseSheetId(raw)||raw;
     if(!id){showAlert('Введіть посилання!');return;}
-    if(id!==SHEET_ID)state.listsSynced=null;
+    if(id!==SHEET_ID && !_switchTable(id)) return;
     SHEET_ID=id;
     localStorage.setItem('sheetId',id);
     _sheetHistAdd(id,'');
@@ -2383,6 +2452,7 @@ async function _ensureLastArchive() {
             state.archiveSheets = list;
             state.allArchiveLoaded = false;
             state.allArchiveRecs = [];
+            _pruneVerify();
             saveLocal();
             if (state.page === 'archive') render();
         }
@@ -2482,6 +2552,7 @@ async function goToArchive(page) {
                 state.allArchiveLoaded = false;
                 state.allArchiveRecs = [];
             }
+            _pruneVerify();
             saveLocal();
         } catch(e) {
             if (_isNetErr(e)) { state.online = false; state.archiveLoading = false; render(); _offlineMsg(); return; }
