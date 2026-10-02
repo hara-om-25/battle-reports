@@ -592,7 +592,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-108';
+const APP_VER = 'v.26.10-109';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1872,6 +1872,14 @@ async function _loadSheetPicks() {
     if (box && html) box.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px">' + html + '</div><div style="height:1rem"></div>';
 }
 
+// Після перемикання таблиці пам'ять порожня (прайс, назва ТГ, списки): без
+// зчитування з нової таблиці підсумки рахуються без цін. Тому зчитуємо одразу
+function _reloadAfterSwitch() {
+    if (state.token && navigator.onLine) { manualPull(); return; }
+    render();
+    showAlert('✅ Таблицю збережено!\nКоли буде мережа, натисніть кнопку завантаження для зчитування даних');
+}
+
 function _pickSheet(id) {
     if (!id) { showAlert('У цьому рядку аркуша «start» немає ID таблиці.'); return; }
     // інша таблиця — її власний кеш, а не чужий
@@ -1880,7 +1888,7 @@ function _pickSheet(id) {
     localStorage.setItem('sheetId', id);
     _sheetHistAdd(id, '');
     closeModal();
-    showAlert('✅ Таблицю збережено!\nНатисніть кнопку завантаження для перезавантаження даних');
+    _reloadAfterSwitch();
 }
 function _saveSheetModal() {
     const el=document.getElementById('_sheetModalInp');
@@ -1892,7 +1900,7 @@ function _saveSheetModal() {
     localStorage.setItem('sheetId',id);
     _sheetHistAdd(id,'');
     closeModal();
-    showAlert('✅ Таблицю збережено!\nНатисніть кнопку завантаження для перезавантаження даних');
+    _reloadAfterSwitch();
 }
 
 function logout() {
