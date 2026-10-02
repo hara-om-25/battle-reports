@@ -592,7 +592,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-115';
+const APP_VER = 'v.26.10-116';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -4863,6 +4863,8 @@ function copyPrev() {
     if (_last.ammo) state.form.ammo = _last.ammo;
     render();
 }
+function toggleFormChk() { state.form.chk = !state.form.chk; render(); }
+
 async function add() {
     if(state.form.targets.length === 0) {
         showAlert('Додайте результат вильоту, навіть якщо ціль не було уражено');
@@ -4900,9 +4902,10 @@ async function add() {
         drone: state.form.drone,
         ammo: state.form.ammo,
         result: resultStr,
-        points: totalPoints
+        points: totalPoints + (state.form.chk ? 1 : 0)
     };
     rec.uid = _newUid();
+    if (state.form.chk) _setChk(rec, true);   // ЧЕКУН: +1 бал і позначка після БК
     state.records.push(rec);
     state.form = {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:''};
     saveLocal();
@@ -6127,6 +6130,9 @@ function render() {
                     </div>
                     <div style="flex:0 0 auto;transform:translateY(-35%)">
                         <button onclick="copyPrev()" onmousedown="this.style.background='#9a9070';this.style.transform='translateY(2px)'" onmouseup="this.style.background='';this.style.transform=''" ontouchstart="this.style.background='#9a9070';this.style.transform='translateY(2px)'" ontouchend="this.style.background='';this.style.transform=''" class="btn-stencil" style="font-size:0.78em;padding:3px 10px;white-space:nowrap;display:block">ПОПЕРЕДНІЙ</button>
+                    </div>
+                    <div style="flex:0 0 auto;transform:translateY(-35%)">
+                        <button onclick="toggleFormChk()" class="btn-stencil chk-btn${state.form.chk?' on':''}" title="Чекун: +1 бал до вильоту" style="font-size:0.78em;padding:3px 10px;white-space:nowrap;display:block">ЧЕКУН</button>
                     </div>
                 </div>
                 
