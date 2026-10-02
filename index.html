@@ -592,7 +592,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-123';
+const APP_VER = 'v.26.10-124';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2334,7 +2334,7 @@ function _rptColor(s) {
         .replace(/додано (\d[\d.]*) (бал\S*?)(?=[,;.)\s]|$)/g, '<span style="color:var(--blue-label)">додано $1 $2</span>')
         // підсумкові рядки: прогноз жовтим, верифіковане й додане зеленим,
         // скасоване червоним, у грошах уражене зеленим, витрачене червоним
-        .replace(/(\(з них )(\d+)( за ЧЕКУНИ\))/, '$1<span style="color:#e08a2e">$2</span>$3')
+        .replace(/(\(з них )(\d+)( бал\S*? за чекуни\))/, '$1<span style="color:#e08a2e">$2</span>$3')
         .replace(/^(Прогнозовано уражень на )(\d[\d.]*)/, '$1<span style="color:var(--yellow)">$2</span>')
         .replace(/^(Верифіковано уражень на )(\d[\d.]*)/, '$1<span style="color:var(--green-label)">$2</span>')
         .replace(/^(Додано верифікатором )(\d[\d.]*)/, '$1<span style="color:var(--blue-label)">$2</span>')
@@ -5773,7 +5773,7 @@ function deleteItem() { if(state.inputList !== null && state.inputIdx !== null) 
 // Скільки вильотів із ЧЕКУН у щойно побудованих підсумках; рядок «Прогнозовано»
 // завжди дописується одразу після generateArchiveReport
 let _lastChkCnt = 0;
-function _chkNote() { return _lastChkCnt ? ' (з них ' + _lastChkCnt + ' за ЧЕКУНИ)' : ''; }
+function _chkNote() { return _lastChkCnt ? ' (з них ' + _lastChkCnt + ' ' + _bal(_lastChkCnt) + ' за чекуни)' : ''; }
 function _effPct(recs) {
     if (!recs.length) return 0;
     const hit = recs.filter(r => String(r.result || '').split(',').some(x => { x = x.trim(); return x === 'знищено' || x === 'пошкоджено'; })).length;
