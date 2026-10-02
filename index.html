@@ -592,7 +592,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-117';
+const APP_VER = 'v.26.10-118';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2279,18 +2279,29 @@ function _tgVerPts(r, j) {
     const pts = _tgPts({ r: r, j: j, p: P });
     return (pts === null || pts === undefined || isNaN(pts)) ? null : pts;
 }
-// ЧЕКУН у вильоті (колонка P = 1): якщо верифікатор дав за ціль рівно на 1 бал
-// більше за наш прайс — це бал чекуна, а не розбіжність. Беремо першу таку
-// ціль вильоту; решта розбіжностей лишаються розбіжностями
+// ЧЕКУН у вильоті (колонка P = 1): +1 бал дається за ВИЛЬОТ, а не за ціль. Якщо
+// верифікатор у сумі по вильоту дав рівно на 1 бал більше за наш прайс — це бал
+// чекуна, а не розбіжність. На картках він лягає на першу ціль, де верифікатор
+// дав більше за прайс; решта розбіжностей лишаються розбіжностями
 function _tgChkBonus(r, j, P) {
     if (!r.chk || !r.v || !r.v.state) return 0;
     P = P || _arRowParts(r);
+    const d = []; let tot = 0;
     for (let k = 0; k < P.tgts.length; k++) {
-        if (!String(P.tgts[k] || '').trim()) continue;
-        const own = _tgOwn(r, k, P);
-        const pts = _tgPts({ r: r, j: k, p: P });
-        if (own === null || pts === null || pts === undefined) continue;
-        if (Math.abs(pts - own - 1) < 1e-9) return k === j ? 1 : 0;
+        let x = 0;
+        if (String(P.tgts[k] || '').trim()) {
+            const own = _tgOwn(r, k, P), pts = _tgPts({ r: r, j: k, p: P });
+            if (own !== null && pts !== null && pts !== undefined) x = pts - own;
+        }
+        d.push(x); tot += x;
+    }
+    if (Math.abs(tot - 1) > 1e-9) return 0;
+    let rem = 1;
+    for (let k = 0; k < d.length && rem > 1e-9; k++) {
+        if (d[k] > 1e-9) {
+            const b = Math.min(d[k], rem); rem -= b;
+            if (k === j) return b;
+        }
     }
     return 0;
 }
