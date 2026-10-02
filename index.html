@@ -488,8 +488,8 @@
     .edit-bottom .save-row { flex: 1 1 0; min-width: 0; }
     .save-row { display: grid; gap: .5rem; grid-template-columns: minmax(0,1fr) minmax(0,2fr); align-items: end; }
     /* ЧЕКУН: віджата — тьмяна й випукла, натиснута — яскрава й втоплена */
-    .btn-stencil.chk-btn { background: #8a5416; border-color: #a8661c; color: #1a1d18; box-shadow: 0 4px 0 #4a2c0a, 0 6px 12px rgba(0,0,0,0.4); }
-    .btn-stencil.chk-btn.on { transform: translateY(4px); box-shadow: none; background: #e08a2e; border-color: #f0a555; }
+    .btn-stencil.chk-btn { background: #4d2f10; border-color: #6a4318; color: #c9a878; box-shadow: 0 4px 0 #2a1808, 0 6px 12px rgba(0,0,0,0.4); }
+.btn-stencil.chk-btn.on { transform: translateY(4px); box-shadow: none; background: #e08a2e; border-color: #f0a555; }
     @media (max-width: 760px) {
       .edit-bottom { flex-wrap: wrap; gap: 14px; }
       .edit-bottom .save-row { flex: 1 1 100%; }
@@ -592,7 +592,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-112';
+const APP_VER = 'v.26.10-113';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
