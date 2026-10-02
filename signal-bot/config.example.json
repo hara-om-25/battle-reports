@@ -7,6 +7,13 @@
   "case_sensitive": false,
   "whole_word": false,
   "admins": ["+380XXXXXXXXX"],
+  "response_timeout_minutes": 5,
+  "pass_mode": "end",
+  "accept_reactions": ["➕", "👍", "✅", "+"],
+  "decline_reactions": ["➖", "👎", "❌", "-"],
+  "voice": true,
+  "voice_lang": "uk",
+  "voice_template": "Прийшла черга {name}, {pos} з {total}",
   "state_file": "state.json",
   "poll_interval": 2,
   "command_prefix": "/"

@@ -3,14 +3,18 @@
 
 Слухає чат-джерело, шукає в повідомленнях ключові слова і пересилає знайдені
 повідомлення в чат черги. Кожне переслане повідомлення адресується (через
-@-згадку) наступному користувачу з черги по колу.
+@-згадку і голосове повідомлення) наступному користувачу з черги.
+
+Відповідальний відповідає реакцією: ➕ — беру, ➖ — не можу. На ➖ або якщо
+ніхто не відреагував за заданий час, повідомлення переходить до наступного.
 
 Працює поверх signal-cli-rest-api (https://github.com/bbernhard/signal-cli-rest-api).
-Залежностей, крім стандартної бібліотеки Python, немає.
+Для голосових повідомлень потрібен пакет gTTS (необов'язково).
 """
 
 import argparse
 import base64
+import io
 import json
 import logging
 import os
@@ -41,7 +45,22 @@ DEFAULT_CONFIG = {
     "state_file": "state.json",
     "poll_interval": 2,
     "command_prefix": "/",
+    # Скільки хвилин чекати на ➕/➖, перш ніж передати наступному (0 — не чекати).
+    "response_timeout_minutes": 5,
+    # Що робити з тим, хто поставив ➖ або не відповів:
+    #   "end"  — перемістити в кінець черги;
+    #   "next" — він отримає наступне нове повідомлення.
+    "pass_mode": "end",
+    "accept_reactions": ["➕", "👍", "✅", "+"],
+    "decline_reactions": ["➖", "👎", "❌", "-"],
+    "voice": True,
+    "voice_lang": "uk",
+    "voice_template": "Прийшла черга {name}, {pos} з {total}",
 }
+
+# Налаштування, які адміністратор може змінювати командами в чаті.
+RUNTIME_SETTINGS = ("response_timeout_minutes", "pass_mode", "voice")
+PASS_MODES = {"end": "в кінець черги", "next": "отримає наступне повідомлення"}
 
 ENV_MAP = {
     "SIGNAL_API_URL": "api_url",
@@ -57,7 +76,7 @@ ENV_MAP = {
 def load_config(path):
     cfg = dict(DEFAULT_CONFIG)
     if path and os.path.exists(path):
-        with open(path, encoding="utf-8") as f:
+        with open(path, encoding="utf-8-sig") as f:
             cfg.update(json.load(f))
     for env, key in ENV_MAP.items():
         value = os.environ.get(env)
@@ -91,18 +110,52 @@ def utf16_len(text):
     return len(text.encode("utf-16-le")) // 2
 
 
+def normalize_emoji(text):
+    return (text or "").replace("️", "").strip()
+
+
+def parse_duration(text):
+    """'5', '5m', '30s', '1h', '1.5' -> хвилини (float). None, якщо не розібрано."""
+    m = re.fullmatch(r"(\d+(?:[.,]\d+)?)\s*(s|с|m|м|хв|h|г|год)?", text.strip().lower())
+    if not m:
+        return None
+    value = float(m.group(1).replace(",", "."))
+    unit = m.group(2) or "m"
+    if unit in ("s", "с"):
+        return value / 60
+    if unit in ("h", "г", "год"):
+        return value * 60
+    return value
+
+
+def format_minutes(minutes):
+    if not minutes:
+        return "вимкнено"
+    if minutes < 1:
+        return f"{round(minutes * 60)} с"
+    return f"{minutes:g} хв"
+
+
 # --------------------------------------------------------------------------- #
-# Черга
+# Стан: черга, завдання, налаштування
 # --------------------------------------------------------------------------- #
 
-class Queue:
-    """Кругова черга користувачів, яка зберігається у JSON-файлі."""
+class State:
+    """Черга користувачів, активні завдання і налаштування; зберігається в JSON.
+
+    members — список учасників у порядку додавання (номер у списку = N у "N/M").
+    order   — порядок отримання повідомлень: перший отримає наступне.
+    tasks   — повідомлення, які чекають на ➕/➖.
+    """
 
     def __init__(self, path):
         self.path = path
-        self.members = []  # [{"id": uuid або номер, "name": "..."}]
-        self.position = 0  # індекс того, хто отримає наступне повідомлення
-        self.lock = threading.Lock()
+        self.members = []   # [{"id": uuid або номер, "number": "+380…", "name": "…"}]
+        self.order = []     # [id, …]
+        self.tasks = []     # [{"id", "text", "assignee", "tried", "deadline", "messages"}]
+        self.settings = {}
+        self.next_task_id = 1
+        self.lock = threading.RLock()
         self._load()
 
     def _load(self):
@@ -110,82 +163,137 @@ class Queue:
             with open(self.path, encoding="utf-8") as f:
                 data = json.load(f)
             self.members = data.get("members", [])
-            self.position = data.get("position", 0)
-        self._normalize()
+            self.order = data.get("order")
+            if self.order is None:  # формат попередньої версії: members + position
+                pos = data.get("position", 0)
+                ids = [m["id"] for m in self.members]
+                self.order = ids[pos:] + ids[:pos]
+            self.tasks = data.get("tasks", [])
+            self.settings = data.get("settings", {})
+            self.next_task_id = data.get("next_task_id", 1)
+        ids = {m["id"] for m in self.members}
+        self.order = [i for i in self.order if i in ids]
+        self.order += [m["id"] for m in self.members if m["id"] not in self.order]
 
-    def _save(self):
+    def save(self):
         if not self.path:
             return
-        tmp = self.path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump({"members": self.members, "position": self.position},
-                      f, ensure_ascii=False, indent=2)
-        os.replace(tmp, self.path)
+        with self.lock:
+            data = {"members": self.members, "order": self.order, "tasks": self.tasks,
+                    "settings": self.settings, "next_task_id": self.next_task_id}
+            tmp = self.path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, self.path)
 
-    def _normalize(self):
-        if not self.members:
-            self.position = 0
-        else:
-            self.position %= len(self.members)
+    # ---- учасники --------------------------------------------------------- #
 
-    def _find(self, member_id):
-        for i, m in enumerate(self.members):
+    def member(self, member_id):
+        for m in self.members:
+            if m["id"] == member_id:
+                return m
+        return None
+
+    def find(self, *ids):
+        """Шукає учасника за uuid або номером телефону."""
+        ids = {i for i in ids if i}
+        for m in self.members:
+            if m["id"] in ids or m.get("number") in ids:
+                return m
+        return None
+
+    def number(self, member_id):
+        for i, m in enumerate(self.members, 1):
             if m["id"] == member_id:
                 return i
-        return -1
+        return 0
 
-    def add(self, member_id, name):
+    def add(self, member_id, name, number=None):
         with self.lock:
-            if self._find(member_id) >= 0:
+            if self.find(member_id, number):
                 return False
-            self.members.append({"id": member_id, "name": name or member_id})
-            self._save()
+            self.members.append({"id": member_id, "number": number, "name": name or member_id})
+            self.order.append(member_id)
+            self.save()
             return True
 
     def remove(self, member_id):
         with self.lock:
-            i = self._find(member_id)
-            if i < 0:
+            m = self.member(member_id)
+            if not m:
                 return False
-            self.members.pop(i)
-            if i < self.position:
-                self.position -= 1
-            self._normalize()
-            self._save()
+            self.members.remove(m)
+            self.order.remove(member_id)
+            self.save()
             return True
-
-    def peek(self):
-        with self.lock:
-            return self.members[self.position] if self.members else None
-
-    def next(self):
-        """Повертає поточного користувача і зсуває чергу на одного вперед."""
-        with self.lock:
-            if not self.members:
-                return None
-            member = self.members[self.position]
-            self.position = (self.position + 1) % len(self.members)
-            self._save()
-            return member
-
-    def skip(self):
-        with self.lock:
-            if not self.members:
-                return None
-            self.position = (self.position + 1) % len(self.members)
-            self._save()
-            return self.members[self.position]
 
     def clear(self):
         with self.lock:
-            self.members = []
-            self.position = 0
-            self._save()
+            self.members, self.order = [], []
+            self.save()
 
     def ordered(self):
-        """Учасники в порядку, в якому вони отримуватимуть повідомлення."""
         with self.lock:
-            return self.members[self.position:] + self.members[:self.position]
+            return [self.member(i) for i in self.order]
+
+    def head(self, exclude=()):
+        with self.lock:
+            for i in self.order:
+                if i not in exclude:
+                    return self.member(i)
+            return None
+
+    def take(self, exclude=()):
+        """Бере першого з черги (крім exclude) і переміщує його в кінець."""
+        with self.lock:
+            m = self.head(exclude)
+            if m:
+                self.move_to_end(m["id"])
+            return m
+
+    def move_to_end(self, member_id):
+        with self.lock:
+            if member_id in self.order:
+                self.order.remove(member_id)
+                self.order.append(member_id)
+                self.save()
+
+    def move_to_front(self, member_id):
+        with self.lock:
+            if member_id in self.order:
+                self.order.remove(member_id)
+                self.order.insert(0, member_id)
+                self.save()
+
+    def skip(self):
+        with self.lock:
+            if not self.order:
+                return None
+            self.move_to_end(self.order[0])
+            return self.member(self.order[0])
+
+    # ---- завдання --------------------------------------------------------- #
+
+    def new_task(self, text):
+        with self.lock:
+            task = {"id": self.next_task_id, "text": text, "assignee": None,
+                    "tried": [], "deadline": None, "messages": []}
+            self.next_task_id += 1
+            self.tasks.append(task)
+            return task
+
+    def task_by_message(self, timestamp):
+        with self.lock:
+            for t in self.tasks:
+                if timestamp in t["messages"]:
+                    return t
+            return None
+
+    def close_task(self, task):
+        with self.lock:
+            if task in self.tasks:
+                self.tasks.remove(task)
+            self.save()
 
 
 # --------------------------------------------------------------------------- #
@@ -232,6 +340,30 @@ def analyze(text, matcher):
 
 
 # --------------------------------------------------------------------------- #
+# Голосові повідомлення
+# --------------------------------------------------------------------------- #
+
+def synthesize_voice(text, lang="uk"):
+    """Повертає MP3 (bytes) з озвученим текстом або None, якщо не вдалося."""
+    try:
+        from gtts import gTTS
+    except ImportError:
+        log.warning("gTTS не встановлено — голосові повідомлення вимкнено (pip install gTTS)")
+        return None
+    try:
+        buf = io.BytesIO()
+        gTTS(text, lang=lang).write_to_fp(buf)
+        return buf.getvalue()
+    except Exception as e:
+        log.warning("Не вдалося озвучити текст: %s", e)
+        return None
+
+
+def voice_attachment(mp3):
+    return "data:audio/mpeg;filename=cherga.mp3;base64," + base64.b64encode(mp3).decode()
+
+
+# --------------------------------------------------------------------------- #
 # Клієнт signal-cli-rest-api
 # --------------------------------------------------------------------------- #
 
@@ -260,15 +392,16 @@ class SignalAPI:
         number = urllib.parse.quote(self.number)
         return self._request("GET", f"/v1/groups/{number}") or []
 
-    def send(self, recipient, text, mentions=None):
-        payload = {
-            "number": self.number,
-            "recipients": [recipient],
-            "message": text,
-        }
+    def send(self, recipient, text, mentions=None, attachments=None):
+        """Надсилає повідомлення; повертає його timestamp (int) або None."""
+        payload = {"number": self.number, "recipients": [recipient], "message": text}
         if mentions:
             payload["mentions"] = mentions
-        return self._request("POST", "/v2/send", payload)
+        if attachments:
+            payload["base64_attachments"] = attachments
+        result = self._request("POST", "/v2/send", payload, timeout=60) or {}
+        ts = result.get("timestamp")
+        return int(ts) if ts else None
 
 
 # --------------------------------------------------------------------------- #
@@ -284,14 +417,27 @@ HELP_TEXT = """Команди бота черги:
 /next — хто наступний
 /skip — пропустити поточного
 /clear — очистити чергу
-/help — ця довідка"""
+/timeout 5 — час на відповідь у хвилинах (30s, 1h; 0 — не чекати)
+/mode end | next — куди переносити того, хто не взяв: у кінець черги / на наступне повідомлення
+/voice on | off — голосові повідомлення
+/settings — поточні налаштування
+/tasks — повідомлення, що чекають відповіді
+/help — ця довідка
+
+Відповідь на повідомлення бота: реакція ➕ — беру, ➖ — не можу
+(або відповідь на повідомлення текстом "+" / "-")."""
+
+ADMIN_COMMANDS = {"add", "remove", "skip", "clear", "timeout", "mode", "voice"}
 
 
 class Bot:
-    def __init__(self, cfg, api=None, queue=None):
+    def __init__(self, cfg, api=None, state=None, tts=synthesize_voice, clock=time.time):
         self.cfg = cfg
         self.api = api or SignalAPI(cfg["api_url"], cfg["bot_number"])
-        self.queue = queue or Queue(cfg["state_file"])
+        self.state = state or State(cfg["state_file"])
+        self.tts = tts
+        self.clock = clock
+        self.lock = self.state.lock
         self.matcher = KeywordMatcher(cfg["keywords"], cfg.get("case_sensitive", False),
                                       cfg.get("whole_word", False))
         self.source_id = group_internal_id(cfg["source_group"])
@@ -299,28 +445,40 @@ class Bot:
         self.queue_send = group_send_id(cfg["queue_group"])
         self.prefix = cfg.get("command_prefix", "/")
         self.admins = set(cfg.get("admins") or [])
+        self.accept = {normalize_emoji(e) for e in cfg.get("accept_reactions", [])}
+        self.decline = {normalize_emoji(e) for e in cfg.get("decline_reactions", [])}
+
+    def setting(self, key):
+        return self.state.settings.get(key, self.cfg.get(key, DEFAULT_CONFIG.get(key)))
 
     # ---- вхідні повідомлення ---------------------------------------------- #
 
     def handle_envelope(self, item):
         env = item.get("envelope", item)
-        dm = env.get("dataMessage")
-        if not dm:
-            return
-        text = dm.get("message") or ""
-        group = (dm.get("groupInfo") or {}).get("groupId", "")
         sender = {
             "id": env.get("sourceUuid") or env.get("sourceNumber") or env.get("source"),
             "number": env.get("sourceNumber") or env.get("source"),
             "name": env.get("sourceName") or env.get("sourceNumber") or "невідомий",
         }
-        if sender["number"] == self.cfg["bot_number"]:
+        dm = env.get("dataMessage")
+        if not dm:
+            # Повідомлення, надіслані з основного телефона акаунта бота.
+            dm = (env.get("syncMessage") or {}).get("sentMessage")
+        if not dm:
             return
+        group = (dm.get("groupInfo") or {}).get("groupId", "")
+        text = dm.get("message") or ""
 
-        if group and group == self.queue_id and text.startswith(self.prefix):
-            self.handle_command(text, dm.get("mentions") or [], sender)
-        elif group and group == self.source_id:
-            self.handle_source(text, dm, sender)
+        with self.lock:
+            if group and group == self.queue_id:
+                if dm.get("reaction"):
+                    self.handle_reaction(dm["reaction"], sender)
+                elif dm.get("quote") and normalize_emoji(text) in self.accept | self.decline:
+                    self.handle_answer(dm["quote"].get("id"), normalize_emoji(text), sender)
+                elif text.startswith(self.prefix):
+                    self.handle_command(text, dm.get("mentions") or [], sender)
+            elif group and group == self.source_id and not dm.get("reaction"):
+                self.handle_source(text, dm, sender)
 
     def handle_source(self, text, dm, sender):
         result = analyze(text, self.matcher)
@@ -329,8 +487,39 @@ class Bot:
         log.info("Ключові слова %s у повідомленні від %s", result["keywords"], sender["name"])
         self.forward(result, sender, attachments=len(dm.get("attachments") or []))
 
+    def handle_reaction(self, reaction, sender):
+        if reaction.get("isRemove"):
+            return
+        target = reaction.get("targetSentTimestamp")
+        self.handle_answer(int(target) if target else None, normalize_emoji(reaction.get("emoji")), sender)
+
+    def handle_answer(self, timestamp, answer, sender):
+        task = self.state.task_by_message(timestamp) if timestamp else None
+        if not task:
+            return
+        member = self.state.find(sender["id"], sender["number"])
+        if not member or member["id"] != task["assignee"]:
+            return  # відповідати може лише той, на кого зараз покладено повідомлення
+        if answer in self.accept:
+            log.info("%s взяв(-ла) повідомлення #%s", member["name"], task["id"])
+            self.state.close_task(task)
+        elif answer in self.decline:
+            self.reassign(task, f"{member['name']} не може")
+
+    def check_timeouts(self):
+        """Передає наступному повідомлення, на які не відповіли вчасно."""
+        with self.lock:
+            now = self.clock()
+            for task in list(self.state.tasks):
+                if task["deadline"] and task["deadline"] <= now:
+                    m = self.state.member(task["assignee"])
+                    name = m["name"] if m else "Відповідальний"
+                    minutes = format_minutes(self.setting("response_timeout_minutes"))
+                    self.reassign(task, f"{name} не відповів(-ла) за {minutes}")
+
+    # ---- призначення ------------------------------------------------------ #
+
     def forward(self, result, sender, attachments=0):
-        member = self.queue.next()
         header = "📨 Нове повідомлення\n"
         header += f"Від: {sender['name']}\n"
         header += f"Ключові слова: {', '.join(result['keywords'])}\n"
@@ -342,16 +531,56 @@ class Bot:
             header += f"Вкладень: {attachments} (дивіться в чаті-джерелі)\n"
         body = f"\n{result['text']}\n\n"
 
-        if member:
-            prefix = header + body + "👉 Відповідальний: "
-            tag = "@" + member["name"]
-            text = prefix + tag
-            mentions = [{"author": member["id"], "start": utf16_len(prefix),
-                         "length": utf16_len(tag)}]
-        else:
-            text = header + body + "⚠️ Черга порожня — додайте людей командою /add"
-            mentions = None
-        self.send(text, mentions)
+        if not self.state.order:
+            self.send(header + body + "⚠️ Черга порожня — додайте людей командою /add")
+            return
+        task = self.state.new_task(result["text"])
+        self.assign(task, header + body)
+
+    def reassign(self, task, reason):
+        previous = task["assignee"]
+        quoted = task["text"] if len(task["text"]) <= 300 else task["text"][:300] + "…"
+        intro = f"↪️ {reason}.\n\n📨 {quoted}\n\n"
+        if not self.assign(task, intro, previous=previous):
+            return
+        if previous and self.setting("pass_mode") == "next":
+            self.state.move_to_front(previous)
+        elif previous:
+            self.state.move_to_end(previous)
+        self.state.save()
+
+    def assign(self, task, intro, previous=None):
+        """Призначає завдання наступному з черги. False, якщо черга вичерпана."""
+        member = self.state.take(exclude=task["tried"])
+        if not member:
+            self.send(intro + "⛔ Ніхто з черги не взяв це повідомлення. Потрібне рішення адміністратора.")
+            self.state.close_task(task)
+            return False
+
+        pos, total = self.state.number(member["id"]), len(self.state.members)
+        before = intro + "🔔 Прийшла черга "
+        tag = "@" + member["name"]
+        after = f" {pos}/{total}\nРеакція ➕ — беру, ➖ — не можу"
+        minutes = self.setting("response_timeout_minutes")
+        if minutes:
+            after += f" (на відповідь {format_minutes(minutes)})"
+        mentions = [{"author": member["id"], "start": utf16_len(before), "length": utf16_len(tag)}]
+
+        attachments = None
+        if self.setting("voice") and self.tts:
+            phrase = self.setting("voice_template").format(name=member["name"], pos=pos, total=total)
+            mp3 = self.tts(phrase, self.setting("voice_lang"))
+            if mp3:
+                attachments = [voice_attachment(mp3)]
+
+        task["assignee"] = member["id"]
+        task["tried"].append(member["id"])
+        task["deadline"] = self.clock() + minutes * 60 if minutes else None
+        ts = self.send(before + tag + after, mentions, attachments)
+        if ts:
+            task["messages"].append(ts)
+        self.state.save()
+        return True
 
     # ---- команди ---------------------------------------------------------- #
 
@@ -370,70 +599,138 @@ class Bot:
         if cmd == "queue":
             return self.send(self.format_queue())
         if cmd == "next":
-            member = self.queue.peek()
+            member = self.state.head()
             return self.send(f"Наступний: {member['name']}" if member else "Черга порожня")
+        if cmd == "settings":
+            return self.send(self.format_settings())
+        if cmd == "tasks":
+            return self.send(self.format_tasks())
         if cmd == "join":
-            ok = self.queue.add(sender["id"], sender["name"])
+            ok = self.state.add(sender["id"], sender["name"], sender["number"])
             return self.send(f"{sender['name']} у черзі" if ok else "Ви вже в черзі")
         if cmd == "leave":
-            ok = self.queue.remove(sender["id"])
+            m = self.state.find(sender["id"], sender["number"])
+            ok = bool(m) and self.state.remove(m["id"])
             return self.send(f"{sender['name']} вийшов(-ла) з черги" if ok else "Вас немає в черзі")
 
-        if cmd not in ("add", "remove", "skip", "clear"):
+        if cmd not in ADMIN_COMMANDS:
             return self.send(f"Невідома команда. {self.prefix}help — список команд")
         if not self.is_admin(sender):
             return self.send("Ця команда доступна лише адміністраторам")
 
         if cmd == "skip":
-            member = self.queue.skip()
+            member = self.state.skip()
             return self.send(f"Пропущено. Наступний: {member['name']}" if member else "Черга порожня")
         if cmd == "clear":
-            self.queue.clear()
+            self.state.clear()
             return self.send("Чергу очищено")
+        if cmd == "timeout":
+            minutes = parse_duration(args[0]) if args else None
+            if minutes is None:
+                return self.send(f"Приклад: {self.prefix}timeout 5 (хвилин), 30s, 1h, 0 — не чекати")
+            self.set_setting("response_timeout_minutes", minutes)
+            return self.send(f"Час на відповідь: {format_minutes(minutes)}")
+        if cmd == "mode":
+            mode = args[0].lower() if args else ""
+            if mode not in PASS_MODES:
+                return self.send(f"Приклад: {self.prefix}mode end — в кінець черги, "
+                                 f"{self.prefix}mode next — отримає наступне повідомлення")
+            self.set_setting("pass_mode", mode)
+            return self.send(f"Хто не взяв повідомлення — {PASS_MODES[mode]}")
+        if cmd == "voice":
+            value = args[0].lower() if args else ""
+            if value not in ("on", "off"):
+                return self.send(f"Приклад: {self.prefix}voice on або {self.prefix}voice off")
+            self.set_setting("voice", value == "on")
+            return self.send("Голосові повідомлення " + ("увімкнено" if value == "on" else "вимкнено"))
 
-        targets = self.parse_targets(text, mentions, args)
+        targets = self.parse_targets(mentions, args)
         if not targets:
             return self.send(f"Вкажіть користувача: {self.prefix}{cmd} @ім'я або номер")
         done = []
-        for member_id, name in targets:
-            if cmd == "add" and self.queue.add(member_id, name):
+        for member_id, name, number in targets:
+            if cmd == "add" and self.state.add(member_id, name, number):
                 done.append(name)
-            elif cmd == "remove" and self.queue.remove(member_id):
-                done.append(name)
+            elif cmd == "remove":
+                m = self.state.find(member_id, number)
+                if m and self.state.remove(m["id"]):
+                    done.append(m["name"])
         verb = "Додано" if cmd == "add" else "Видалено"
         self.send(f"{verb}: {', '.join(done)}" if done else "Нічого не змінено")
 
-    def parse_targets(self, text, mentions, args):
+    def set_setting(self, key, value):
+        self.state.settings[key] = value
+        if key == "response_timeout_minutes":
+            # Нове значення діє і на повідомлення, які вже чекають відповіді.
+            now = self.clock()
+            for task in self.state.tasks:
+                task["deadline"] = now + value * 60 if value else None
+        self.state.save()
+
+    def parse_targets(self, mentions, args):
         targets = []
         for m in mentions:
             member_id = m.get("uuid") or m.get("number")
             name = m.get("name") or m.get("number") or member_id
             if member_id:
-                targets.append((member_id, name))
+                targets.append((member_id, name, m.get("number")))
         for arg in args:
             if re.fullmatch(r"\+\d{7,15}", arg):
-                targets.append((arg, arg))
+                targets.append((arg, arg, arg))
         return targets
 
     def format_queue(self):
-        members = self.queue.ordered()
+        members = self.state.ordered()
         if not members:
             return "Черга порожня"
+        total = len(self.state.members)
         lines = ["Черга (першим отримає наступне повідомлення):"]
-        lines += [f"{i}. {m['name']}" for i, m in enumerate(members, 1)]
+        lines += [f"{i}. {m['name']} ({self.state.number(m['id'])}/{total})"
+                  for i, m in enumerate(members, 1)]
+        return "\n".join(lines)
+
+    def format_settings(self):
+        return "\n".join([
+            "Налаштування:",
+            f"Час на відповідь: {format_minutes(self.setting('response_timeout_minutes'))}",
+            f"Хто не взяв: {PASS_MODES.get(self.setting('pass_mode'), self.setting('pass_mode'))}",
+            f"Голосові: {'увімкнено' if self.setting('voice') else 'вимкнено'}",
+            f"Ключові слова: {', '.join(self.cfg['keywords'])}",
+        ])
+
+    def format_tasks(self):
+        if not self.state.tasks:
+            return "Немає повідомлень, що чекають відповіді"
+        lines = ["Чекають відповіді:"]
+        now = self.clock()
+        for t in self.state.tasks:
+            m = self.state.member(t["assignee"])
+            left = f", залишилось {max(0, round((t['deadline'] - now) / 60))} хв" if t["deadline"] else ""
+            preview = t["text"][:60] + ("…" if len(t["text"]) > 60 else "")
+            lines.append(f"#{t['id']} → {m['name'] if m else '?'}{left}: {preview}")
         return "\n".join(lines)
 
     # ---- відправка / цикл ------------------------------------------------- #
 
-    def send(self, text, mentions=None):
+    def send(self, text, mentions=None, attachments=None):
         try:
-            self.api.send(self.queue_send, text, mentions)
-        except (urllib.error.URLError, OSError) as e:
+            return self.api.send(self.queue_send, text, mentions, attachments)
+        except (urllib.error.URLError, OSError, ValueError) as e:
             log.error("Не вдалося надіслати повідомлення: %s", e)
+            return None
+
+    def timer_loop(self):
+        while True:
+            try:
+                self.check_timeouts()
+            except Exception:
+                log.exception("Помилка перевірки таймаутів")
+            time.sleep(5)
 
     def run(self):
         log.info("Бот запущено. Джерело: %s, черга: %s, ключові слова: %s",
                  self.cfg["source_group"], self.cfg["queue_group"], self.cfg["keywords"])
+        threading.Thread(target=self.timer_loop, daemon=True).start()
         while True:
             try:
                 for item in self.api.receive():
@@ -454,12 +751,24 @@ class Bot:
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Signal-бот черги")
     parser.add_argument("-c", "--config", default="config.json", help="шлях до config.json")
-    parser.add_argument("command", nargs="?", default="run", choices=["run", "groups"],
-                        help="run — запустити бота; groups — показати групи бота та їх id")
+    parser.add_argument("command", nargs="?", default="run", choices=["run", "groups", "voice-test"],
+                        help="run — запустити бота; groups — показати групи бота та їх id; "
+                             "voice-test — зберегти приклад голосового в voice-test.mp3")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     cfg = load_config(args.config)
+
+    if args.command == "voice-test":
+        phrase = cfg["voice_template"].format(name="Петро", pos=8, total=14)
+        mp3 = synthesize_voice(phrase, cfg["voice_lang"])
+        if not mp3:
+            sys.exit("Не вдалося створити голосове повідомлення")
+        with open("voice-test.mp3", "wb") as f:
+            f.write(mp3)
+        print(f"Збережено voice-test.mp3: «{phrase}»")
+        return
+
     if not cfg["bot_number"]:
         sys.exit("Не задано bot_number (config.json або змінна BOT_NUMBER)")
 

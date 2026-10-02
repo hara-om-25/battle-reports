@@ -3,3 +3,4 @@ state.json
 state.json.tmp
 signal-cli-config/
 __pycache__/
+voice-test.mp3

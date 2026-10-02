@@ -8,7 +8,7 @@ if not exist config.json (
   pause
   exit /b
 )
-docker compose up -d
+docker compose up -d --build
 echo.
 echo Bot started. Logs: docker compose logs -f bot
 pause
