@@ -1,0 +1,13 @@
+{
+  "api_url": "http://localhost:8080",
+  "bot_number": "+380XXXXXXXXX",
+  "source_group": "group.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+  "queue_group": "group.YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY",
+  "keywords": ["приліт", "вибух", "тривога"],
+  "case_sensitive": false,
+  "whole_word": false,
+  "admins": ["+380XXXXXXXXX"],
+  "state_file": "state.json",
+  "poll_interval": 2,
+  "command_prefix": "/"
+}

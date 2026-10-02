@@ -1,0 +1,22 @@
+services:
+  signal-api:
+    image: bbernhard/signal-cli-rest-api:latest
+    environment:
+      - MODE=native
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./signal-cli-config:/home/.local/share/signal-cli
+    restart: unless-stopped
+
+  bot:
+    image: python:3.12-slim
+    working_dir: /app
+    command: python bot.py -c config.json run
+    environment:
+      - SIGNAL_API_URL=http://signal-api:8080
+    volumes:
+      - ./:/app
+    depends_on:
+      - signal-api
+    restart: unless-stopped
