@@ -592,7 +592,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-122';
+const APP_VER = 'v.26.10-123';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2324,14 +2324,16 @@ function _rptColor(s) {
     const clr = { 'верифіковано': 'var(--green-label)', 'відхилено': 'var(--red-label)',
                   'замінено': 'var(--blue-label)', 'дублюючих': '#e08a2e',
                   'не звірено': 'var(--yellow)' };
-    return String(s).replace(/(верифіковано|замінено|відхилено|дублюючих|не звірено)(\s+\d+)/g,
+    return String(s)
+        // рядок про чекуни фарбуємо першим: далі «додано N балів» зробило б його синім
+        .replace(/^(За чекуни додано )(\d+)( бал\S*)/, '$1<span style="color:#e08a2e">$2</span>$3')
+        .replace(/(верифіковано|замінено|відхилено|дублюючих|не звірено)(\s+\d+)/g,
         (m, w, n) => w + n.replace(/\d+/, d => '<span style="color:' + clr[w] + '">' + d + '</span>'))
         .replace(/(шт на )(\d[\d.]*) (бал\S*?)(?=,| \(|;|\.|$)/g, '$1<span style="color:var(--green-label)">$2 $3</span>')
         .replace(/скасовано (\d[\d.]*) (бал\S*?)(?=[,;.)\s]|$)/g, '<span style="color:var(--red-label)">скасовано $1 $2</span>')
         .replace(/додано (\d[\d.]*) (бал\S*?)(?=[,;.)\s]|$)/g, '<span style="color:var(--blue-label)">додано $1 $2</span>')
         // підсумкові рядки: прогноз жовтим, верифіковане й додане зеленим,
         // скасоване червоним, у грошах уражене зеленим, витрачене червоним
-        .replace(/^(Балів за ЧЕКУНИ: )(\d+)/, '$1<span style="color:#e08a2e">$2</span>')
         .replace(/(\(з них )(\d+)( за ЧЕКУНИ\))/, '$1<span style="color:#e08a2e">$2</span>$3')
         .replace(/^(Прогнозовано уражень на )(\d[\d.]*)/, '$1<span style="color:var(--yellow)">$2</span>')
         .replace(/^(Верифіковано уражень на )(\d[\d.]*)/, '$1<span style="color:var(--green-label)">$2</span>')
@@ -3963,7 +3965,7 @@ function _pushVerifyLines(lines, recs, ckLine) {
     if (_pt(canc)) lines.push('Скасовано ' + _pt(canc) + ' ' + _bal(_pt(canc)) + '.');
     // бали чекунів — окремим рядком під «Скасовано» (в АРХІВІ; у ЗВІТАХ вони в рядку прогнозу)
     const _ckn = recs.filter(r => r.chk).length;
-    if (ckLine && _ckn) lines.push('Балів за ЧЕКУНИ: ' + _ckn + '.');
+    if (ckLine && _ckn) lines.push('За чекуни додано ' + _ckn + ' ' + _bal(_ckn) + '.');
     // різниця між прогнозом і верифікованим: додане мінус скасоване
     const _net = _pt(add - canc);
     if (_net) lines.push('Розбіжність з прогнозом ' + (_net > 0 ? '+' : '\u2212') + Math.abs(_net) + ' ' + _bal(Math.abs(_net)) + '.');
