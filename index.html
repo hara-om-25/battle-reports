@@ -592,7 +592,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-116';
+const APP_VER = 'v.26.10-117';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -698,16 +698,17 @@ function _noteOf(r, j) {
 
 // «ЧЕКУН» — позначка всього вильоту: +1 бал і помаранчевий напис після БК.
 // Ключ завжди вильотний (без номера цілі), навіть коли правка йде з переліку ЦІЛЕЙ
-function _chkOf(r) {
+function _chkOf(r) { return !!(r && (r.chk || (_anyChk() && _chkNoteOf(r)))); }
+// після збереження вильоту ЧЕКУН живе в колонці P: старий прапорець у нотатках гасимо,
+// інакше він повертав би знятий ЧЕКУН
+function _clearChkNote(r) {
+    const k = _noteKey(r), o = state.notes && state.notes[k];
+    if (o && o.chk) { state.notes[k] = { memo: o.memo || '', flag: !!o.flag, chk: false, ts: Date.now() }; _notesTouch(); }
+}
+// стара схема: прапорець у нотатках вильоту (до колонки P). Ще читаємо, щоб не губити
+function _chkNoteOf(r) {
     const n = (state.notes && state.notes[_noteKey(r)]) || null;
     return !!(n && n.chk);
-}
-function _setChk(r, on) {
-    if (!state.notes) state.notes = {};
-    const k = _noteKey(r), o = state.notes[k] || {};
-    if (!!o.chk === !!on) return;
-    state.notes[k] = { memo: o.memo || '', flag: !!o.flag, chk: !!on, ts: Date.now() };
-    _notesTouch();
 }
 function _anyChk() { return Object.values(state.notes || {}).some(n => n && n.chk); }
 function _chkTag(r) { return _chkOf(r) ? '<span style="color:#e08a2e">ЧЕКУН</span>' : ''; }
@@ -2180,10 +2181,13 @@ function _parseMainRows(rows) {
                 ammo: (row[7] || '').trim(),
                 result: row[8] || '',
                 points: _num(row[9]),
+                // колонка P: 1 — ЧЕКУН (+1 бал уже в J, коли вписано застосунком)
+                chk: parseInt(row[15]) === 1 ? 1 : 0,
                 // номер рядка аркуша: за ним шукають запис у таблиці руками
                 sheet: 'ГОЛОВНА', srow: i + 1
             };
             rec.uid = (row[10] || '').trim() || _contentUid(rec);
+            if (!rec.chk && _anyChk() && _chkNoteOf(rec)) rec.chk = 1;
             out.push(rec);
         }
     }
@@ -2275,6 +2279,22 @@ function _tgVerPts(r, j) {
     const pts = _tgPts({ r: r, j: j, p: P });
     return (pts === null || pts === undefined || isNaN(pts)) ? null : pts;
 }
+// ЧЕКУН у вильоті (колонка P = 1): якщо верифікатор дав за ціль рівно на 1 бал
+// більше за наш прайс — це бал чекуна, а не розбіжність. Беремо першу таку
+// ціль вильоту; решта розбіжностей лишаються розбіжностями
+function _tgChkBonus(r, j, P) {
+    if (!r.chk || !r.v || !r.v.state) return 0;
+    P = P || _arRowParts(r);
+    for (let k = 0; k < P.tgts.length; k++) {
+        if (!String(P.tgts[k] || '').trim()) continue;
+        const own = _tgOwn(r, k, P);
+        const pts = _tgPts({ r: r, j: k, p: P });
+        if (own === null || pts === null || pts === undefined) continue;
+        if (Math.abs(pts - own - 1) < 1e-9) return k === j ? 1 : 0;
+    }
+    return 0;
+}
+
 function _tgDiffPts(r, j) {
     if (!r.v || !r.v.state) return 0;
     const P = _arRowParts(r);
@@ -2282,7 +2302,7 @@ function _tgDiffPts(r, j) {
     const own = _tgOwn(r, j, P);
     const pts = _tgPts({ r: r, j: j, p: P });
     if (own === null || pts === null || pts === undefined) return 0;
-    return pts - own;
+    return pts - own - _tgChkBonus(r, j, P);
 }
 
 // Лічильники в дужках доповіді фарбуються тими самими барвами, що й підписи
@@ -2300,6 +2320,7 @@ function _rptColor(s) {
         .replace(/додано (\d[\d.]*) (бал\S*?)(?=[,;.)\s]|$)/g, '<span style="color:var(--blue-label)">додано $1 $2</span>')
         // підсумкові рядки: прогноз жовтим, верифіковане й додане зеленим,
         // скасоване червоним, у грошах уражене зеленим, витрачене червоним
+        .replace(/^(Балів за ЧЕКУНИ: )(\d+)/, '$1<span style="color:#e08a2e">$2</span>')
         .replace(/^(Прогнозовано уражень на )(\d[\d.]*)/, '$1<span style="color:var(--yellow)">$2</span>')
         .replace(/^(Верифіковано уражень на )(\d[\d.]*)/, '$1<span style="color:var(--green-label)">$2</span>')
         .replace(/^(Додано верифікатором )(\d[\d.]*)/, '$1<span style="color:var(--blue-label)">$2</span>')
@@ -2398,6 +2419,8 @@ function generateArchiveReport(recs, periodLabel) {
     if (recs.length) {
         lines.push('');
         lines.push('Ефективність ' + _effPct(recs) + '%.');
+        const _ck = recs.filter(r => r.chk).length;
+        if (_ck) lines.push('Балів за ЧЕКУНИ: ' + _ck + '.');
     }
     return lines;
 }
@@ -4371,7 +4394,10 @@ function _parseArchiveRows(rows, name) {
                 sheet: name, srow: i + 1
             });
             // чекун: у формулу аркуша бал не вписати, тож +1 додаємо тут
-            if (_hasChk && _chkOf(out[out.length - 1])) out[out.length - 1].points += 1;
+            const _ar = out[out.length - 1];
+            _ar.chk = parseInt(row[15]) === 1 ? 1 : 0;
+            if (!_ar.chk && _hasChk && _chkNoteOf(_ar)) _ar.chk = 1;
+            if (_ar.chk) _ar.points += 1;
         }
     }
     return out;
@@ -4902,10 +4928,10 @@ async function add() {
         drone: state.form.drone,
         ammo: state.form.ammo,
         result: resultStr,
-        points: totalPoints + (state.form.chk ? 1 : 0)
+        points: totalPoints + (state.form.chk ? 1 : 0),
+        chk: state.form.chk ? 1 : 0
     };
     rec.uid = _newUid();
-    if (state.form.chk) _setChk(rec, true);   // ЧЕКУН: +1 бал і позначка після БК
     state.records.push(rec);
     state.form = {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:''};
     saveLocal();
@@ -4918,11 +4944,11 @@ async function add() {
         return;
     }
     try {
-        await apiAppend('ГОЛОВНА!A:K', [[
+        await apiAppend('ГОЛОВНА!A:P', [[
             rec.reportNum, rec.datetime, rec.target,
             rec.qty200, rec.qty300,
             rec.coordinates, rec.drone, rec.ammo, rec.result,
-            rec.points, rec.uid
+            rec.points, rec.uid, '', '', '', '', rec.chk ? 1 : ''
         ]]);
         saveLocal();
         showAlert('✅ Запис додано і синхронізовано!');
@@ -5077,7 +5103,7 @@ async function syncRecordsToAPI(remoteCount, nowDel) {
     // токен, закрите вікно — ГОЛОВНА лишалась порожньою, і дані зникали.
     // Тепер спершу запис, а стирається лише хвіст нижче записаного: аркуш
     // ні на мить не буває порожнім
-    if (state.records.length === 0) { await apiClear('ГОЛОВНА!A2:K'); return; }
+    if (state.records.length === 0) { await apiClear('ГОЛОВНА!A2:P'); return; }
     {
         // Рядки в таблиці завжди йдуть хронологічно за датою й часом вильоту — найновіші внизу.
         // Це переставляє рядок і тоді, коли в РЕДАГУВАННІ змінили час: він переїде на своє місце.
@@ -5085,15 +5111,16 @@ async function syncRecordsToAPI(remoteCount, nowDel) {
             const ka = _fullDT(a), kb = _fullDT(b);
             return ka < kb ? -1 : ka > kb ? 1 : 0;
         });
+        // L..O на ГОЛОВНІЙ порожні (їх заповнює лише верифікація архіву), P — ЧЕКУН
         const rows = _sorted.map(r => [
             r.reportNum, r.datetime, r.target,
             r.qty200, r.qty300,
             r.coordinates, r.drone, r.ammo, r.result,
-            r.points, r.uid
+            r.points, r.uid, '', '', '', '', r.chk ? 1 : ''
         ]);
-        await apiUpdate(`ГОЛОВНА!A2:K${rows.length + 1}`, rows);
+        await apiUpdate(`ГОЛОВНА!A2:P${rows.length + 1}`, rows);
         // рядки, що лишилися від довшого попереднього запису
-        await apiClear(`ГОЛОВНА!A${rows.length + 2}:K`);
+        await apiClear(`ГОЛОВНА!A${rows.length + 2}:P`);
     }
 }
 
@@ -5651,7 +5678,8 @@ async function saveEditRecord() {
     }
     if (!r.uid) r.uid = _contentUid(r);
     _setNote(_noteKey(r, er.noteJ), er.memo || '', er.flag);   // нотатка й позначка — лише локально
-    _setChk(r, er.chk);
+    r.chk = er.chk ? 1 : 0;   // ЧЕКУН — колонка P
+    _clearChkNote(r);
     saveLocal();   // інакше стерте MEMO живе тільки до перезавантаження й вертається
     // Архівний виліт: пишемо прямо в його рядок аркуша, стовпці A-I та K.
     // Стовпець J не чіпаємо взагалі — там формула аркуша, яка рахує бали
@@ -5670,6 +5698,7 @@ async function saveEditRecord() {
         try {
             await apiUpdate(_rng, row, true);
             await apiUpdate(_rngK, [[r.uid || '']], true);
+            await apiUpdate(er.arch.sheet + '!P' + er.arch.srow, [[r.chk ? 1 : '']], true);
             // бали перерахувала формула — беремо з аркуша те, що вона дала,
             // інакше на екрані світилося б наше число, а в таблиці інше
             try {
@@ -6385,7 +6414,9 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         // мінус — коли менше. Рівно стільки ж, скільки просили,
                         // різниці не дає, і нуля там не пишемо
                         const _own=_pn===null?null:_tgOwn(r,j,P);
-                        const _dif=_own===null?0:_pt(_pn-_own);
+                        const _bn=_own===null?0:_tgChkBonus(r,j,P);
+                        const _dif=_own===null?0:_pt(_pn-_own-_bn);
+                        if(_bn)_line+=`${_ysep}<span style="color:#e08a2e">+1 з чекуна</span>`;
                         if(_dif)_line+=`${_ysep}<span style="color:${_dif>0?'var(--green-label)':'var(--red-label)'}">${_dif>0?'+':'\u2212'}${_pt(Math.abs(_dif))} ${_bal(Math.abs(_dif))}</span>`;
                         const _cpS=(t,k)=>t?`<span class="cp ${k}" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()">${esc(t)}</span>`:'';
                         const _cc=String(r.coordinates||'').split(',');
