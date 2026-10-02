@@ -592,7 +592,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-125';
+const APP_VER = 'v.26.10-126';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -713,6 +713,8 @@ function _chkNoteOf(r) {
 function _anyChk() { return Object.values(state.notes || {}).some(n => n && n.chk); }
 // колір — як у решти рядка (координата, дата, дрон, БК): без власного забарвлення
 function _chkTag(r) { return _chkOf(r) ? 'ЧЕКУН' : ''; }
+// у ЗВІТАХ позначка помаранчева
+function _chkTagO(r) { return _chkOf(r) ? '<span style="color:#e08a2e">ЧЕКУН</span>' : ''; }
 
 function _setNote(uid, memo, flag) {
     if (!state.notes) state.notes = {};
@@ -5876,7 +5878,7 @@ function formatRecord(r, num) {
     const _mc = (f, txt) => txt
         ? `<span class="cp cp-hl" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()" style="color:${_c(f,'inherit')}">${esc(txt)}</span>`
         : '';
-    const meta = [_mc('time',_rTime),_mc('coordinates',r.coordinates),_mc('drone',r.drone),_mc('ammo',r.ammo),_chkTag(r)].filter(Boolean).join(ysep);
+    const meta = [_mc('time',_rTime),_mc('coordinates',r.coordinates),_mc('drone',r.drone),_mc('ammo',r.ammo),_chkTagO(r)].filter(Boolean).join(ysep);
     const _gone = !!r._ghost;
     const _nt = _noteOf(r);
     // помаранчева рамка «не синхронізовано» має пріоритет над жовтим акцентом
