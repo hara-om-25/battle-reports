@@ -23,28 +23,59 @@
 [signal-cli-rest-api](https://github.com/bbernhard/signal-cli-rest-api).
 Черга та позиція зберігаються в `state.json`, тому переживають перезапуск.
 
-## Встановлення
+## Встановлення на Windows
 
-1. Потрібен окремий номер телефону для бота.
-2. Запустіть API:
-   ```bash
-   docker compose up -d signal-api
-   ```
-3. Прив'яжіть номер як додатковий пристрій: відкрийте
-   `http://localhost:8080/v1/qrcodelink?device_name=queue-bot` і проскануйте QR
-   у Signal на телефоні (Налаштування → Пов'язані пристрої).
-   Або зареєструйте номер напряму — див. документацію signal-cli-rest-api.
-4. Додайте бота в обидва чати (джерело і черга).
-5. Створіть конфіг і дізнайтесь id груп:
-   ```bash
-   cp config.example.json config.json   # вкажіть bot_number
-   python3 bot.py groups                 # покаже id усіх груп бота
-   ```
-   Впишіть `id` груп у `source_group` і `queue_group`, задайте `keywords`.
-6. Запустіть бота:
-   ```bash
-   docker compose up -d bot      # або: python3 bot.py run
-   ```
+### 1. Docker Desktop
+1. Потрібна Windows 10 (22H2) або Windows 11, 64-біт.
+2. Завантажте і встановіть [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+   Під час встановлення залиште галочку **Use WSL 2**. Якщо Windows попросить
+   оновити WSL — погодьтесь (або в PowerShell від адміністратора: `wsl --update`).
+3. Перезавантажте комп'ютер, запустіть Docker Desktop і дочекайтесь статусу
+   *Engine running*.
+4. У Docker Desktop → Settings → General увімкніть
+   **Start Docker Desktop when you sign in**, щоб бот піднімався після перезавантаження.
+
+> Якщо Docker пише про віртуалізацію — увімкніть її в BIOS (Intel VT-x / AMD-V / SVM).
+
+### 2. Файли бота
+Завантажте репозиторій (Code → Download ZIP на GitHub) і розпакуйте, наприклад,
+у `C:\signal-bot`. Далі працюємо в теці `signal-bot`.
+
+### 3. Прив'язка акаунта Signal
+1. Двічі клацніть `groups.bat` — він створить `config.json` і запустить Signal API
+   (перший раз завантаження займе кілька хвилин; помилку про `bot_number` поки ігноруйте).
+2. Відкрийте в браузері
+   `http://localhost:8080/v1/qrcodelink?device_name=queue-bot`.
+3. На телефоні: Signal → Налаштування → Пов'язані пристрої → **+** → проскануйте QR.
+
+Акаунт має бути учасником **обох** груп: тієї, яку слухаємо, і чату черги.
+
+### 4. Налаштування
+1. Відкрийте `config.json` у Блокноті, впишіть `bot_number` (номер акаунта, `+380…`)
+   і збережіть.
+2. Знову запустіть `groups.bat` — він покаже список груп з їх `id`.
+3. Скопіюйте `id` (вигляду `group.xxxx…`) у `source_group` і `queue_group`,
+   впишіть `keywords` і, за бажанням, `admins`. Збережіть (кодування UTF-8 —
+   Блокнот у Windows 10/11 зберігає так за замовчуванням).
+
+### 5. Запуск
+- `start.bat` — запустити бота (працює у фоні, перезапускається сам).
+- `stop.bat` — зупинити.
+- Логи: `docker compose logs -f bot` (у терміналі в цій теці).
+- Після зміни `config.json` — `docker compose restart bot`.
+
+Щоб бот не пропускав повідомлення, вимкніть сон комп'ютера:
+Параметри → Система → Живлення → Сон → **Ніколи**.
+
+## Встановлення на Linux / macOS
+
+```bash
+cp config.example.json config.json          # вкажіть bot_number
+docker compose up -d signal-api
+# прив'язка: http://localhost:8080/v1/qrcodelink?device_name=queue-bot
+docker compose run --rm bot python bot.py groups   # id груп -> config.json
+docker compose up -d
+```
 
 ## Налаштування (`config.json`)
 
