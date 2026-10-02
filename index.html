@@ -592,7 +592,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-106';
+const APP_VER = 'v.26.10-107';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2279,9 +2279,8 @@ function generateArchiveReport(recs, periodLabel) {
     // ефективність: частка вильотів, де було хоч одне уражене (знищено/пошкоджено)
     // ціль, від усіх вильотів; скільки цілей уражено за один виліт, значення не має
     if (recs.length) {
-        const _hit = recs.filter(r => String(r.result || '').split(',').some(x => { x = x.trim(); return x === 'знищено' || x === 'пошкоджено'; })).length;
         lines.push('');
-        lines.push('Ефективність ' + (Math.round(_hit / recs.length * 1000) / 10) + '%.');
+        lines.push('Ефективність ' + _effPct(recs) + '%.');
     }
     return lines;
 }
@@ -5605,6 +5604,13 @@ function addItem() { showModal(); }
 function editItem() { if(state.inputList !== null && state.inputIdx !== null) { showEditModal(); } }
 function deleteItem() { if(state.inputList !== null && state.inputIdx !== null) { showDeleteModal(); } }
 
+// Ефективність: вильоти, де уражено хоч одну ціль, від усіх вильотів (у %, до десятої)
+function _effPct(recs) {
+    if (!recs.length) return 0;
+    const hit = recs.filter(r => String(r.result || '').split(',').some(x => { x = x.trim(); return x === 'знищено' || x === 'пошкоджено'; })).length;
+    return Math.round(hit / recs.length * 1000) / 10;
+}
+
 function generateReport(dayRecs) {
     let lines = [];
     lines.push('Доповідаю!');
@@ -5639,6 +5645,7 @@ function generateReport(dayRecs) {
     if (hasOs && osSum300 > 0) resultLines.push('ОС 300 - ' + osSum300 + '.');
     Object.entries(otherGrouped).forEach(([k, v]) => resultLines.push(v.d + ' ' + v.r + ' - ' + v.n + '.'));
     resultLines.forEach((l, i) => lines.push((i + 1) + '. ' + l));
+    lines.push('Ефективність ' + _effPct(dayRecs) + '%.');
     lines.push('Продовжують працювати.');
     lines.push('');
     lines.push('🫡🤝🇺🇦');
