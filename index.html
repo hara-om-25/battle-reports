@@ -599,7 +599,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-130';
+const APP_VER = 'v.26.10-131';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -613,7 +613,7 @@ let state = {
     arFront: '',
     arShowSum: false,
     arShowList: false,
-    arShowStat: false,
+    arShowStat: true,
     // натиснутий рядок статистики в переліку ЦІЛЕЙ
     tgFilter: null,
     // результат звіряння по кожному архіву окремо: {аркуш: {left, fix}}, де
@@ -943,7 +943,7 @@ function _switchTable(newId) {
     // усе, що стояло на екрані за даними старої таблиці
     state.report = 1; state.selReport = null; state.selDate = null; state.selVylotyDate = null;
     state.arFilter = null; state.tgFilter = null; state.arFront = '';
-    state.arShowSum = false; state.arShowList = false; state.arShowStat = false;
+    state.arShowSum = false; state.arShowList = false; state.arShowStat = true;
     state.filterFrom = ''; state.filterTo = ''; state.zvityFilterFrom = ''; state.zvityFilterTo = '';
     state.filterPeriodOpen = false; state.filterPeriodShown = false; state.zvityFilterOpen = false; state.zvityFilterShown = false;
     state.form = {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:'', selTargetName:''};
