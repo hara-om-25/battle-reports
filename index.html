@@ -336,6 +336,9 @@
       nav .nav-head .nav-title { margin-left: auto; }
       nav .nav-head .nav-email { flex-basis: 100%; text-align: center; margin-left: 0 !important; margin-top: -16px; }
     }
+    /* «СЬОГОДНІ: дата» — у два рядки лише на телефоні, на планшеті в один */
+    .br-m { display: none; }
+    @media (max-width: 640px) { .br-m { display: inline; } }
     .nav-btn.logout {
       background: var(--danger);
       border-color: var(--danger-bright);
@@ -623,7 +626,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-142';
+const APP_VER = 'v.26.10-143';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6168,7 +6171,7 @@ function render() {
         h += `<div class="p-4 max-w-3xl mx-auto"><div class="crate p-6">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px">
                 <h2 class="stencil-shadow text-3xl" style="color: var(--yellow);flex:1">ЗВІТ №${state.report}</h2>
-                <span class="stencil" style="color:var(--khaki);font-size:0.9em;white-space:nowrap;flex:1;text-align:center;line-height:1.2">СЬОГОДНІ:<br><span style="color:#ffffff">${todayDate}</span></span>
+                <span class="stencil" style="color:var(--khaki);font-size:0.9em;white-space:nowrap;flex:1;text-align:center;line-height:1.2">СЬОГОДНІ:<br class="br-m"> <span style="color:#ffffff">${todayDate}</span></span>
                 <div style="flex:1;display:flex;justify-content:flex-end"><button onclick="newReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">НОВИЙ ЗВІТ</button></div>
             </div>
             <div class="mb-4 stencil" style="font-size:calc(1.15em - 1px); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap">
