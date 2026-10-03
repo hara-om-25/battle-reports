@@ -441,6 +441,13 @@
     .br-toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
     /* Панель керування списками прилипає під основне меню, а списки їдуть під неї */
     .lists-bar { position: sticky; z-index: 30; top: 0; width: 50vw; margin-left: auto; margin-right: auto; }
+    /* СТАТИСТИКА на телефоні: ВЕРИФІКАЦІЯ, РЕЗУЛЬТАТИ, потім ДРОНИ, БОЄПРИПАСИ, ПВР */
+    @media (max-width: 640px) {
+      .stat-cols { flex-direction: column; flex-wrap: nowrap; }
+      .stat-cols > .stat-r { order: -1; display: flex; flex-direction: column; gap: 12px; }
+      .stat-cols > .stat-r > * { margin-top: 0 !important; }
+      .stat-r > .stat-ver { order: -1; }
+    }
     @media (max-width: 640px) { .lists-bar { width: 100%; } }
     /* Ширину поля редагування рахує recalcListFieldWidth() — при синхронізації
        з таблицею і при змінах у списках. Панель обхоплює поле й кнопки */
@@ -592,7 +599,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-129';
+const APP_VER = 'v.26.10-130';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6393,7 +6400,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         +_rowT('Дублюючі',_pk,_c(_pk),'v','pack','r');
                 })();
                 const _statsBlock=_R.length===0?''
-                    :`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}</div><div class="space-y-3" style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_resRows)}${_sec('ВЕРИФІКАЦІЯ',_vrRows)}</div></div>`;
+                    :`<div class="flex flex-wrap gap-4 stat-cols" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_drnRows)}${_sec('БОЄПРИПАСИ',_ammoRows)}${_sec('ПВР',_pvrRows)}</div><div class="space-y-3 stat-r" style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_resRows)}<div class="stat-ver">${_sec('ВЕРИФІКАЦІЯ',_vrRows)}</div></div></div>`;
                 const _shRptLines=(()=>{if(!_R.length)return[];const _l=generateArchiveReport(_R,(state.selArchive||'')+'р.');_l.push(''),_l.push('Прогнозовано уражень на '+_arTotal+' '+_bal(_arTotal)+'.');if(_pushVerifyLines(_l,_R,true))_l.push('');_pushCostLines(_l,_arTotal,_R);return _l;})();
                 // Аркуш звірений — у заголовку підсумків показуємо не наш
                 // прогноз, а те, що нарахував верифікатор. Це та сама сума,
@@ -6574,7 +6581,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _allAmmoRows=Object.entries(_allAmmoCnt).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_row(esc(a),c,' шт')).join('');
                 const _allPvrRows=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_allAmmoCnt[am]||0)*cf,0);return tot?_row(esc(pvr.name),tot+' кг'):'';}).filter(Boolean).join('');
                 const _allResRows=Object.entries(_allResCnt).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,' '+_plu(c,'раз','рази','разів'))).join('');
-                const _allStatsBlock=`<div class="flex flex-wrap gap-4" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_allDrnRows)}${_sec('БОЄПРИПАСИ',_allAmmoRows)}${_sec('ПВР',_allPvrRows)}</div><div class="space-y-3" style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_allResRows)}${_sec('ВЕРИФІКАЦІЯ',_vrRowsFor(_allRecs))}</div></div>`;
+                const _allStatsBlock=`<div class="flex flex-wrap gap-4 stat-cols" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_allDrnRows)}${_sec('БОЄПРИПАСИ',_allAmmoRows)}${_sec('ПВР',_allPvrRows)}</div><div class="space-y-3 stat-r" style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_allResRows)}<div class="stat-ver">${_sec('ВЕРИФІКАЦІЯ',_vrRowsFor(_allRecs))}</div></div></div>`;
                 _allSection=(state.arShowSum?_allRptBlock:'')+(state.arShowStat?'<h2 class="stencil-shadow text-xl px-2" style="color:var(--yellow)">ЗАГАЛЬНА СТАТИСТИКА</h2>'+_allStatsBlock:'');
             }
         }
