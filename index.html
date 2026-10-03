@@ -592,7 +592,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-126';
+const APP_VER = 'v.26.10-127';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5527,6 +5527,18 @@ function _sizeArchRot() {
             for (;; rows++) {
                 per = Math.max(1, Math.floor((W - bbox - (rows - 1) * drift) / pitch) + 1);
                 if (rows * per >= N) break;
+            }
+            // Вузька рамка (телефон): у ряду вміщується одна смуга. Зсув рядів тоді
+            // давав зигзаг і великі проміжки, тож смуги стають у стовпчик по центру
+            // однієї вертикалі, щільно: крок — той самий, що й у ряду (просвіт 5 px)
+            if (per === 1 && N > 1) {
+                ws.forEach((w, i) => {
+                    w.style.left = (bbox / 2) + 'px';
+                    w.style.top = (bbox / 2 + i * pitch) + 'px';
+                });
+                box.style.width = Math.ceil(bbox) + 'px';
+                box.style.height = Math.ceil(bbox + (N - 1) * pitch + 8) + 'px';
+                return;
             }
             ws.forEach((w, i) => {
                 const r = Math.floor(i / per), c = i % per;
