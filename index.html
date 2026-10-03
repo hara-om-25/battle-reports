@@ -460,7 +460,7 @@
       .stat-cols > .stat-r > * { margin-top: 0 !important; }
       .stat-r > .stat-ver { order: -1; }
     }
-    @media (max-width: 640px) { .lists-bar { width: 100%; } }
+    @media (max-width: 640px) { .lists-bar { width: 100%; } nav.crate.sticky { position: static; } }
     /* Ширину поля редагування рахує recalcListFieldWidth() — при синхронізації
        з таблицею і при змінах у списках. Панель обхоплює поле й кнопки */
     .lists-bar.fit { width: fit-content; max-width: 100%; }
@@ -611,7 +611,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-137';
+const APP_VER = 'v.26.10-138';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5445,6 +5445,8 @@ function _alignMemoToAmmo() {
 function _syncListsBarTop() {
     const bar = document.querySelector('.lists-bar');
     if (!bar) return;
+    // на телефоні меню не прилипає, тож панель прилипає майже до самого верху
+    if (window.matchMedia('(max-width: 640px)').matches) { bar.style.top = '8px'; return; }
     const nav = document.querySelector('nav.crate');
     const h = nav ? nav.getBoundingClientRect().height : 0;
     bar.style.top = (h + 16 + 8) + 'px';
