@@ -326,7 +326,13 @@
     }
     /* Шапка меню на телефоні: ХАРА ОМ скраю праворуч, електронна адреса на своєму рядку по центру */
     @media (max-width: 640px) {
-      nav .nav-head { width: 100%; }
+      nav .nav-head { width: 100%; align-items: flex-start; }
+      /* однакові відступи від рамки: герб зліва й зверху, ХАРА ОМ зверху й праворуч.
+         У герба навколо видимого малюнка прозоре поле (9,6 px ліворуч і 3,1 px зверху
+         при висоті 52 px) — прибираємо його від'ємним відступом; у напису
+         text-box обрізає порожнє місце над великими літерами */
+      nav .nav-head > img { margin-left: -9.6px; margin-top: -3.1px; }
+      nav .nav-head .nav-title { text-box: trim-both cap alphabetic; }
       nav .nav-head .nav-title { margin-left: auto; }
       nav .nav-head .nav-email { flex-basis: 100%; text-align: center; margin-left: 0 !important; }
     }
@@ -617,7 +623,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-139';
+const APP_VER = 'v.26.10-140';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
