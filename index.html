@@ -599,7 +599,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-131';
+const APP_VER = 'v.26.10-132';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -3960,6 +3960,18 @@ async function runVerification(file) {
 
 // Рядки про верифікацію в доповідь. Рахуємо цілі, а не вильоти.
 // Скасовані бали — різниця між нарахованими за виліт і підтвердженими
+// «ВЕРИФІКОВАНО БАЛІВ N» під «БАЛІВ ЗА ЗВІТ»: та сама сума, що й «Верифіковано
+// уражень на» в підсумках (скасовані дублюючі не входять, не звірені — теж).
+// Без жодного звіреного вильоту рядка немає
+function _verBalNo(recs) {
+    let sum = 0, any = false;
+    recs.forEach(r => {
+        if (!r.v || !r.v.state || r.v.state === 'pack') return;
+        any = true; sum += r.v.sum;
+    });
+    if (!any) return '';
+    return '<span style="color:var(--khaki);white-space:nowrap;flex-basis:100%">ВЕРИФІКОВАНО БАЛІВ:&nbsp;<span style="color:var(--green-label)">' + _pt(sum) + '</span></span>';
+}
 function _pushVerifyLines(lines, recs, ckLine) {
     let ok = 0, no = 0, sum = 0, canc = 0, add = 0, unv = 0;
     recs.forEach(r => {
@@ -6365,7 +6377,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                     }).join('');
                     return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
                 }).join('');
-                const _arHeader=_R.length>0?`<div class="stencil" style="font-size:calc(1.15em - 1px);margin-top:6px;display:flex;flex-wrap:wrap;gap:2px 20px"><span style="color:var(--khaki);white-space:nowrap">ВИЛЬОТІВ ЗА ЗВІТ:&nbsp;<span style="color:var(--yellow)">${_R.length}</span></span><span style="color:var(--khaki);white-space:nowrap">ЦІЛЕЙ ЗА ЗВІТ:&nbsp;<span style="color:var(--yellow)">${_arOrder.reduce((n,r)=>{const _p=_arRowParts(r);for(let j=0;j<_p.n;j++)if(String(_p.tgts[j]||'').trim())n++;return n;},0)}</span></span><span style="color:var(--khaki);white-space:nowrap">БАЛІВ ЗА ЗВІТ:&nbsp;<span style="color:var(--yellow)">${_arTotal}</span></span></div>`:'';
+                const _arHeader=_R.length>0?`<div class="stencil" style="font-size:calc(1.15em - 1px);margin-top:6px;display:flex;flex-wrap:wrap;gap:2px 20px"><span style="color:var(--khaki);white-space:nowrap">ВИЛЬОТІВ ЗА ЗВІТ:&nbsp;<span style="color:var(--yellow)">${_R.length}</span></span><span style="color:var(--khaki);white-space:nowrap">ЦІЛЕЙ ЗА ЗВІТ:&nbsp;<span style="color:var(--yellow)">${_arOrder.reduce((n,r)=>{const _p=_arRowParts(r);for(let j=0;j<_p.n;j++)if(String(_p.tgts[j]||'').trim())n++;return n;},0)}</span></span><span style="color:var(--khaki);white-space:nowrap">БАЛІВ ЗА ЗВІТ:&nbsp;<span style="color:var(--yellow)">${_arTotal}</span></span>${_verBalNo(_R)}</div>`:'';
                 const _drnCnt={};_R.forEach(r=>{if(r.drone)_drnCnt[r.drone]=(_drnCnt[r.drone]||0)+1;});
                 const _ammoCnt={};_R.forEach(r=>{if(r.ammo)_ammoCnt[r.ammo]=(_ammoCnt[r.ammo]||0)+1;});
                 const _resCnt={};_R.forEach(r=>{if(r.result)r.result.split(', ').forEach(x=>{x=x.trim();if(x)_resCnt[x]=(_resCnt[x]||0)+1;});});
