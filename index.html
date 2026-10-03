@@ -592,7 +592,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-128';
+const APP_VER = 'v.26.10-129';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1376,6 +1376,13 @@ function _initVerMark() {
         + 'font-size:0.8em;white-space:nowrap;pointer-events:none';
     document.body.appendChild(v);
     const place = () => {
+        // АРХІВ завжди такої ж ширини, як ВИЙТИ (більша з двох)
+        const _a = document.querySelector('nav.crate .nav-btn-archive'), _l = document.querySelector('nav.crate button.logout');
+        if (_a && _l) {
+            _a.style.minWidth = _l.style.minWidth = '';
+            const mw = Math.ceil(Math.max(_a.getBoundingClientRect().width, _l.getBoundingClientRect().width)) + 'px';
+            _a.style.minWidth = _l.style.minWidth = mw;
+        }
         // Напис потрібен лише там, де дивляться, чи свіжий застосунок, —
         // на ФОРМІ. На решті вкладок він тільки висить збоку
         if (state.page !== 'form') { v.style.visibility = 'hidden'; return; }
@@ -6100,7 +6107,7 @@ function render() {
             <div class="flex gap-2 items-center flex-wrap">
                 <button onclick="state.page='form';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='form'?'active':''}">ФОРМА</button>
                 <button onclick="state.page='reports';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='reports'?'active':''}">ЗВІТИ</button>
-                <button onclick="manualPush()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="font-size:${state.queue.length?'1.05em':'1.5em'};font-weight:${state.queue.length?'700':'400'};letter-spacing:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box;border-width:1px;box-shadow:0 4px 0 #2a2404,0 6px 12px rgba(0,0,0,0.4)${state.queue.length?';background:#8a4a2a;color:#fff;box-shadow:0 4px 0 #3d1c08,0 6px 12px rgba(0,0,0,0.4)':''}" title="${state.queue.length?state.queue.length+' незбережених записів — натисніть, щоб синхронізувати':'Записати та синхронізувати дані в таблицю'}">${state.syncing?spinnerSvg(23):(state.queue.length||tiwazSvg(23))}</button><button onclick="goToArchive()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn-archive ${state.page==='archive'?'active':''}">АРХІВ</button><button onclick="showSettings()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box;border-width:1px;box-shadow:0 4px 0 #2a2404,0 6px 12px rgba(0,0,0,0.4)" title="Налаштування">${icoGear(23)}</button><button onclick="logout()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn logout" style="margin-left:auto">ВИЙТИ</button>
+                <button onclick="manualPush()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="font-size:${state.queue.length?'1.05em':'1.5em'};font-weight:${state.queue.length?'700':'400'};letter-spacing:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box;border-width:1px;box-shadow:0 4px 0 #2a2404,0 6px 12px rgba(0,0,0,0.4)${state.queue.length?';background:#8a4a2a;color:#fff;box-shadow:0 4px 0 #3d1c08,0 6px 12px rgba(0,0,0,0.4)':''}" title="${state.queue.length?state.queue.length+' незбережених записів — натисніть, щоб синхронізувати':'Записати та синхронізувати дані в таблицю'}">${state.syncing?spinnerSvg(23):(state.queue.length||tiwazSvg(23))}</button><button onclick="goToArchive()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn-archive ${state.page==='archive'?'active':''}">АРХІВ</button><button onclick="showSettings()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="margin-left:auto;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box;border-width:1px;box-shadow:0 4px 0 #2a2404,0 6px 12px rgba(0,0,0,0.4)" title="Налаштування">${icoGear(23)}</button><button onclick="logout()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn logout">ВИЙТИ</button>
             </div>
         </div>
     </nav>`;
