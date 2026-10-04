@@ -425,7 +425,7 @@
     /* Рядки статистики натискаються й фільтрують перелік вильотів.
        Увімкнений підсвічується заднім фоном у кольорі своєї групи.
        Ширина по тексту, щоб смуга не тяглася через увесь стовпець */
-    .st-row { cursor: pointer; width: fit-content; padding: 0 4px; margin-left: -4px; border-radius: 2px; }
+    .st-row { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: pointer; width: fit-content; padding: 0 4px; margin-left: -4px; border-radius: 2px; }
     /* Три рядки «верифіковано» — з відступом під спільним підсумком.
        Відступ саме падінгом: margin у рядка задано в самому тегу, а inline
        сильніший за клас і зовнішній відступ просто не спрацював би */
@@ -629,7 +629,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-161';
+const APP_VER = 'v.26.10-162';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6704,11 +6704,11 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 const _allDrnCnt={};_allRecs.forEach(r=>{if(r.drone)_allDrnCnt[r.drone]=(_allDrnCnt[r.drone]||0)+1;});
                 const _allAmmoCnt={};_allRecs.forEach(r=>{if(r.ammo)_allAmmoCnt[r.ammo]=(_allAmmoCnt[r.ammo]||0)+1;});
                 const _allResCnt={};_allRecs.forEach(r=>{if(r.result)r.result.split(', ').forEach(x=>{x=x.trim();if(x)_allResCnt[x]=(_allResCnt[x]||0)+1;});});
-                const _allDrnRows=Object.entries(_allDrnCnt).sort((a,b)=>b[1]-a[1]).map(([d,c])=>_row(esc(d),c,' шт')).join('');
-                const _allAmmoRows=Object.entries(_allAmmoCnt).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_row(esc(a),c,' шт')).join('');
+                const _allDrnRows=Object.entries(_allDrnCnt).sort((a,b)=>b[1]-a[1]).map(([d,c])=>_rowF(esc(d),c,' шт','drone',d,'g')).join('');
+                const _allAmmoRows=Object.entries(_allAmmoCnt).sort((a,b)=>b[1]-a[1]).map(([a,c])=>_rowF(esc(a),c,' шт','ammo',a,'g')).join('');
                 const _allPvrRows=state.pvr.map(pvr=>{const tot=Object.entries(pvr.map).reduce((s,[am,cf])=>s+(_allAmmoCnt[am]||0)*cf,0);return tot?_row(esc(pvr.name),tot+' кг'):'';}).filter(Boolean).join('');
-                const _allResRows=Object.entries(_allResCnt).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_row(esc(r),c,' '+_plu(c,'раз','рази','разів'))).join('');
-                const _allStatsBlock=`<div class="flex flex-wrap gap-4 stat-cols" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_allDrnRows)}${_sec('БОЄПРИПАСИ',_allAmmoRows)}${_sec('ПВР',_allPvrRows)}</div><div class="space-y-3 stat-r" style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_allResRows)}<div class="stat-ver">${_sec('ВЕРИФІКАЦІЯ',_vrRowsFor(_allRecs))}</div></div></div>`;
+                const _allResRows=Object.entries(_allResCnt).sort((a,b)=>b[1]-a[1]).map(([r,c])=>_rowF(esc(r),c,' '+_plu(c,'раз','рази','разів'),'result',r,'g')).join('');
+                const _allStatsBlock=`<div class="flex flex-wrap gap-4 stat-cols" style="padding:4px 4px 8px"><div class="space-y-3" style="flex:2 1 220px">${_sec('ДРОНИ',_allDrnRows)}${_sec('БОЄПРИПАСИ',_allAmmoRows)}${_sec('ПВР',_allPvrRows)}</div><div class="space-y-3 stat-r" style="flex:3 1 280px">${_sec('РЕЗУЛЬТАТИ',_allResRows)}<div class="stat-ver">${_sec('ВЕРИФІКАЦІЯ',_vrRowsFor(_allRecs,true))}</div></div></div>`;
                 _allSection=(state.arShowSum?_allRptBlock:'')+(state.arShowStat?'<h2 class="stencil-shadow text-xl px-2" style="color:var(--yellow)">ЗАГАЛЬНА СТАТИСТИКА</h2>'+_allStatsBlock:'');
             }
         }
