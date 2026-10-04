@@ -629,7 +629,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-158';
+const APP_VER = 'v.26.10-160';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2212,8 +2212,10 @@ function getDateOnly(datetime) {
 }
 
 // Розбір рядків ГОЛОВНА. Колонка K = uid; для старих записів без неї — детермінований uid
+let _strayMain = false;   // у ГОЛОВНІЙ знайдено зсунуті (колонки Q..) копії рядків
 function _parseMainRows(rows) {
     const out = [];
+    _strayMain = false;
     for (let i = 1; i < (rows || []).length; i++) {
         const row = rows[i] || [];
         if (row[0] || row[2] || row[5] || row[6] || row[7] || row[8]) {
@@ -2229,12 +2231,29 @@ function _parseMainRows(rows) {
                 result: row[8] || '',
                 points: _num(row[9]),
                 // колонка P: 1 — ЧЕКУН (+1 бал уже в J, коли вписано застосунком)
-                chk: parseInt(row[15]) === 1 ? 1 : 0,
+                // (якщо правіше є ще дані — це зсунутий рядок, і в P лежить номер звіту, а не ЧЕКУН)
+                chk: row[16] ? (parseInt(row[30]) === 1 ? 1 : 0) : (parseInt(row[15]) === 1 ? 1 : 0),
                 // номер рядка аркуша: за ним шукають запис у таблиці руками
                 sheet: 'ГОЛОВНА', srow: i + 1
             };
+            if (row[16]) _strayMain = true;
             rec.uid = (row[10] || '').trim() || _contentUid(rec);
             if (!rec.chk && _anyChk() && _chkNoteOf(rec)) rec.chk = 1;
+            out.push(rec);
+        } else if (row[16] && (row[17] || row[20])) {
+            _strayMain = true;
+            // Рядок, який Google колись поклав не в A:K, а правіше — з колонки P
+            // (append). Дані ті самі, лише зсунуті на 15 колонок: повертаємо їх
+            const o = 15;
+            const rec = {
+                reportNum: parseInt(row[o]) || 0, datetime: row[o + 1] || '', target: row[o + 2] || '',
+                qty200: parseInt(row[o + 3]) || 0, qty300: parseInt(row[o + 4]) || 0,
+                coordinates: row[o + 5] || '', drone: (row[o + 6] || '').trim(), ammo: (row[o + 7] || '').trim(),
+                result: row[o + 8] || '', points: _num(row[o + 9]),
+                chk: parseInt(row[o + 15]) === 1 ? 1 : 0,
+                sheet: 'ГОЛОВНА', srow: i + 1
+            };
+            rec.uid = (row[o + 10] || '').trim() || _contentUid(rec);
             out.push(rec);
         }
     }
@@ -5041,21 +5060,21 @@ async function add() {
         return;
     }
     try {
-        // Додаємо так само, як було до ЧЕКУНА (A:K): ширший діапазон A:P — це підозра
-        // на зникнення вильотів (рядок не лягав у таблицю). ЧЕКУН пишемо окремо
-        const _ap = await apiAppend('ГОЛОВНА!A:K', [[
+        // НЕ `append`: Google клав такий рядок не з колонки A, а правіше (з колонки P:
+        // у шапці P1 є «Чекун», і він бачить там окрему таблицю). Тому рахуємо
+        // перший вільний рядок самі й пишемо в нього явно, A..P
+        const _colA = await apiGet('ГОЛОВНА!A:A');
+        const _rowN = _colA.length + 1;
+        const _ap = await apiUpdate('ГОЛОВНА!A' + _rowN + ':P' + _rowN, [[
             rec.reportNum, rec.datetime, rec.target,
             rec.qty200, rec.qty300,
             rec.coordinates, rec.drone, rec.ammo, rec.result,
-            rec.points, rec.uid
+            rec.points, rec.uid, '', '', '', '', rec.chk ? 1 : ''
         ]]);
-        if (rec.chk) {
-            const _m = /!?[A-Z]+(\d+):[A-Z]+\d+$/.exec((_ap && _ap.updates && _ap.updates.updatedRange) || '');
-            if (_m) { try { await apiUpdate('ГОЛОВНА!P' + _m[1], [[1]]); } catch (e) { /* P дорівняє наступна повна синхронізація */ } }
-        }
+        if (_ap && !_ap.updatedRange) _ap.updatedRange = 'ГОЛОВНА!A' + _rowN + ':P' + _rowN;
         // Перевірка: читаємо рядок назад і дивимось, що там наш uid. Google міг
         // відповісти «ок» і покласти рядок не туди
-        const _rng = (_ap && _ap.updates && _ap.updates.updatedRange) || '';
+        const _rng = 'ГОЛОВНА!A' + _rowN + ':K' + _rowN;
         let _where = _rng ? _rng.replace(/^.*!/, '') : 'невідомо';
         let _ok = false;
         if (_rng) {
@@ -5240,6 +5259,9 @@ async function syncRecordsToAPI(remoteCount, nowDel) {
         await apiUpdate(`ГОЛОВНА!A2:P${rows.length + 1}`, rows);
         // рядки, що лишилися від довшого попереднього запису
         await apiClear(`ГОЛОВНА!A${rows.length + 2}:P`);
+        // зсунуті копії рядків (Q..AF), які Google колись поклав через append, —
+        // їх уже повернуто в A:P вище, тож чистимо, щоб рядки не двоїлися
+        if (_strayMain) { await apiClear('ГОЛОВНА!Q2:AF'); _strayMain = false; }
     }
 }
 
