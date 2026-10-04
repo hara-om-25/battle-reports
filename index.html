@@ -229,7 +229,7 @@
       border-color: #4a7d4d;
       box-shadow: 0 4px 0 #1a3318, 0 6px 12px rgba(0,0,0,0.4);
     }
-    .record-card.flagged { border-color: var(--yellow); }
+    .record-card.flagged { border-color: #fff; }
     /* напис ВЕРИФІКОВАНО на картці вильоту — найсвітліший синій застосунку */
     :root { --blue-label: #5599dd; --green-label: #5ab558; --red-label: #e05050; }
     /* Усе викреслене — одним кольором: 65% від звичайного тексту #d9d6c4.
@@ -375,12 +375,12 @@
     /* Додано офлайн і ще не потрапило в Google таблицю — сама лише рамка, без заливки */
     .record-card.pending-sync, .list-item.pending-sync { border-color: #e08a2e; }
     /* Виліт із балами, якого звіряння не зачепило: у файлі верифікації йому
-       нічого не знайшлося. Біла рамка — щоб такі було видно з першого погляду */
+       нічого не знайшлося. Жовта рамка — щоб такі було видно з першого погляду */
     .record-card.not-verified { border-color: var(--yellow); }
     /* В архіві акцент «!» показуємо тлом, а не рамкою: рамка там уже зайнята
        станом звіряння, і жовта її перекривала. Тло темніше за звичайне тло
        картки, без власного відтінку */
-    .record-card.flagged-bg { background: rgba(0, 0, 0, 0.6); }
+    .record-card.flagged-bg { background: rgba(0, 0, 0, 0.6); border-color: #fff; }
     /* обраний елемент списку — той самий вигляд, що й під курсором,
        і тримається, доки не оберуть інший */
     .list-item.picked { border-color: var(--olive-bright); background: rgba(122, 149, 64, 0.1); }
@@ -628,7 +628,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-152';
+const APP_VER = 'v.26.10-153';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
