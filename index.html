@@ -629,7 +629,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-167';
+const APP_VER = 'v.26.10-168';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2238,6 +2238,7 @@ function _parseMainRows(rows) {
             };
             if (row[16]) _strayMain = true;
             rec.uid = (row[10] || '').trim() || _contentUid(rec);
+            if (!_hasHit(rec)) rec.points = 0;   // без знищено/пошкоджено балів немає ніде
             if (!rec.chk && _anyChk() && _chkNoteOf(rec)) rec.chk = 1;
             out.push(rec);
         } else if (row[16] && (row[17] || row[20])) {
@@ -2254,6 +2255,7 @@ function _parseMainRows(rows) {
                 sheet: 'ГОЛОВНА', srow: i + 1
             };
             rec.uid = (row[o + 10] || '').trim() || _contentUid(rec);
+            if (!_hasHit(rec)) rec.points = 0;
             out.push(rec);
         }
     }
@@ -4526,6 +4528,7 @@ function _parseArchiveRows(rows, name) {
             _ar.chk = parseInt(row[15]) === 1 ? 1 : 0;
             if (!_ar.chk && _hasChk && _chkNoteOf(_ar)) _ar.chk = 1;
             if (_ar.chk) _ar.points += 1;
+            if (!_hasHit(_ar)) _ar.points = 0;   // без знищено/пошкоджено балів немає ніде
         }
     }
     return out;
@@ -5056,7 +5059,7 @@ async function add() {
         drone: state.form.drone,
         ammo: state.form.ammo,
         result: resultStr,
-        points: totalPoints + (state.form.chk ? 1 : 0),
+        points: _hasHit({result: resultStr}) ? totalPoints + (state.form.chk ? 1 : 0) : 0,
         chk: state.form.chk ? 1 : 0
     };
     rec.uid = _newUid();
@@ -5849,6 +5852,7 @@ async function saveEditRecord() {
     let _ptsE=0;
     er.targets.forEach(t=>{const _p=t.name.trim().split(' '),_l=_p[_p.length-1],_r=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.name.trim(),_u=_r.toUpperCase();const _ab=Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})();if(_ab==='ОС'){if(t.result==='знищено')_ptsE+=_osE.znyshcheno*(parseInt(er.qty200)||0)+_osE.poshkodzheno*(parseInt(er.qty300)||0);else if(t.result==='пошкоджено')_ptsE+=_osE.poshkodzheno*(parseInt(er.qty300)||0);}else{const _sc=state.scoreTable[_ab];if(_sc)_ptsE+=t.result==='знищено'?_sc.znyshcheno:t.result==='пошкоджено'?_sc.poshkodzheno:0;}});
     r.points=Math.round((_ptsE+(er.chk?1:0))*100)/100;
+    if(!_hasHit(r)) r.points=0;
     // Дата й час вильоту: беремо обране в полях, секунди лишаємо як були.
     // Дату теж правлять — у старих записах вона буває не та, а то й порожня
     if (er.hour != null && er.minute != null) {
@@ -5887,6 +5891,7 @@ async function saveEditRecord() {
             try {
                 const _j = await apiGet(er.arch.sheet + '!J' + er.arch.srow);
                 r.points = _num((_j[0] || [])[0]) + (er.chk ? 1 : 0);
+                if (!_hasHit(r)) r.points = 0;
             } catch (e2) { /* не прочиталося — лишаємо як було */ }
         }
         catch (e) {
