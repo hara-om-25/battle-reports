@@ -628,7 +628,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-155';
+const APP_VER = 'v.26.10-156';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6346,7 +6346,7 @@ function render() {
                 +row('Верифіковано із заміною',by('repl'),'repl','b',true)
                 +row('Відхилено',by('no'),'no','r')
                 +row('Дублюючих',by('pack'),'pack','r')
-                +row('Не звірено',rs.filter(r=>(parseFloat(r.points)||0)&&!(r.v&&r.v.state)).length,'unv','r');
+                +row('Не звірено',rs.filter(r=>(parseFloat(r.points)||0)&&!(r.v&&r.v.state)).length,'unv','y');
         };
         const _sec=(title,rows)=>rows?`<div><p class="stencil" style="color:var(--khaki);font-size:calc(0.85em + 2px);letter-spacing:0.08em;margin-bottom:4px">${title}</p>${rows}</div>`:'';
         let _arContent='';
