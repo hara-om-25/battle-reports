@@ -629,7 +629,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-162';
+const APP_VER = 'v.26.10-163';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -3247,6 +3247,12 @@ function toggleTgFilter(el) {
     const f = state.tgFilter;
     state.tgFilter = (f && f.k === k && f.v === v) ? null : { k: k, v: v };
     render();
+}
+// «Не звірено» в переліку цілей: ціль, у якої є свій вердикт (верифіковано, відхилено,
+// дублююча), не звірено не є, навіть якщо виліт у цілому вердикту не має
+function _unvTgOk(o) {
+    const f = state.arFilter;
+    return !(f && f.k === 'v' && f.v === 'unv') || !_tgVerdict(o);
 }
 function _tgMatch(o) {
     const f = state.tgFilter;
@@ -6663,7 +6669,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                             +`</div>`;
                     };
                     _tgGroups=_arDates.map(d=>{
-                        const rows=_tgAll.filter(o=>getDateOnly(o.r.datetime)===d&&_arMatch(o.r)&&_tgMatch(o));
+                        const rows=_tgAll.filter(o=>getDateOnly(o.r.datetime)===d&&_arMatch(o.r)&&_tgMatch(o)&&_unvTgOk(o));
                         if(!rows.length)return '';
                         // бали дня — сума балів самих цілей, що лишилися на екрані
                         const dayPts=_pt(rows.reduce((s,o)=>s+(_tgPts(o)||0),0));
@@ -6671,7 +6677,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                     }).join('');
                 }
                 // під фільтром одразу видно, скільки карток лишилося з усіх
-                const _tgShown=_tgAll.filter(o=>_arMatch(o.r)&&_tgMatch(o)).length;
+                const _tgShown=_tgAll.filter(o=>_arMatch(o.r)&&_tgMatch(o)&&_unvTgOk(o)).length;
                 const _flHdr=(_tgMode?'ЦІЛІ':'ВИЛЬОТИ')+((_tgMode?(state.arFilter||state.tgFilter):state.arFilter)?` <span class="stencil" style="color:var(--khaki);font-size:0.7em">показано ${_tgMode?_tgShown+' з '+_tgAll.length:_shown+' з '+_R.length}</span>`:'');
                 // Кнопка кольору й вигляду головного меню, а літери в ній —
                 // такі самі, як у заголовку поруч. Висоту знімаємо із самого
