@@ -628,7 +628,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-154';
+const APP_VER = 'v.26.10-155';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5040,12 +5040,18 @@ async function add() {
         return;
     }
     try {
-        await apiAppend('ГОЛОВНА!A:P', [[
+        // Додаємо так само, як було до ЧЕКУНА (A:K): ширший діапазон A:P — це підозра
+        // на зникнення вильотів (рядок не лягав у таблицю). ЧЕКУН пишемо окремо
+        const _ap = await apiAppend('ГОЛОВНА!A:K', [[
             rec.reportNum, rec.datetime, rec.target,
             rec.qty200, rec.qty300,
             rec.coordinates, rec.drone, rec.ammo, rec.result,
-            rec.points, rec.uid, '', '', '', '', rec.chk ? 1 : ''
+            rec.points, rec.uid
         ]]);
+        if (rec.chk) {
+            const _m = /!?[A-Z]+(\d+):[A-Z]+\d+$/.exec((_ap && _ap.updates && _ap.updates.updatedRange) || '');
+            if (_m) { try { await apiUpdate('ГОЛОВНА!P' + _m[1], [[1]]); } catch (e) { /* P дорівняє наступна повна синхронізація */ } }
+        }
         saveLocal();
         showAlert('✅ Запис додано і синхронізовано!');
     } catch(err) {
