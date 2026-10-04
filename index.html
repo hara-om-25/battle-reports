@@ -629,7 +629,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-172';
+const APP_VER = 'v.26.10-173';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -3005,15 +3005,18 @@ function _markPacks(recs) {
     });
     recs.forEach(r => {
         if (!r.v || (r.v.state && r.v.state !== 'pack')) return;
-        const _wasAny = r.v.state === 'pack';                 // pack: примітка верифікатора або позначка ПАКЕТ у L
-        const _wasPack = _wasAny && r.v.dup > 0;   // дублікат назвав сам верифікатор у примітці («верифіковано раніше», «дубляж»); позначці ПАКЕТ у L не довіряємо
+        // pack: примітка верифікатора («верифіковано раніше», «дубляж») або позначка ПАКЕТ:<рядок> у L —
+        // обом довіряємо (рішення користувача, 05.10.2026). За ПАКЕТ можна знайти, на користь кого
+        // скасовано: рядок аркуша, який забрав вердикт
+        const _wasPack = r.v.state === 'pack';
+        const _prow = r.v.packRow || 0;
         r.v.state = ''; r.v.packOf = null; r.v.lost = '';
-        const _lost = () => { if (_wasAny) r.v.lost = _wasPack ? 'примітка верифікатора' : 'позначка ПАКЕТ у L'; };
+        const _lost = () => { if (_wasPack) r.v.lost = r.v.dup > 0 ? 'примітка верифікатора' : 'позначка ПАКЕТ у L'; };
         // нуль балів — це не удар: «НЕвлучання» чи збитий дрон. Скасовувати
         // там нема чого, отже й дублювати нема чого
-        if (!(parseFloat(r.points) || 0)) { if (_wasPack) r.v.state = 'pack'; _lost(); return; }
+        if (!(parseFloat(r.points) || 0)) { if (_wasPack) r.v.state = 'pack'; return; }
         const names = _packNames(r);
-        if (!names.length) { if (_wasPack) r.v.state = 'pack'; _lost(); return; }
+        if (!names.length) { if (_wasPack) r.v.state = 'pack'; return; }
         let own = (owners[_packKeyRec(r)] || [])
             .find(o => names.every(n => o.names.indexOf(n) >= 0));
         // Рухома ціль: координата щоразу інша, тож ключем її не впіймати.
@@ -3030,7 +3033,12 @@ function _markPacks(recs) {
         if (own) { r.v.state = 'pack'; r.v.packOf = own.rec; }
         // пари серед наших вильотів не знайшлося (координата розійшлась), але верифікатор
         // сам назвав виліт дублюючим — довіряємо йому, а не робимо виліт «не звіреним»
-        else { if (_wasPack) r.v.state = 'pack'; _lost(); }
+        else if (_wasPack) {
+            r.v.state = 'pack';
+            // на користь кого: за позначкою ПАКЕТ — вильот, що лежить у тому рядку аркуша
+            if (_prow) { const t = recs.find(x => x !== r && x.sheet === r.sheet && x.srow === _prow); if (t) r.v.packOf = t; }
+            _lost();
+        }
     });
 }
 
@@ -3441,7 +3449,9 @@ function _osParts(r, tgts) {
 // свого ж переліку**: у ВИЛЬОТАХ це виліт, у ЦІЛЯХ — ціль. Інакше шукати
 // його нікуди: у переліку ЦІЛЕЙ картки підписані номерами цілей, і «виліт
 // №8» відсилав до картки, на якій стоїть зовсім інше число
-function _packNote(n, tg) {
+function _packNote(n, tg, byVerifier) {
+    // дублікат визначив сам верифікатор (примітка), а на користь кого — невідомо
+    if (!n && byVerifier) return _vY('дублюючий за визначенням верифікатора');
     const w = tg ? ['цю ціль', 'цілі', 'такої самої'] : ['цей виліт', 'вильоту', 'такого самого'];
     // «№» жовтий, як службові слова, а саме число біле — числа в поясненнях
     // верифікатора скрізь білі, і це число не виняток
@@ -6500,7 +6510,7 @@ function render() {
                         const n=_arOrder.indexOf(r)+1;
                         const _rp0=_arRowParts(r);const parts=_rp0.parts;const notes=_rp0.notes.slice();
                         // виліт скасовано на користь такого самого, який верифікатор зарахував
-                        if(r.v&&r.v.state==='pack')notes.push(_packNote(_packNum(r)));
+                        if(r.v&&r.v.state==='pack')notes.push(_packNote(_packNum(r),false,!!(r.v.dup>0&&!r.v.packOf)));
                         // Дата й час попереду решти: без них з картки не видно,
                         // коли був виліт, і доводиться лізти в таблицю
                         // Дата й координата натискаються: значення цілком лягає
@@ -6698,7 +6708,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                             +(_nte.memo?`<p class="stencil" style="color:#e08a2e;font-size:0.88em;white-space:pre-wrap">${esc(_nte.memo)}</p>`:'')
                             +`<p class="stencil" style="color:var(--text)">${_line}</p>`
                             +(_vLine?`<p class="stencil" style="color:var(--text)">${_vLine}</p>`:'')
-                            +(_tv==='pack'?`<p class="stencil" style="color:var(--text)">${_packNote(_pkTo,true)}</p>`:'')
+                            +(_tv==='pack'?`<p class="stencil" style="color:var(--text)">${_packNote(_pkTo,true,!!(r.v&&r.v.dup>0&&!r.v.packOf))}</p>`:'')
                                                         +(_meta?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em;margin-top:4px">${_meta}</p>`:'')
                             +(_meta2?`<p class="stencil" style="color:var(--text-dim);font-size:0.92em">${_meta2}</p>`:'')
                             +(_vnt?`<p class="stencil" style="color:var(--text);font-size:0.92em">${esc(_vnt)}</p>`:'')
