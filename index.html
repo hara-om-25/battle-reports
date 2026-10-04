@@ -436,9 +436,10 @@
     .st-y.on { background: #a8922e; }
     .st-b.on { background: #5480b0; }
     .st-r.on { background: #b55252; }
+    .st-o.on { background: #b8742a; }
     .st-n.on { background: #4f8f4d; }
     .st-y.on, .st-y.on span, .st-b.on, .st-b.on span,
-    .st-r.on, .st-r.on span, .st-n.on, .st-n.on span { color: var(--bg) !important; }
+    .st-r.on, .st-r.on span, .st-n.on, .st-n.on span, .st-o.on, .st-o.on span { color: var(--bg) !important; }
     /* дрони, боєприпаси й результати — темно-сірий зі світлим текстом */
     .st-g.on { background: #3f3f38; }
     .st-g.on, .st-g.on span { color: var(--text) !important; }
@@ -628,7 +629,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-156';
+const APP_VER = 'v.26.10-157';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6345,7 +6346,7 @@ function render() {
                 +row('Частково верифіковано',by('part'),'part','b',true)
                 +row('Верифіковано із заміною',by('repl'),'repl','b',true)
                 +row('Відхилено',by('no'),'no','r')
-                +row('Дублюючих',by('pack'),'pack','r')
+                +row('Дублюючих',by('pack'),'pack','o')
                 +row('Не звірено',rs.filter(r=>(parseFloat(r.points)||0)&&!(r.v&&r.v.state)).length,'unv','y');
         };
         const _sec=(title,rows)=>rows?`<div><p class="stencil" style="color:var(--khaki);font-size:calc(0.85em + 2px);letter-spacing:0.08em;margin-bottom:4px">${title}</p>${rows}</div>`:'';
@@ -6449,7 +6450,7 @@ const _a=Math.max(0,_pt(r.v.sum-(parseFloat(r.points)||0)));
 const _clr=_st==='repl'?'var(--blue-label)':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)';return `<p class="stencil" style="color:${_clr}">${_st==='no'?0:_sum} ${_bal(_st==='no'?0:_sum)}${_c?` <span style="color:var(--yellow)">(скасовано ${_c} ${_bal(_c)})</span>`:''}${_a?` <span style="color:var(--yellow)">(додано ${_a} ${_bal(_a)})</span>`:''}</p>`;})()}${(()=>{const _st=r.v&&r.v.state;
 // виліт із балами, який не дістав жодного вердикту — саме такі й губляться
 if(!_st) return (_anyV&&(parseFloat(r.points)||0))?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:var(--yellow)">НЕ ЗВІРЕНО</span>`:'';
-return `<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${(_st==='no'||_st==='pack')?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)'}">${_st==='repl'?'ЗАМІНЕНО':_st==='ok'?'ВЕРИФІКОВАНО':_st==='no'?'ВІДХИЛЕНО':_st==='pack'?'ДУБЛЮЮЧИЙ':'ЧАСТКОВО<br>ВЕРИФІКОВАНО'}</span>`;})()}</div>`;
+return `<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${_st==='pack'?'#e08a2e':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)'}">${_st==='repl'?'ЗАМІНЕНО':_st==='ok'?'ВЕРИФІКОВАНО':_st==='no'?'ВІДХИЛЕНО':_st==='pack'?'ДУБЛЮЮЧИЙ':'ЧАСТКОВО<br>ВЕРИФІКОВАНО'}</span>`;})()}</div>`;
                     }).join('');
                     return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
                 }).join('');
@@ -6532,7 +6533,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         const _rep=_tv==='repl';
                         const _lbl=_rep?['ЗАМІНЕНО','var(--blue-label)']
                             :_tv==='ok'?['ВЕРИФІКОВАНО','var(--green-label)']
-                            :_tv==='pack'?['ДУБЛЮЮЧИЙ','var(--red-label)']
+                            :_tv==='pack'?['ДУБЛЮЮЧИЙ','#e08a2e']
                             :_tv==='no'?['ВІДХИЛЕНО','var(--red-label)']
                             :(_anyV&&(parseFloat(r.points)||0))?['НЕ ЗВІРЕНО','var(--yellow)']:null;
                         // Бали окремої цілі відомі тільки там, де їх дав
