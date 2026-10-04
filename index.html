@@ -628,7 +628,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-146';
+const APP_VER = 'v.26.10-145';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5612,22 +5612,6 @@ function _sizeArchRot() {
         const cr = [...gr.querySelectorAll('.crate')];
         gr.style.height = Math.max(0, ...cr.map(c => c.offsetHeight)) + 'px';
         gr.style.width = Math.max(0, ...cr.map(c => c.offsetLeft + c.offsetWidth)) + 'px';
-    });
-    // рік на задній рамці стоїть по центру її видимої смужки (від лівого краю
-    // рамки до лівого краю передньої): однакові проміжки з обох боків напису
-    document.querySelectorAll('.arch-groups').forEach(gr => {
-        const fr = gr.querySelector('.crate[data-back="0"]');
-        gr.querySelectorAll('.crate').forEach(cr => {
-            const yr = cr.querySelector('.arch-year');
-            if (!yr) return;
-            yr.style.left = '';
-            if (cr.dataset.back !== '1' || !fr) return;
-            const strip = (parseFloat(fr.style.left) || 0) - (parseFloat(cr.style.left) || 0);
-            const want = cr.getBoundingClientRect().left + (strip - yr.offsetWidth) / 2;
-            const cur = yr.getBoundingClientRect().left;
-            // не лізти лівіше за свій звичайний край, коли смужка вужча за напис
-            yr.style.left = Math.max(0, want - cur) + 'px';
-        });
     });
     // «за період» стоїть по правому краю найширшої рамки року, а не сторінки
     const _hr = document.getElementById('ar-hdr-right');
