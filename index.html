@@ -628,7 +628,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-150';
+const APP_VER = 'v.26.10-151';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2592,17 +2592,39 @@ async function _ensureLastArchive() {
     } catch (e) { /* не вийшло — спробуємо наступного разу */ }
 }
 
+// Позначити збережену копію аркуша застарілою: наступне зведення прочитає його з таблиці
+function _archStale(name) {
+    try {
+        const ix = JSON.parse(localStorage.getItem(LS_ARCH) || '{}') || {};
+        if (ix && typeof ix === 'object' && name in ix) { ix[name] = 0; localStorage.setItem(LS_ARCH, JSON.stringify(ix)); }
+    } catch (e) {}
+}
+// Скільки мілісекунд тому аркуш архіву збережено на пристрої (без запису — безкінечність)
+function _archAgeMs(name) {
+    try {
+        const ix = JSON.parse(localStorage.getItem(LS_ARCH) || '{}') || {};
+        const t = ix[name];
+        return (typeof t === 'number' && _archOne(name)) ? Date.now() - t : Infinity;
+    } catch (e) { return Infinity; }
+}
 async function loadAllArchiveSheets() {
     if (state.allArchiveLoading || state.allArchiveLoaded) return;
     state.allArchiveLoading = true;
     render();
     try {
         const allRecs = [];
+        let _quotaHit = false;
         for (const name of state.archiveSheets) {
             let rows = null;
-            if (state.online) {
+            // Аркуш, збережений на пристрої менше 5 хвилин тому, з таблиці не
+            // перечитуємо: Google дає лише ~60 читань на хвилину на користувача,
+            // а всі аркуші разом перечитувались при кожному вході в АРХІВ
+            if (state.online && !_quotaHit && _archAgeMs(name) > 300000) {
                 try { rows = await apiGet(name); _archCachePut(name, rows); }
-                catch (e) { if (!_isNetErr(e)) throw e; }
+                catch (e) {
+                    if (/quota/i.test(e.message || '')) _quotaHit = true;   // ліміт — решту беремо з пристрою
+                    else if (!_isNetErr(e)) throw e;
+                }
             }
             if (!rows) rows = _archOne(name);
             if (!rows) continue;   // цього аркуша на пристрої немає — пропускаємо
@@ -5821,6 +5843,7 @@ async function saveEditRecord() {
         // нього все, тож перечитувати аркуш — а тим паче всі вісім заради
         // зведення — немає з чого: це секунди чекання на порожньому місці
         _markPacks(state.archiveRecs);
+        _archStale(er.arch.sheet);   // у таблиці аркуш змінено — збережена копія застаріла
         const _twin = (state.allArchiveRecs || [])
             .find(x => x.sheet === er.arch.sheet && x.srow === er.arch.srow);
         if (_twin) {
