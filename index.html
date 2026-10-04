@@ -629,7 +629,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-174';
+const APP_VER = 'v.26.10-175';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -748,10 +748,9 @@ function _chkNoteOf(r) {
     return !!(n && n.chk);
 }
 function _anyChk() { return Object.values(state.notes || {}).some(n => n && n.chk); }
-// колір — як у решти рядка (координата, дата, дрон, БК): без власного забарвлення
-function _chkTag(r) { return _chkOf(r) ? 'ЧЕКУН' : ''; }
-// у ЗВІТАХ позначка помаранчева
-function _chkTagO(r) { return _chkOf(r) ? '<span style="color:#e08a2e">ЧЕКУН</span>' : ''; }
+// ЧЕКУН скрізь блакитний, як ЗАМІНЕНО (рішення користувача)
+function _chkTag(r) { return _chkOf(r) ? '<span style="color:var(--blue-label)">ЧЕКУН</span>' : ''; }
+function _chkTagO(r) { return _chkTag(r); }
 
 function _setNote(uid, memo, flag) {
     if (!state.notes) state.notes = {};
@@ -6646,7 +6645,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                         const _own=(_pn===null||(_lbl&&_lbl[0]==='НЕ ЗВІРЕНО'))?null:_tgOwn(r,j,P);   // у не звіреної різниці з верифікатором немає
                         const _bn=_own===null?0:_tgChkBonus(r,j,P);
                         const _dif=_own===null?0:_pt(_pn-_own-_bn);
-                        if(_bn)_line+=`${_ysep}<span style="color:#e08a2e">+1 за чекуна</span>`;
+                        if(_bn)_line+=`${_ysep}<span style="color:var(--blue-label)">+1 за чекуна</span>`;
                         if(_dif)_line+=`${_ysep}<span style="color:${_dif>0?'var(--green-label)':'var(--red-label)'}">${_dif>0?'+':'\u2212'}${_pt(Math.abs(_dif))} ${_bal(Math.abs(_dif))}</span>`;
                         const _cpS=(t,k)=>t?`<span class="cp ${k}" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()">${esc(t)}</span>`:'';
                         const _cc=String(r.coordinates||'').split(',');
