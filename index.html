@@ -629,7 +629,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-168';
+const APP_VER = 'v.26.10-170';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2908,7 +2908,10 @@ function _verdictInfo(targetsStr, l, m, q200, q300, note, comm) {
         // у вердикті може стояти й результат верифікатора: «Підтверджено|Знищено»
         const _q = (lv[i] || '').split('|');
         const t = (_q[0] || '').trim().toLowerCase();
-        const v = t === 'підтверджено' ? 'ok' : t === 'відхилено' ? 'no' : '';
+        let v = t === 'підтверджено' ? 'ok' : t === 'відхилено' ? 'no' : '';
+        // Оцінку верифікатор міг не поставити, але прямо написав «верифіковано раніше» /
+        // «дубляж» — отже ціль дублююча, а не просто не звірена
+        if (!v && _dupLine(i)) v = 'no';
         list.push(v);
         vres.push((_q[1] || '').trim());
         const num = parseFloat(String(mv[i] || '').replace(',', '.'));
@@ -3002,12 +3005,13 @@ function _markPacks(recs) {
     });
     recs.forEach(r => {
         if (!r.v || (r.v.state && r.v.state !== 'pack')) return;
+        const _wasPack = r.v.state === 'pack';   // про дублікат написав сам верифікатор (ПАКЕТ або «верифіковано раніше»)
         r.v.state = ''; r.v.packOf = null;
         // нуль балів — це не удар: «НЕвлучання» чи збитий дрон. Скасовувати
         // там нема чого, отже й дублювати нема чого
-        if (!(parseFloat(r.points) || 0)) return;
+        if (!(parseFloat(r.points) || 0)) { if (_wasPack) r.v.state = 'pack'; return; }
         const names = _packNames(r);
-        if (!names.length) return;
+        if (!names.length) { if (_wasPack) r.v.state = 'pack'; return; }
         let own = (owners[_packKeyRec(r)] || [])
             .find(o => names.every(n => o.names.indexOf(n) >= 0));
         // Рухома ціль: координата щоразу інша, тож ключем її не впіймати.
@@ -3022,6 +3026,9 @@ function _markPacks(recs) {
                 && _vDist(_vCoord(o.rec.coordinates), c) <= _V_PACK_DIST);
         }
         if (own) { r.v.state = 'pack'; r.v.packOf = own.rec; }
+        // пари серед наших вильотів не знайшлося (координата розійшлась), але верифікатор
+        // сам назвав виліт дублюючим — довіряємо йому, а не робимо виліт «не звіреним»
+        else if (_wasPack) r.v.state = 'pack';
     });
 }
 
