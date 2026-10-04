@@ -471,10 +471,12 @@
     /* СТАТИСТИКА на телефоні: ВЕРИФІКАЦІЯ, РЕЗУЛЬТАТИ, потім ДРОНИ, БОЄПРИПАСИ, ПВР */
     @media (max-width: 640px) {
       .stat-cols { flex-direction: column; flex-wrap: nowrap; }
-      .stat-cols > .stat-r { order: -1; display: flex; flex-direction: column; gap: 12px; }
-      .stat-cols > .stat-r > * { margin-top: 0 !important; }
-      .stat-r > .stat-ver { order: -1; }
+      .stat-cols > .stat-r { order: -1; }
     }
+    /* ВЕРИФІКАЦІЯ над РЕЗУЛЬТАТАМИ на всіх екранах (рішення користувача) */
+    .stat-cols > .stat-r { display: flex; flex-direction: column; gap: 12px; }
+    .stat-cols > .stat-r > * { margin-top: 0 !important; }
+    .stat-r > .stat-ver { order: -1; }
     @media (max-width: 640px) { .lists-bar { width: 100%; } nav.crate.sticky { position: static; } }
     /* Ширину поля редагування рахує recalcListFieldWidth() — при синхронізації
        з таблицею і при змінах у списках. Панель обхоплює поле й кнопки */
@@ -626,7 +628,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-144';
+const APP_VER = 'v.26.10-145';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
