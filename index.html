@@ -629,7 +629,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-157';
+const APP_VER = 'v.26.10-158';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5053,8 +5053,24 @@ async function add() {
             const _m = /!?[A-Z]+(\d+):[A-Z]+\d+$/.exec((_ap && _ap.updates && _ap.updates.updatedRange) || '');
             if (_m) { try { await apiUpdate('ГОЛОВНА!P' + _m[1], [[1]]); } catch (e) { /* P дорівняє наступна повна синхронізація */ } }
         }
+        // Перевірка: читаємо рядок назад і дивимось, що там наш uid. Google міг
+        // відповісти «ок» і покласти рядок не туди
+        const _rng = (_ap && _ap.updates && _ap.updates.updatedRange) || '';
+        let _where = _rng ? _rng.replace(/^.*!/, '') : 'невідомо';
+        let _ok = false;
+        if (_rng) {
+            try {
+                const _back = await apiGet(_rng);
+                _ok = !!(_back[0] && String(_back[0][10] || '').trim() === rec.uid);
+            } catch (e) { _ok = false; }
+        }
         saveLocal();
-        showAlert('✅ Запис додано і синхронізовано!');
+        if (_ok) {
+            showAlert('✅ Запис додано і синхронізовано!\n\nГОЛОВНА, рядок ' + _where.replace(/^[A-Z]+/, '').replace(/:.*$/, '') + ' (таблиця …' + SHEET_ID.slice(-6) + '). Перевірено читанням.');
+        } else {
+            queueOp('add', rec.uid, rec);
+            showAlert('⚠️ Таблиця відповіла «ок», але рядка на місці немає (' + _where + ', таблиця …' + SHEET_ID.slice(-6) + ').\n\nЗапис збережено на пристрої, він піде в таблицю при наступній синхронізації. Не оновлюйте сторінку, натисніть кнопку завантаження (стрілка).');
+        }
     } catch(err) {
         queueOp('add', rec.uid, rec);
         if (_isNetErr(err)) {
