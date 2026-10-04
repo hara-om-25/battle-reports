@@ -628,7 +628,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-149';
+const APP_VER = 'v.26.10-150';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5567,7 +5567,14 @@ function _sizeArchRot() {
         const yr = bk && bk.querySelector('.arch-year');
         if (!fr || !yr) return;
         const d = yr.getBoundingClientRect().left - bk.getBoundingClientRect().left;
-        fr.style.left = ((parseFloat(bk.style.left) || 0) + Math.round(2 * d + yr.offsetWidth)) + 'px';
+        // без ковзання: це підгонка розміру, а не рух (ковзає лише клік по задній рамці)
+        const _nl = ((parseFloat(bk.style.left) || 0) + Math.round(2 * d + yr.offsetWidth)) + 'px';
+        if (fr.style.left !== _nl) {
+            fr.style.transition = 'none';
+            fr.style.left = _nl;
+            void fr.offsetWidth;
+            fr.style.transition = '';
+        }
     });
     document.querySelectorAll('.arch-groups').forEach(gr => {
         const boxes = [...gr.querySelectorAll('.arch-rot-box')];
