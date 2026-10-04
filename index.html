@@ -629,7 +629,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-170';
+const APP_VER = 'v.26.10-171';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2961,7 +2961,7 @@ function _verdictInfo(targetsStr, l, m, q200, q300, note, comm) {
                 : (!ok && !no) ? ((pack || dup) ? 'pack' : '')
                 : (ok && no) ? 'part' : ok ? 'ok' : 'no';
     return { list: list, pts: pts, vres: vres, sum: own + rsum, ok: ok, no: no,
-             repl: repl, os: os, pack: pack, packRow: packRow, state: state };
+             repl: repl, os: os, pack: pack, packRow: packRow, dup: dup, state: state };
 }
 
 // Місце удару: день і координата, у якої відкинуто два крайні знаки — у них
@@ -3005,7 +3005,7 @@ function _markPacks(recs) {
     });
     recs.forEach(r => {
         if (!r.v || (r.v.state && r.v.state !== 'pack')) return;
-        const _wasPack = r.v.state === 'pack';   // про дублікат написав сам верифікатор (ПАКЕТ або «верифіковано раніше»)
+        const _wasPack = r.v.state === 'pack' && r.v.dup > 0;   // дублікат назвав сам верифікатор у примітці («верифіковано раніше», «дубляж»); позначці ПАКЕТ у L не довіряємо
         r.v.state = ''; r.v.packOf = null;
         // нуль балів — це не удар: «НЕвлучання» чи збитий дрон. Скасовувати
         // там нема чого, отже й дублювати нема чого
