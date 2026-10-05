@@ -6900,7 +6900,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 +'<span class="stencil" style="color:var(--khaki)">'+esc(_hdr)+'</span>'
                 +'</div><div class="report-box">'+_body+'</div></div>';
         })();
-        const _sbBtn=(t,cls,on,oc,tip,pr)=>`<button ${on?`onclick="${oc}" `:'disabled '}onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil ${cls}${pr?' active':''}" style="font-size:0.78em;padding:5px 10px;width:100%${on?'':';cursor:not-allowed'}"${tip?` title="${tip}"`:''}>${t}</button>`;
+        const _sbBtn=(t,cls,on,oc,tip,pr)=>`<button ${on?`onclick="${oc}" `:'disabled '}class="btn-stencil ${cls}${pr?' active':''}" style="font-size:0.78em;padding:5px 10px;width:100%${on?'':';cursor:not-allowed'}"${tip?` title="${tip}"`:''}>${t}</button>`;
         const _sbOpen=!state.filterPeriodOpen;
         const _sbCol=`<div class="arch-side" style="margin-left:auto;display:flex;flex-direction:column;gap:8px;flex:0 0 auto;min-width:170px">`
             +_sbBtn('ПІДСУМКИ','btn-black',_sbOpen,"_arToggle('arShowSum')",'',state.arShowSum&&_sbOpen)
