@@ -629,7 +629,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-177';
+const APP_VER = 'v.26.10-178';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -749,7 +749,7 @@ function _chkNoteOf(r) {
 }
 function _anyChk() { return Object.values(state.notes || {}).some(n => n && n.chk); }
 // ЧЕКУН скрізь: чорні літери на жовтому тлі (рішення користувача)
-function _chkTag(r) { return _chkOf(r) ? '<span style="background:var(--yellow);color:var(--blue-label);padding:0 0.35em">ЧЕКУН</span>' : ''; }
+function _chkTag(r) { return _chkOf(r) ? '<span style="color:var(--blue-label)">ЧЕКУН</span>' : ''; }
 function _chkTagO(r) { return _chkTag(r); }
 
 function _setNote(uid, memo, flag) {
