@@ -5555,6 +5555,13 @@ function _syncChkHeight() {
         const h = paste.getBoundingClientRect().height;
         if (h < 10) return;
         ids.forEach(id => { const b = document.getElementById(id); if (b) { b.style.height = h + 'px'; b.style.alignSelf = 'center'; } });
+        // ПОПЕРЕДНІЙ — по центру поля БОЄПРИПАС (середина кнопки на середині поля)
+        const w = document.getElementById('form-prev-wrap');
+        const sel = w && w.parentElement && w.parentElement.querySelector('select');
+        if (cid === 'form-coord' && w && sel) {
+            const sh = sel.getBoundingClientRect().height;
+            if (sh > h) w.style.marginBottom = ((sh - h) / 2) + 'px';
+        }
     });
 }
 function _syncEditRowHeights() {
@@ -6411,7 +6418,7 @@ function render() {
                             ${_freqSort(state.ammo,'ammo').map(a=>`<option value="${esc(a)}" ${state.form.ammo===a?'selected':''}>${esc(a)}</option>`).join('')}
                         </select>
                     </div>
-                    <div style="flex:0 0 auto;transform:translateY(-35%)">
+                    <div id="form-prev-wrap" style="flex:0 0 auto">
                         <button onclick="copyPrev()" onmousedown="this.style.background='#9a9070';this.style.transform='translateY(2px)'" onmouseup="this.style.background='';this.style.transform=''" ontouchstart="this.style.background='#9a9070';this.style.transform='translateY(2px)'" ontouchend="this.style.background='';this.style.transform=''" id="form-prev" class="btn-stencil" style="font-size:0.78em;padding:3px 10px;white-space:nowrap;display:block">ПОПЕРЕДНІЙ</button>
                     </div>
                 </div>
