@@ -2393,7 +2393,7 @@ function _rptColor(s) {
                   'не звірено': 'var(--yellow)' };
     return String(s)
         // рядок про чекуни фарбуємо першим: далі «додано N балів» зробило б його синім
-        .replace(/^(За чекуни додано )(\d+)( бал\S*)/, '$1<span style="color:#e08a2e">$2</span>$3')
+        .replace(/^(За чекуни додано )(\d+)( бал\S*)/, '$1<span style="color:var(--blue-label)">$2</span>$3')
         .replace(/(верифіковано|замінено|відхилено|дублюючих|не звірено)(\s+\d+)/g,
         (m, w, n) => w + n.replace(/\d+/, d => '<span style="color:' + clr[w] + '">' + d + '</span>'))
         .replace(/(шт на )(\d[\d.]*) (бал\S*?)(?=,| \(|;|\.|$)/g, '$1<span style="color:var(--green-label)">$2 $3</span>')
@@ -2401,7 +2401,7 @@ function _rptColor(s) {
         .replace(/, \+(\d[\d.]*) (бал\S*?)(?=[,;.)\s]|$)/g, ', <span style="color:var(--blue-label)">+$1 $2</span>')
         // підсумкові рядки: прогноз жовтим, верифіковане й додане зеленим,
         // скасоване червоним, у грошах уражене зеленим, витрачене червоним
-        .replace(/(\(з них )(\d+)( бал\S*? за чекуни\))/, '$1<span style="color:#e08a2e">$2</span>$3')
+        .replace(/(\(з них )(\d+)( бал\S*? за чекуни\))/, '$1<span style="color:var(--blue-label)">$2</span>$3')
         .replace(/^(Прогнозовано уражень на )(\d[\d.]*)/, '$1<span style="color:var(--yellow)">$2</span>')
         .replace(/^(Верифіковано уражень на )(\d[\d.]*)/, '$1<span style="color:var(--green-label)">$2</span>')
         .replace(/^(Додано верифікатором )(\d[\d.]*)/, '$1<span style="color:var(--blue-label)">$2</span>')
