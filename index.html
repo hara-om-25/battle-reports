@@ -2492,7 +2492,7 @@ function generateArchiveReport(recs, periodLabel) {
     if (_dead.length) {
         const _cn = recs.filter(r => r.v && (r.v.state === 'no' || r.v.state === 'pack')).length;
         lines.push('');
-        lines.push('Повністю скасовано ' + _cn + ' ' + _vyl(_cn) + ' та наступні цілі:');
+        lines.push('Скасовано ' + _cn + ' ' + _vyl(_cn) + ', з них повністю скасовані наступні цілі:');
         _dead.forEach((p,i)=>lines.push('  '+(i+1)+'. '+p.t+' - '+p.n+' шт'+_statTail(p.v)+(i===_dead.length-1?'.':';')));
     }
     // ефективність: частка вильотів, де було хоч одне уражене (знищено/пошкоджено)
