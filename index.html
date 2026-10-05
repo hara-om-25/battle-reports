@@ -534,6 +534,8 @@
     [class*="btn-"]:active, [class*="btn-"].active, [class*="btn-"].pressing,
     .nav-btn:active, .nav-btn.pressing, .btn-archive:active, .btn-archive.pressing { box-shadow: inset 0 4px 6px rgba(0,0,0,0.45) !important; }
     #toTopBtn.show.active { transform: none; }
+    /* зелені кнопки (+, ЗБЕРЕГТИ, ПОПЕРЕДНІЙ, стрілка вставки): під час натискання текст і значок чорні */
+    .btn-green:active, .btn-green.active, #form-prev:active, button[title="Вставити з буфера"]:active { color: #000 !important; text-shadow: none !important; }
     .btn-stencil.chk-btn { background: #2c4666; border-color: #3d5f87; color: var(--yellow); box-shadow: none; }
     .btn-stencil.chk-btn, .btn-stencil.chk-btn:active { transform: none; transition: background 0.1s, border-color 0.1s, color 0.1s, box-shadow 0.1s; }
     .btn-stencil.chk-btn.on { transform: none; box-shadow: inset 0 4px 6px rgba(0,0,0,0.45); background: #5599dd; border-color: #7ab3ec; color: #000; }
@@ -639,7 +641,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-202';
+const APP_VER = 'v.26.10-203';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
