@@ -5550,7 +5550,9 @@ function restoreMemo() {
 function _syncChkHeight() {
     [['form-coord', ['form-chk', 'form-prev']], ['er_coord', ['edit-chk']]].forEach(([cid, ids]) => {
         const c = document.getElementById(cid);
-        const paste = c && c.parentElement && c.parentElement.querySelector('button');
+        // у вікні РЕДАГУВАННЯ зразок — зелена «+» біля результату, у ФОРМІ — стрілка вставки
+        const paste = cid === 'er_coord' ? document.querySelector('button[onclick^="addEditTarget"]')
+            : (c && c.parentElement && c.parentElement.querySelector('button'));
         if (!paste) return;
         const h = paste.getBoundingClientRect().height;
         if (h < 10) return;
