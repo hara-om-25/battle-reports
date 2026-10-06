@@ -641,7 +641,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-206';
+const APP_VER = 'v.26.10-207';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5797,10 +5797,10 @@ window.addEventListener('resize', _sizeArchRot, { passive: true });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { _sizeListCols(); _sizeArchRot(); _syncChkHeight(); });
 
 // Кнопки, що віджимаються самі (+, стрілка вставки, ПОПЕРЕДНІЙ, ЗБЕРЕГТИ, галочка, хрестик):
-// ефект натискання (чорний текст, втоплена) тримається ще 1 с після відпускання.
+// ефект натискання (чорний текст, втоплена) тримається ще 0,5 с після відпускання.
 // Після кліку сторінка часто перемальовується й кнопка створюється наново, тож
 // «утримання» запам'ятовується за підписом і ставиться на нову кнопку, поки не мине час.
-const _HOLD_MS = 1000;
+const _HOLD_MS = 500;
 const _HOLD_SEL = '.btn-green, #form-prev, button[title="Вставити з буфера"], #edit-save-top, .modal-box.edit-wide button[onclick="closeModal()"]';
 let _holdSig = null, _holdUntil = 0, _holdTimer = null;
 function _holdSigOf(b) { return (b.id || '') + '|' + (b.getAttribute('onclick') || '') + '|' + (b.getAttribute('title') || '') + '|' + (b.textContent || '').trim(); }
