@@ -646,7 +646,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-213';
+const APP_VER = 'v.26.10-214';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1166,16 +1166,21 @@ function _isNetErr(e) {
 // Запис змінено локально: онлайн — одразу в таблицю, офлайн — у чергу
 async function pushChange(op, uid, rec, chg) {
     if (!state.online || !navigator.onLine) { queueOp(op, uid, rec, chg); saveLocal(); return; }
+    // Спершу в чергу, потім у таблицю. Раніше при помилці запису (не мережевій)
+    // видалений виліт зникав зі state.records, а в черзі його не було: зміна
+    // лишалась «нічийною», охоронець не міг її пояснити, і кожне наступне
+    // видалення ще більше розходилось із таблицею (в таблиці 8, пишемо 6)
+    const _had = state.queue.some(o => o.uid === uid);
+    queueOp(op, uid, rec, chg);
+    saveLocal();
     try {
-        // Запис уже прибрано зі state.records, а в таблиці він ще стоїть.
-        // Охоронець порівнює ці два числа й без попередження вважав би таке
-        // видалення втратою рядка, тож кажемо йому, скільки саме рядків
-        // зникає з нашої волі просто зараз
-        await syncRecordsToAPI(undefined, op === 'del' ? 1 : 0);
+        await syncRecordsToAPI(undefined, 0);
+        // записано — зміна більше не «незбережена» (чужий запис черги не чіпаємо)
+        if (!_had) { const k = state.queue.findIndex(o => o.uid === uid); if (k >= 0) state.queue.splice(k, 1); }
         saveLocal();
     } catch (e) {
-        if (_isNetErr(e)) { state.online = false; queueOp(op, uid, rec, chg); }
-        else showAlert('Помилка: ' + e.message);
+        if (_isNetErr(e)) state.online = false;
+        else showAlert('Помилка: ' + e.message + '\n\nЗміну збережено в черзі — вона піде в таблицю при наступному вивантаженні (стрілка).');
         saveLocal();
     }
 }
