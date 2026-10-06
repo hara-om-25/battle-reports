@@ -536,8 +536,10 @@
     #toTopBtn.show.active { transform: none; }
     /* зелені кнопки (+, ЗБЕРЕГТИ, ПОПЕРЕДНІЙ, стрілка вставки): під час натискання текст і значок чорні */
     .btn-green:active, .btn-green.active, .btn-hold.hold, #form-prev:active, button[title="Вставити з буфера"]:active, #edit-save-top:active, .modal-box.edit-wide button[onclick="closeModal()"]:active, button[onclick="newReport()"]:active { color: #000 !important; text-shadow: none !important; }
-    /* кнопки вибору звіту/дня й КОПІЮВАТИ: під час натискання літери блакитні, як «300» */
-    button[onclick^="state.selReport="]:active, button[onclick^="state.selDate="]:active, button[onclick^="copy"]:not([onclick="copyPrev()"]):active, .btn-hold.hold.hold-b { color: var(--blue-label) !important; text-shadow: none !important; }
+    /* кнопки вибору звіту/дня: під час натискання яскраво-жовті, літери блакитні (як «300») */
+    button[onclick^="state.selReport="]:active, button[onclick^="state.selDate="]:active, .btn-hold.hold.hold-b { color: var(--blue-label) !important; text-shadow: none !important; background: var(--yellow) !important; border-color: #f4d942 !important; }
+    /* КОПІЮВАТИ: під час натискання літери жовті */
+    button[onclick^="copy"]:not([onclick="copyPrev()"]):active, .btn-hold.hold.hold-y { color: var(--yellow) !important; text-shadow: none !important; }
     .btn-stencil.chk-btn { background: #2c4666; border-color: #3d5f87; color: var(--yellow); box-shadow: none; }
     .btn-stencil.chk-btn, .btn-stencil.chk-btn:active { transform: none; transition: background 0.1s, border-color 0.1s, color 0.1s, box-shadow 0.1s; }
     .btn-stencil.chk-btn.on { transform: none; box-shadow: inset 0 4px 6px rgba(0,0,0,0.45); background: #5599dd; border-color: #7ab3ec; color: #000; }
@@ -643,7 +645,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-210';
+const APP_VER = 'v.26.10-211';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5804,9 +5806,10 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { _s
 // «утримання» запам'ятовується за підписом і ставиться на нову кнопку, поки не мине час.
 const _HOLD_MS = 300;
 const _HOLD_SEL = '.btn-green, #form-prev, button[title="Вставити з буфера"], #edit-save-top, .modal-box.edit-wide button[onclick="closeModal()"], button[onclick="newReport()"]';
-const _HOLD_SEL_B = 'button[onclick^="state.selReport="], button[onclick^="state.selDate="], button[onclick^="copy"]:not([onclick="copyPrev()"])';
+const _HOLD_SEL_B = 'button[onclick^="state.selReport="], button[onclick^="state.selDate="]';
+const _HOLD_SEL_Y = 'button[onclick^="copy"]:not([onclick="copyPrev()"])';
 let _holdSig = null, _holdUntil = 0, _holdTimer = null;
-function _holdMark(b) { b.classList.add('btn-hold'); if (b.matches(_HOLD_SEL_B)) b.classList.add('hold-b'); }
+function _holdMark(b) { b.classList.add('btn-hold'); if (b.matches(_HOLD_SEL_B)) b.classList.add('hold-b'); if (b.matches(_HOLD_SEL_Y)) b.classList.add('hold-y'); }
 function _holdSigOf(b) { return (b.id || '') + '|' + (b.getAttribute('onclick') || '') + '|' + (b.getAttribute('title') || '') + '|' + (b.textContent || '').trim(); }
 function _holdApply() {
     const on = _holdSig && Date.now() < _holdUntil;
@@ -5816,7 +5819,7 @@ function _holdApply() {
     });
 }
 document.addEventListener('click', e => {
-    const b = e.target.closest && e.target.closest(_HOLD_SEL + ', ' + _HOLD_SEL_B);
+    const b = e.target.closest && e.target.closest(_HOLD_SEL + ', ' + _HOLD_SEL_B + ', ' + _HOLD_SEL_Y);
     if (!b || b.disabled) return;
     _holdMark(b);
     _holdSig = _holdSigOf(b); _holdUntil = Date.now() + _HOLD_MS;
@@ -5826,7 +5829,7 @@ document.addEventListener('click', e => {
 }, true);
 new MutationObserver(() => {
     if (!_holdSig) return;
-    document.querySelectorAll(_HOLD_SEL + ', ' + _HOLD_SEL_B).forEach(b => { if (_holdSigOf(b) === _holdSig) _holdMark(b); });
+    document.querySelectorAll(_HOLD_SEL + ', ' + _HOLD_SEL_B + ', ' + _HOLD_SEL_Y).forEach(b => { if (_holdSigOf(b) === _holdSig) _holdMark(b); });
     _holdApply();
 }).observe(document.documentElement, { childList: true, subtree: true });
 
