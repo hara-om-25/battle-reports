@@ -646,7 +646,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-212';
+const APP_VER = 'v.26.10-213';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1226,7 +1226,13 @@ async function reconcileSync() {
     merged.sort((a, b) => _k(a.datetime) < _k(b.datetime) ? -1 : _k(a.datetime) > _k(b.datetime) ? 1 : 0);
     state.records = merged;
     // аркуш уже прочитано вище — передаємо його обсяг, щоб не питати вдруге
-    await syncRecordsToAPI(remote.length);
+    // Охоронець рахує вилучення за кількістю записів у черзі, а один запис черги
+    // може зняти кілька рядків таблиці (однаковий uid). Скільки рядків таблиці
+    // зникає з нашої волі насправді — стільки й кажемо йому: інакше навмисне
+    // видалення вважалось втратою, запис зупинявся, і видалені вильоти поверталися
+    const _qDel = state.queue.filter(o => o.op === 'del').length;
+    const _gone = remote.filter(r => delUids.has(r.uid)).length;
+    await syncRecordsToAPI(remote.length, Math.max(0, _gone - _qDel));
     // Списки, змінені офлайн, теж мають поїхати в таблицю
     if (_listsDirty()) await _uploadLists();
     state.queue = [];
