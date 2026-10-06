@@ -532,10 +532,10 @@
     .btn-stencil, [class*="btn-"], .nav-btn, .btn-archive, .nav-btn-archive { transform: none !important; box-shadow: none !important; }
     .btn-stencil:active, .btn-stencil.active, .btn-stencil.on,
     [class*="btn-"]:active, [class*="btn-"].active, [class*="btn-"].pressing,
-    .nav-btn:active, .nav-btn.pressing, .btn-archive:active, .btn-archive.pressing { box-shadow: inset 0 4px 6px rgba(0,0,0,0.45) !important; }
+    .nav-btn:active, .nav-btn.pressing, .btn-archive:active, .btn-archive.pressing, .btn-hold.hold { box-shadow: inset 0 4px 6px rgba(0,0,0,0.45) !important; }
     #toTopBtn.show.active { transform: none; }
     /* зелені кнопки (+, ЗБЕРЕГТИ, ПОПЕРЕДНІЙ, стрілка вставки): під час натискання текст і значок чорні */
-    .btn-green:active, .btn-green.active, #form-prev:active, button[title="Вставити з буфера"]:active, #edit-save-top:active, .modal-box.edit-wide button[onclick="closeModal()"]:active { color: #000 !important; text-shadow: none !important; }
+    .btn-green:active, .btn-green.active, .btn-hold.hold, #form-prev:active, button[title="Вставити з буфера"]:active, #edit-save-top:active, .modal-box.edit-wide button[onclick="closeModal()"]:active { color: #000 !important; text-shadow: none !important; }
     .btn-stencil.chk-btn { background: #2c4666; border-color: #3d5f87; color: var(--yellow); box-shadow: none; }
     .btn-stencil.chk-btn, .btn-stencil.chk-btn:active { transform: none; transition: background 0.1s, border-color 0.1s, color 0.1s, box-shadow 0.1s; }
     .btn-stencil.chk-btn.on { transform: none; box-shadow: inset 0 4px 6px rgba(0,0,0,0.45); background: #5599dd; border-color: #7ab3ec; color: #000; }
@@ -641,7 +641,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-204';
+const APP_VER = 'v.26.10-205';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5795,6 +5795,36 @@ function _sizeArchRot() {
 }
 window.addEventListener('resize', _sizeArchRot, { passive: true });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { _sizeListCols(); _sizeArchRot(); _syncChkHeight(); });
+
+// Кнопки, що віджимаються самі (+, стрілка вставки, ПОПЕРЕДНІЙ, ЗБЕРЕГТИ, галочка, хрестик):
+// ефект натискання (чорний текст, втоплена) тримається ще 2 с після відпускання.
+// Після кліку сторінка часто перемальовується й кнопка створюється наново, тож
+// «утримання» запам'ятовується за підписом і ставиться на нову кнопку, поки не мине час.
+const _HOLD_MS = 2000;
+const _HOLD_SEL = '.btn-green, #form-prev, button[title="Вставити з буфера"], #edit-save-top, .modal-box.edit-wide button[onclick="closeModal()"]';
+let _holdSig = null, _holdUntil = 0, _holdTimer = null;
+function _holdSigOf(b) { return (b.id || '') + '|' + (b.getAttribute('onclick') || '') + '|' + (b.getAttribute('title') || '') + '|' + (b.textContent || '').trim(); }
+function _holdApply() {
+    const on = _holdSig && Date.now() < _holdUntil;
+    document.querySelectorAll('button.btn-hold').forEach(b => {
+        const want = on && _holdSigOf(b) === _holdSig;
+        if (b.classList.contains('hold') !== want) b.classList.toggle('hold', want);
+    });
+}
+document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest(_HOLD_SEL);
+    if (!b || b.disabled) return;
+    b.classList.add('btn-hold');
+    _holdSig = _holdSigOf(b); _holdUntil = Date.now() + _HOLD_MS;
+    b.classList.add('hold');
+    clearTimeout(_holdTimer);
+    _holdTimer = setTimeout(() => { _holdSig = null; _holdApply(); }, _HOLD_MS);
+}, true);
+new MutationObserver(() => {
+    if (!_holdSig) return;
+    document.querySelectorAll(_HOLD_SEL).forEach(b => { if (_holdSigOf(b) === _holdSig) b.classList.add('btn-hold'); });
+    _holdApply();
+}).observe(document.documentElement, { childList: true, subtree: true });
 
 // Кнопки вікна РЕДАГУВАННЯ робимо квадратними. Тінь під кнопкою не рахується —
 // вона малюється поза межами самої кнопки. Виняток — «+» та ЗБЕРЕГТИ (data-sq="0").
