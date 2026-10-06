@@ -646,7 +646,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-214';
+const APP_VER = 'v.26.10-215';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5293,20 +5293,25 @@ function _fullDT(r) {
 // записом рахуємо, скільки рядків зараз в аркуші. Записати менше, ніж там є,
 // можна лише настільки, наскільки це пояснюють видалення з черги. Усе інше —
 // ознака, що в пам'яті не ті дані, і тоді краще не писати зовсім
+// uid вильотів, які користувач видалив у цьому сеансі: охоронець не мусить вважати їх втратою
+const _userDel = new Set();
 async function _guardShrink(n, remoteCount, nowDel) {
-    if (remoteCount === undefined) {
-        try { remoteCount = ((await apiGet('ГОЛОВНА!A2:A')) || []).length; }
-        catch (e) { return; }                 // не дізнались — не заважаємо
-    }
-    // видалення з черги (офлайн) плюс те, яке відбувається цієї миті
-    const del = (state.queue || []).filter(o => o.op === 'del').length + (nowDel || 0);
-    const lost = remoteCount - del - n;
-    // жодного рядка губити не можна: зупиняємось на будь-якій нестачі, якої
-    // не пояснюють видалення з черги
-    if (lost < 1) return;
-    throw new Error('ЗАПИС ЗУПИНЕНО\n\nВ таблиці ' + remoteCount + ' '
-        + _vyl(remoteCount) + ', а застосунок зібрався записати ' + n + '.\n'
-        + 'Різниця в ' + lost + ' — це схоже на втрату, а не на вашу правку.\n\n'
+    // Рахуємо не кількості (вони розходились: один uid знімає кілька рядків,
+    // видалення могло не дійти до таблиці), а САМІ рядки: які рядки таблиці
+    // відсутні в пам'яті й чи видалив їх користувач
+    let remote;
+    try { remote = _parseMainRows(await apiGet('ГОЛОВНА')); }
+    catch (e) { return; }                     // не дізнались — не заважаємо
+    const have = new Set(state.records.map(r => r.uid || _contentUid(r)));
+    const okDel = new Set((state.queue || []).filter(o => o.op === 'del').map(o => o.uid));
+    _userDel.forEach(u => okDel.add(u));
+    const lost = remote.filter(r => !have.has(r.uid) && !okDel.has(r.uid));
+    // жодного рядка губити не можна: зупиняємось, якщо в таблиці є рядок, якого
+    // немає в пам'яті і який користувач не видаляв
+    if (!lost.length) return;
+    throw new Error('ЗАПИС ЗУПИНЕНО\n\nВ таблиці ' + remote.length + ' '
+        + _vyl(remote.length) + ', а застосунок зібрався записати ' + n + '.\n'
+        + lost.length + ' з них застосунок не бачить, і ти їх не видаляв — це схоже на втрату, а не на твою правку.\n\n'
         + 'У таблицю нічого не записано. Перезавантажте застосунок і подивіться, '
         + 'чи всі вильоти на місці.');
 }
@@ -5358,6 +5363,7 @@ async function confirmDeleteRecord() {
     if (idx === null || idx === undefined) return;
     const gone = state.records[idx];
     const uid = (gone && gone.uid) || (gone && _contentUid(gone));
+    if (uid) _userDel.add(uid);
     state.records.splice(idx, 1);
     state.pendingRecordIdx = null;
     closeModal(); render();
