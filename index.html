@@ -646,7 +646,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-216';
+const APP_VER = 'v.26.10-217';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2515,11 +2515,48 @@ function generateArchiveReport(recs, periodLabel) {
     const _dead = _allItems.filter(p => p.v && p.v.h && _pt(p.v.p || 0) === 0);
     const _live = _allItems.filter(p => _dead.indexOf(p) < 0);
     _live.forEach((p,i)=>lines.push('  '+(i+1)+'. '+p.t+' - '+p.n+' шт'+_statTail(p.v)+(i===_live.length-1?'.':';')));
-    if (_dead.length) {
-        const _cn = recs.filter(r => r.v && (r.v.state === 'no' || r.v.state === 'pack')).length;
-        lines.push('');
-        lines.push('Скасовано ' + _cn + ' ' + _vyl(_cn) + ', з них повністю скасовані наступні цілі:');
-        _dead.forEach((p,i)=>lines.push('  '+(i+1)+'. '+p.t+' - '+p.n+' шт'+_statTail(p.v)+(i===_dead.length-1?'.':';')));
+    // Повністю скасовані вильоти (ВІДХИЛЕНО й ДУБЛЮЮЧИЙ) — окремим переліком
+    // їхніх цілей: щоб було видно, що саме не зараховано (рішення користувача:
+    // «де повністю скасовані?»). Групи з нулем балів у основному переліку теж
+    // лишаються лише тут
+    const _cxRecs = anyV ? recs.filter(r => r.v && (r.v.state === 'no' || r.v.state === 'pack')) : [];
+    if (_cxRecs.length) {
+        const _cx = {};
+        _cxRecs.forEach(r => {
+            const P = _arRowParts(r);
+            const tg = r.target.split(', '), rs = r.result.split(', ');
+            tg.forEach((t, idx) => {
+                const tt = t.trim(), res = (rs[idx] || '').trim();
+                if (!tt || !(res === 'знищено' || res === 'пошкоджено')) return;
+                let name, n = 1;
+                if (tt.toLowerCase().startsWith('ос')) {
+                    name = _osN; n = ((parseInt(r.qty200) || 0) + (parseInt(r.qty300) || 0)) || 1;
+                } else {
+                    const _tP = tt.split(' '), _tL = _tP[_tP.length - 1];
+                    const ab = /^\d+$/.test(_tL) ? _tP.slice(0, -1).join(' ') : tt;
+                    const sce = Object.entries(state.scoreTable).find(([a, sc]) => a.toLowerCase() === ab.toLowerCase() || (sc.fullName && sc.fullName.toLowerCase() === ab.toLowerCase()));
+                    name = sce ? (sce[1].hName || sce[1].fullName) : ab;
+                }
+                const key = name.toUpperCase() + ' ' + res;
+                const g = _cx[key] || (_cx[key] = { t: name + ' ' + res, n: 0, p: 0, no: 0, dup: 0 });
+                g.n += n;
+                let o = null; try { o = _tgOwn(r, idx, P); } catch (e) {}
+                if (o) g.p += o;
+                if (r.v.state === 'pack') g.dup++; else g.no++;
+            });
+        });
+        const _cl = Object.values(_cx).sort((x, y) => y.n - x.n);
+        if (_cl.length) {
+            const _cn = _cxRecs.length;
+            lines.push('');
+            lines.push('Повністю скасовано ' + _cn + ' ' + _vyl(_cn) + ' та наступні цілі:');
+            _cl.forEach((g, i) => {
+                const cnt = [g.no ? 'відхилено ' + g.no : '', g.dup ? 'дублюючих ' + g.dup : ''].filter(Boolean).join(', ');
+                lines.push('  ' + (i + 1) + '. ' + g.t + ' - ' + g.n + ' шт'
+                    + (g.p > 0 ? ', -' + _pt(g.p) + ' ' + _bal(_pt(g.p)) : '')
+                    + (cnt ? ' (' + cnt + ')' : '') + (i === _cl.length - 1 ? '.' : ';'));
+            });
+        }
     }
     // ефективність: частка вильотів, де було хоч одне уражене (знищено/пошкоджено)
     // ціль, від усіх вильотів; скільки цілей уражено за один виліт, значення не має
