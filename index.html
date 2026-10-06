@@ -532,6 +532,7 @@
     .btn-stencil, [class*="btn-"], .nav-btn, .btn-archive, .nav-btn-archive { transform: none !important; box-shadow: none !important; }
     .btn-stencil:active, .btn-stencil.active, .btn-stencil.on,
     [class*="btn-"]:active, [class*="btn-"].active, [class*="btn-"].pressing,
+    button[onclick^="state.selReport="].btn-yellow, button[onclick^="state.selDate="].btn-yellow, button[onclick^="_pickSheet("].btn-yellow { box-shadow: inset 0 4px 6px rgba(0,0,0,0.45) !important; }
     .nav-btn:active, .nav-btn.pressing, .nav-btn.active, .btn-archive:active, .btn-archive.pressing, .btn-hold.hold { box-shadow: inset 0 4px 6px rgba(0,0,0,0.45) !important; }
     #toTopBtn.show.active { transform: none; }
     /* зелені кнопки (+, ЗБЕРЕГТИ, ПОПЕРЕДНІЙ, стрілка вставки): під час натискання текст і значок чорні */
@@ -645,7 +646,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-211';
+const APP_VER = 'v.26.10-212';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
