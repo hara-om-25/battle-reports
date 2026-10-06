@@ -646,7 +646,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-215';
+const APP_VER = 'v.26.10-216';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1447,9 +1447,7 @@ function _initVerMark() {
             const mw = Math.ceil(Math.max(_a.getBoundingClientRect().width, _l.getBoundingClientRect().width)) + 'px';
             _a.style.minWidth = _l.style.minWidth = mw;
         }
-        // Напис потрібен лише там, де дивляться, чи свіжий застосунок, —
-        // на ФОРМІ. На решті вкладок він тільки висить збоку
-        if (state.page !== 'form') { v.style.visibility = 'hidden'; return; }
+        // номер версії показуємо на всіх сторінках (рішення користувача)
         const nav = document.querySelector('nav.crate');
         const btn = nav && nav.querySelector('button.logout');
         if (!nav || !btn) { v.style.visibility = 'hidden'; return; }
