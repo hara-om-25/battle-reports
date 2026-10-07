@@ -648,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-224';
+const APP_VER = 'v.26.10-225';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1176,6 +1176,7 @@ async function pushChange(op, uid, rec, chg) {
     queueOp(op, uid, rec, chg);
     saveLocal();
     try {
+        await _addIdle();
         await syncRecordsToAPI(undefined, 0);
         // записано — зміна більше не «незбережена» (чужий запис черги не чіпаємо)
         if (!_had) { const k = state.queue.findIndex(o => o.uid === uid); if (k >= 0) state.queue.splice(k, 1); }
@@ -1216,6 +1217,7 @@ function _applyQueue(base) {
 
 // Повне звіряння в обидва боки: нічого не губиться
 async function reconcileSync() {
+    await _addIdle();   // фоновий запис нового вильоту має закінчитись першим
     const mainRows = await apiGet('ГОЛОВНА');
     const remote = _parseMainRows(mainRows);
     const delUids = new Set(state.queue.filter(o => o.op === 'del').map(o => o.uid));
@@ -5186,56 +5188,107 @@ async function add() {
     rec.uid = _newUid();
     state.records.push(rec);
     state.form = {targets:[], q200:0, q300:0, coord:'', drone:'', ammo:'', newTarget:'', newResult:''};
+    // Виліт одразу в чергу (як і всі зміни), форма відразу вільна. Запис у таблицю
+    // йде у фоні, по одному: два підряд обчислили б один «перший вільний рядок»
+    queueOp('add', rec.uid, rec);
     saveLocal();
 
     if (!state.online || !navigator.onLine) {
-        queueOp('add', rec.uid, rec);
         state.online = false;
         showAlert('💾 Запис збережено локально (' + state.queue.length + ').\nСинхронізується після появи інтернету.');
         render();
         return;
     }
+    render();
+    _addChain = _addChain.then(() => _writeAddRow(rec)).catch(() => {});
+}
+
+// Черга фонових записів нових вильотів. Усе, що чіпає таблицю (стрілка,
+// правка, видалення), спершу чекає, поки вона спорожніє
+let _addChain = Promise.resolve();
+let _addPending = 0;
+function _addIdle() { return _addChain; }
+
+async function _writeAddRow(rec) {
+    _addPending++;
+    const snap = JSON.stringify(rec);
     try {
+        const k0 = state.queue.findIndex(o => o.uid === rec.uid);
+        if (k0 < 0 && !state.records.some(r => r.uid === rec.uid)) return;   // скасовано до початку запису
+        if (!state.online || !navigator.onLine) return;
         // НЕ `append`: Google клав такий рядок не з колонки A, а правіше (з колонки P:
         // у шапці P1 є «Чекун», і він бачить там окрему таблицю). Тому рахуємо
         // перший вільний рядок самі й пишемо в нього явно, A..P
         const _colA = await apiGet('ГОЛОВНА!A:A');
         const _rowN = _colA.length + 1;
-        const _ap = await apiUpdate('ГОЛОВНА!A' + _rowN + ':P' + _rowN, [[
+        await apiUpdate('ГОЛОВНА!A' + _rowN + ':P' + _rowN, [[
             rec.reportNum, rec.datetime, rec.target,
             rec.qty200, rec.qty300,
             rec.coordinates, rec.drone, rec.ammo, rec.result,
             rec.points, rec.uid, '', '', '', '', rec.chk ? 1 : ''
         ]]);
-        if (_ap && !_ap.updatedRange) _ap.updatedRange = 'ГОЛОВНА!A' + _rowN + ':P' + _rowN;
         // Перевірка: читаємо рядок назад і дивимось, що там наш uid. Google міг
         // відповісти «ок» і покласти рядок не туди
         const _rng = 'ГОЛОВНА!A' + _rowN + ':K' + _rowN;
-        let _where = _rng ? _rng.replace(/^.*!/, '') : 'невідомо';
         let _ok = false;
-        if (_rng) {
-            try {
-                const _back = await apiGet(_rng);
-                _ok = !!(_back[0] && String(_back[0][10] || '').trim() === rec.uid);
-            } catch (e) { _ok = false; }
-        }
-        saveLocal();
+        try {
+            const _back = await apiGet(_rng);
+            _ok = !!(_back[0] && String(_back[0][10] || '').trim() === rec.uid);
+        } catch (e) { _ok = false; }
         if (_ok) {
-            showAlert('✅ Запис додано і синхронізовано!');   // адресу рядка показуємо лише при збої (нижче)
+            // Рядок у таблиці. Поки писали, виліт могли змінити чи видалити —
+            // тоді в черзі лишається правка/видалення вже існуючого рядка
+            const k = state.queue.findIndex(o => o.uid === rec.uid);
+            if (k >= 0) {
+                const q = state.queue[k];
+                if (q.op === 'add' && JSON.stringify(q.rec) === snap) state.queue.splice(k, 1);
+                else if (q.op === 'add') state.queue[k] = { op: 'edit', uid: rec.uid, rec: q.rec, chg: q.chg || [] };
+            } else if (!state.records.some(r => r.uid === rec.uid)) {
+                state.queue.push({ op: 'del', uid: rec.uid, rec: rec, chg: [] });
+            }
+            saveLocal();
+            _toast('ЗАПИСАНО');
         } else {
-            queueOp('add', rec.uid, rec);
-            showAlert('⚠️ Таблиця відповіла «ок», але рядка на місці немає (' + _where + ', таблиця …' + SHEET_ID.slice(-6) + ').\n\nЗапис збережено на пристрої, він піде в таблицю при наступній синхронізації. Не оновлюйте сторінку, натисніть кнопку завантаження (стрілка).');
+            _failBar('⚠️ Виліт не записано в таблицю: Google відповів «ок», але рядка на місці немає (A' + _rowN + ', таблиця …' + SHEET_ID.slice(-6) + '). Він у черзі на пристрої — натисніть стрілку вивантаження. Сторінку не оновлюйте.');
         }
-    } catch(err) {
-        queueOp('add', rec.uid, rec);
+    } catch (err) {
         if (_isNetErr(err)) {
             state.online = false;
-            showAlert('💾 Запис збережено локально (' + state.queue.length + ').\nСинхронізується після появи інтернету.');
+            _failBar('⚠️ Виліт не записано в таблицю: немає мережі. Він у черзі на пристрої й піде при з\'єднанні (стрілка).');
         } else {
-            showAlert('⚠️ Запис додано локально, але не синхронізовано: ' + err.message);
+            _failBar('⚠️ Виліт не записано в таблицю: ' + err.message + '. Він у черзі на пристрої — натисніть стрілку вивантаження.');
         }
+    } finally {
+        _addPending--;
+        _softRender();
     }
-    render();
+}
+
+// Перемальовка після фонового запису: не під час набору тексту в полі —
+// інакше пропаде курсор. Повторюємо, поки поле не відпустять
+function _softRender(n) {
+    const a = document.activeElement;
+    const typing = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
+    if (!typing || (n || 0) >= 20) { render(); return; }
+    setTimeout(() => _softRender((n || 0) + 1), 1500);
+}
+
+// Збій фонового запису не зникає сам: стоїть під меню, доки його не закриють
+function _failBar(msg) {
+    let b = document.getElementById('br-fail');
+    if (!b) {
+        b = document.createElement('div');
+        b.id = 'br-fail';
+        b.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);z-index:60;max-width:min(92vw,640px);'
+            + 'background:#3a1a14;color:#f2d9c9;border:2px solid #b8742a;padding:10px 40px 10px 14px;'
+            + 'font-size:0.85em;line-height:1.35;box-shadow:0 6px 18px rgba(0,0,0,.5)';
+        b.innerHTML = '<span id="br-fail-t"></span><button onclick="this.parentNode.remove()" '
+            + 'style="position:absolute;top:4px;right:6px;background:none;border:0;color:#f2d9c9;font-size:1.3em;cursor:pointer">✕</button>';
+        document.body.appendChild(b);
+    }
+    document.getElementById('br-fail-t').textContent = msg;
+    const nav = document.querySelector('nav.crate');
+    b.style.top = ((nav ? nav.getBoundingClientRect().bottom : 8) + 12) + 'px';
 }
 
 function newReport() {
