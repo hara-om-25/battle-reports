@@ -220,6 +220,8 @@
     }
     @keyframes ico-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     .ico-spin { animation: ico-spin 0.9s linear infinite; transform-origin: 50% 50%; }
+    /* шестерня крутиться навколо своєї крапки (12; 10,89 з 24), поки йде обмін із таблицею */
+    .ico-spin-gear { animation: ico-spin 1.6s linear infinite; transform-origin: 50% 45.4%; }
     .btn-black:active, .btn-black.active {
       background: #24281f;
       box-shadow: 0 2px 0 #0b0d09, 0 4px 8px rgba(0,0,0,0.4);
@@ -646,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-217';
+const APP_VER = 'v.26.10-218';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -4968,7 +4970,7 @@ function icoPencil(px){ return _ico(px, _icoPath('M4.5 19.5L4.5 15.5L15.5 4.5L19
 // більший за руну двічі поспіль (висота 23,9 px проти 19,6) — так вирішив
 // користувач, бо вирівняна по висоті вона виглядала меншою. Верх тому виходить
 // за межу свого значка, і без overflow:visible його б обрізало
-function icoGear(px) {
+function icoGear(px, spin) {
     const d = 'M5.59 14.29 L2.03 14.29 L2.03 7.50 L5.59 7.50 L5.85 7.03 L4.07'
         + ' 3.95 L9.95 0.56 L11.73 3.64 L12.27 3.64 L14.05 0.56 L19.93 3.95'
         + ' L18.15 7.03 L18.41 7.50 L21.97 7.50 L21.97 14.29 L18.41 14.29'
@@ -4976,7 +4978,8 @@ function icoGear(px) {
         + ' L9.95 21.23 L4.07 17.83 L5.85 14.75 Z';
     const r = (_ICO_W / 2) * 24 / px;
     return _ico(px, _icoPath(d) + '<circle cx="12" cy="10.89" r="' + r.toFixed(3) + '" fill="currentColor"/>')
-        .replace('style="display:block"', 'style="display:block;overflow:visible"');
+        .replace('style="display:block"', 'style="display:block;overflow:visible"')
+        .replace('<svg ', '<svg class="' + (spin ? 'ico-spin-gear' : '') + '" ');
 }
 function icoTrash(px) { return _ico(px, _icoPath('M4 7.5L20 7.5') + _icoPath('M9.5 7.5L9.5 4.5L14.5 4.5L14.5 7.5') + _icoPath('M6.5 7.5L7.5 20L16.5 20L17.5 7.5')); }
 
@@ -6418,7 +6421,7 @@ function render() {
             <div class="flex gap-2 items-center flex-wrap nav-btns">
                 <button onclick="state.page='form';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='form'?'active':''}">ФОРМА</button>
                 <button onclick="state.page='reports';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='reports'?'active':''}">ЗВІТИ</button>
-                <button onclick="manualPush()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="font-size:${state.queue.length?'1.05em':'1.5em'};font-weight:${state.queue.length?'700':'400'};letter-spacing:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box;border-width:1px;box-shadow:0 4px 0 #2a2404,0 6px 12px rgba(0,0,0,0.4)${state.queue.length?';background:#8a4a2a;color:#fff;box-shadow:0 4px 0 #3d1c08,0 6px 12px rgba(0,0,0,0.4)':''}" title="${state.queue.length?state.queue.length+' незбережених записів — натисніть, щоб синхронізувати':'Записати та синхронізувати дані в таблицю'}">${state.syncing?spinnerSvg(23):(state.queue.length||tiwazSvg(23))}</button><button onclick="goToArchive()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn-archive ${state.page==='archive'?'active':''}">АРХІВ</button><button onclick="showSettings()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="margin-left:auto;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box;border-width:1px;box-shadow:0 4px 0 #2a2404,0 6px 12px rgba(0,0,0,0.4)" title="Налаштування">${icoGear(23)}</button><button onclick="logout()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn logout">ВИЙТИ</button>
+                <button onclick="manualPush()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="font-size:${state.queue.length?'1.05em':'1.5em'};font-weight:${state.queue.length?'700':'400'};letter-spacing:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box;border-width:1px;box-shadow:0 4px 0 #2a2404,0 6px 12px rgba(0,0,0,0.4)${state.queue.length?';background:#8a4a2a;color:#fff;box-shadow:0 4px 0 #3d1c08,0 6px 12px rgba(0,0,0,0.4)':''}" title="${state.queue.length?state.queue.length+' незбережених записів — натисніть, щоб синхронізувати':'Записати та синхронізувати дані в таблицю'}">${state.syncing?spinnerSvg(23):(state.queue.length||tiwazSvg(23))}</button><button onclick="goToArchive()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn-archive ${state.page==='archive'?'active':''}">АРХІВ</button><button onclick="showSettings()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="margin-left:auto;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box;border-width:1px;box-shadow:0 4px 0 #2a2404,0 6px 12px rgba(0,0,0,0.4)" title="Налаштування">${icoGear(23, state.syncing)}</button><button onclick="logout()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn logout">ВИЙТИ</button>
             </div>
         </div>
     </nav>`;
