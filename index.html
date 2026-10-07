@@ -648,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-220';
+const APP_VER = 'v.26.10-221';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2761,6 +2761,10 @@ function _gearApply() {
     const on = Date.now() < _gearUntil || _gearHold > 0;
     document.querySelectorAll('svg.ico-gear').forEach(e => e.classList.toggle('ico-spin-gear', on));
 }
+document.addEventListener('click', e => {
+    if (!(e.target.closest && e.target.closest('button, .btn-stencil'))) return;
+    _gearUntil = Date.now() + 800; _gearApply(); setTimeout(_gearApply, 850);
+}, true);
 async function goToArchive(page) {
     _gearHold++; _gearApply();
     try { await _goToArchive(page); } finally { _gearHold--; _gearApply(); }
