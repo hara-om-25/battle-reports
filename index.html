@@ -648,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-227';
+const APP_VER = 'v.26.10-228';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1467,7 +1467,8 @@ function _initVerMark() {
         // а наступну за ним обгортку, яка не липне
         const sy = window.pageYOffset, sx = window.pageXOffset;
         const _sib = nav.nextElementSibling;
-        let y = _sib ? _sib.getBoundingClientRect().top + 16 : nav.getBoundingClientRect().bottom + 32;
+        // посередині 32-пікселевого проміжку під меню (рішення користувача малюнком)
+        let y = _sib ? _sib.getBoundingClientRect().top - h / 2 : nav.getBoundingClientRect().bottom + (32 - h) / 2;
         if (vw <= 640) {
             // Телефон (рішення користувача малюнком): по центру екрана, посередині
             // проміжку між меню й першим ящиком; там тексту немає, тож не ховаємо
