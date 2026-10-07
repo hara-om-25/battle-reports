@@ -648,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-222';
+const APP_VER = 'v.26.10-223';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1428,7 +1428,6 @@ function _initToTop() {
 // сторінці своє (ЗВІТИ лишають 10%, СПИСКИ 5%), тож міряємо його так само,
 // як для кнопки ВГОРУ, і ставимо напис посередині просвіту. Живе поза #app,
 // тож перемальовування його не чіпає
-let _vmBase = null;
 function _initVerMark() {
     if (document.getElementById('verMark')) return;
     const v = document.createElement('div');
@@ -1460,12 +1459,11 @@ function _initVerMark() {
         // по центру кнопки ВИЙТИ, під самим меню; на вузькому екрані кнопка
         // стоїть скраю, тож напис притримуємо в межах екрана
         const x = Math.min(Math.max(b.left + (b.width - w) / 2, 4), Math.max(4, vw - w - 4));
-        // Напис їде зі сторінкою (рішення користувача: залазив на кнопки), тож
-        // міряємо в координатах документа. Прилипле меню зсувається, тому
-        // «природний» низ меню беремо, поки воно не прилипло, і запам'ятовуємо
-        const sy = window.pageYOffset, sx = window.pageXOffset, nr = nav.getBoundingClientRect();
-        if (nr.top >= 16.5 || _vmBase == null) _vmBase = nr.bottom + sy;
-        const y = _vmBase + 12 - sy;
+        // Напис їде зі сторінкою (координати документа), а верх його стоїть на
+        // лінії верху першого ящика під меню (рішення користувача малюнком)
+        const sy = window.pageYOffset, sx = window.pageXOffset;
+        const _c = document.querySelector('#app .crate:not(nav)');
+        const y = (_c ? _c.getBoundingClientRect().top : nav.getBoundingClientRect().bottom + 12);
         // На вузькому екрані вміст починається одразу під меню, і напис ліг би
         // просто на текст. Тому щоразу міряємо, чи не накриває він котрийсь
         // ящик, — накриває, отже його тут просто немає
