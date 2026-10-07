@@ -648,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-218';
+const APP_VER = 'v.26.10-219';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2756,7 +2756,16 @@ function _startPage() {
 }
 function _afterStartPage() { if (state.page === 'archive' || state.page === 'service') goToArchive(state.page); }
 
+let _prevPage = null, _gearUntil = 0, _gearHold = 0;
+function _gearApply() {
+    const on = Date.now() < _gearUntil || _gearHold > 0;
+    document.querySelectorAll('svg.ico-gear').forEach(e => e.classList.toggle('ico-spin-gear', on));
+}
 async function goToArchive(page) {
+    _gearHold++; _gearApply();
+    try { await _goToArchive(page); } finally { _gearHold--; _gearApply(); }
+}
+async function _goToArchive(page) {
     state.page = page || 'archive';
     // Офлайн: показуємо лише збережені локально назви архівів
     if (!state.online || !navigator.onLine) {
@@ -4979,7 +4988,7 @@ function icoGear(px, spin) {
     const r = (_ICO_W / 2) * 24 / px;
     return _ico(px, _icoPath(d) + '<circle cx="12" cy="10.89" r="' + r.toFixed(3) + '" fill="currentColor"/>')
         .replace('style="display:block"', 'style="display:block;overflow:visible"')
-        .replace('<svg ', '<svg class="' + (spin ? 'ico-spin-gear' : '') + '" ');
+        .replace('<svg ', '<svg class="ico-gear' + (spin ? ' ico-spin-gear' : '') + '" ');
 }
 function icoTrash(px) { return _ico(px, _icoPath('M4 7.5L20 7.5') + _icoPath('M9.5 7.5L9.5 4.5L14.5 4.5L14.5 7.5') + _icoPath('M6.5 7.5L7.5 20L16.5 20L17.5 7.5')); }
 
@@ -6394,6 +6403,7 @@ function _pckConfirm(){
 
 function render() {
     const app = document.getElementById('app');
+    if (state.page !== _prevPage) { _prevPage = state.page; _gearUntil = Date.now() + 800; setTimeout(_gearApply, 850); }
     try { if (state.user && ['form', 'reports', 'archive', 'lists', 'service'].includes(state.page)) localStorage.setItem('br_page', state.page); } catch (e) {}
     
     if (state.page === 'login' || !state.user) {
@@ -6421,7 +6431,7 @@ function render() {
             <div class="flex gap-2 items-center flex-wrap nav-btns">
                 <button onclick="state.page='form';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='form'?'active':''}">ФОРМА</button>
                 <button onclick="state.page='reports';render()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn ${state.page==='reports'?'active':''}">ЗВІТИ</button>
-                <button onclick="manualPush()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="font-size:${state.queue.length?'1.05em':'1.5em'};font-weight:${state.queue.length?'700':'400'};letter-spacing:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box;border-width:1px;box-shadow:0 4px 0 #2a2404,0 6px 12px rgba(0,0,0,0.4)${state.queue.length?';background:#8a4a2a;color:#fff;box-shadow:0 4px 0 #3d1c08,0 6px 12px rgba(0,0,0,0.4)':''}" title="${state.queue.length?state.queue.length+' незбережених записів — натисніть, щоб синхронізувати':'Записати та синхронізувати дані в таблицю'}">${state.syncing?spinnerSvg(23):(state.queue.length||tiwazSvg(23))}</button><button onclick="goToArchive()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn-archive ${state.page==='archive'?'active':''}">АРХІВ</button><button onclick="showSettings()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="margin-left:auto;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box;border-width:1px;box-shadow:0 4px 0 #2a2404,0 6px 12px rgba(0,0,0,0.4)" title="Налаштування">${icoGear(23, state.syncing)}</button><button onclick="logout()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn logout">ВИЙТИ</button>
+                <button onclick="manualPush()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="font-size:${state.queue.length?'1.05em':'1.5em'};font-weight:${state.queue.length?'700':'400'};letter-spacing:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box;border-width:1px;box-shadow:0 4px 0 #2a2404,0 6px 12px rgba(0,0,0,0.4)${state.queue.length?';background:#8a4a2a;color:#fff;box-shadow:0 4px 0 #3d1c08,0 6px 12px rgba(0,0,0,0.4)':''}" title="${state.queue.length?state.queue.length+' незбережених записів — натисніть, щоб синхронізувати':'Записати та синхронізувати дані в таблицю'}">${state.syncing?spinnerSvg(23):(state.queue.length||tiwazSvg(23))}</button><button onclick="goToArchive()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn-archive ${state.page==='archive'?'active':''}">АРХІВ</button><button onclick="showSettings()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim" style="margin-left:auto;display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 8px;box-sizing:border-box;border-width:1px;box-shadow:0 4px 0 #2a2404,0 6px 12px rgba(0,0,0,0.4)" title="Налаштування">${icoGear(23)}</button><button onclick="logout()" onmousedown="this.classList.add('pressing')" onmouseup="this.classList.remove('pressing')" ontouchstart="this.classList.add('pressing')" ontouchend="this.classList.remove('pressing')" class="nav-btn logout">ВИЙТИ</button>
             </div>
         </div>
     </nav>`;
@@ -7202,7 +7212,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
     }
     
     app.innerHTML = h;
-    _syncListsBarTop();
+    _gearApply(); _syncListsBarTop();
     _sizeListCols();
     _sizeArchRot();
     _syncChkHeight();
