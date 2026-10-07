@@ -648,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-221';
+const APP_VER = 'v.26.10-222';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1428,6 +1428,7 @@ function _initToTop() {
 // сторінці своє (ЗВІТИ лишають 10%, СПИСКИ 5%), тож міряємо його так само,
 // як для кнопки ВГОРУ, і ставимо напис посередині просвіту. Живе поза #app,
 // тож перемальовування його не чіпає
+let _vmBase = null;
 function _initVerMark() {
     if (document.getElementById('verMark')) return;
     const v = document.createElement('div');
@@ -1438,7 +1439,7 @@ function _initVerMark() {
     // Напис тримається меню, а не сторінки: меню прилипле (sticky top-4),
     // тож під час гортання воно стоїть, а вміст їде під ним. Лежав би напис
     // у сторінці — поїхав би разом зі ЗВІТОМ і відстав би від кнопки
-    v.style.cssText = 'position:fixed;z-index:25;color:var(--text-dim);'
+    v.style.cssText = 'position:absolute;z-index:25;color:var(--text-dim);'
         + 'font-size:0.8em;white-space:nowrap;pointer-events:none';
     document.body.appendChild(v);
     const place = () => {
@@ -1459,7 +1460,12 @@ function _initVerMark() {
         // по центру кнопки ВИЙТИ, під самим меню; на вузькому екрані кнопка
         // стоїть скраю, тож напис притримуємо в межах екрана
         const x = Math.min(Math.max(b.left + (b.width - w) / 2, 4), Math.max(4, vw - w - 4));
-        const y = nav.getBoundingClientRect().bottom + 12;
+        // Напис їде зі сторінкою (рішення користувача: залазив на кнопки), тож
+        // міряємо в координатах документа. Прилипле меню зсувається, тому
+        // «природний» низ меню беремо, поки воно не прилипло, і запам'ятовуємо
+        const sy = window.pageYOffset, sx = window.pageXOffset, nr = nav.getBoundingClientRect();
+        if (nr.top >= 16.5 || _vmBase == null) _vmBase = nr.bottom + sy;
+        const y = _vmBase + 12 - sy;
         // На вузькому екрані вміст починається одразу під меню, і напис ліг би
         // просто на текст. Тому щоразу міряємо, чи не накриває він котрийсь
         // ящик, — накриває, отже його тут просто немає
@@ -1469,8 +1475,8 @@ function _initVerMark() {
             if (r.width && r.left < x + w && r.right > x && r.top < y + h && r.bottom > y) hit = true;
         });
         if (hit) { v.style.visibility = 'hidden'; return; }
-        v.style.left = Math.round(x) + 'px';
-        v.style.top = Math.round(y) + 'px';
+        v.style.left = Math.round(x + sx) + 'px';
+        v.style.top = Math.round(y + sy) + 'px';
     };
     window.addEventListener('resize', place, { passive: true });
     window.addEventListener('scroll', place, { passive: true });
