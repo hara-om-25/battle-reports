@@ -648,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-223';
+const APP_VER = 'v.26.10-224';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1459,11 +1459,13 @@ function _initVerMark() {
         // по центру кнопки ВИЙТИ, під самим меню; на вузькому екрані кнопка
         // стоїть скраю, тож напис притримуємо в межах екрана
         const x = Math.min(Math.max(b.left + (b.width - w) / 2, 4), Math.max(4, vw - w - 4));
-        // Напис їде зі сторінкою (координати документа), а верх його стоїть на
-        // лінії верху першого ящика під меню (рішення користувача малюнком)
+        // Напис їде зі сторінкою (координати документа). Висота однакова на всіх
+        // сторінках: нижче за природний низ меню на 32 px (відступ меню 16 +
+        // відступ обгортки 16). Прилипле меню зсувається, тому міряємо не його,
+        // а наступну за ним обгортку, яка не липне
         const sy = window.pageYOffset, sx = window.pageXOffset;
-        const _c = document.querySelector('#app .crate:not(nav)');
-        const y = (_c ? _c.getBoundingClientRect().top : nav.getBoundingClientRect().bottom + 12);
+        const _sib = nav.nextElementSibling;
+        const y = _sib ? _sib.getBoundingClientRect().top + 16 : nav.getBoundingClientRect().bottom + 32;
         // На вузькому екрані вміст починається одразу під меню, і напис ліг би
         // просто на текст. Тому щоразу міряємо, чи не накриває він котрийсь
         // ящик, — накриває, отже його тут просто немає
