@@ -648,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-226';
+const APP_VER = 'v.26.10-227';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1471,11 +1471,12 @@ function _initVerMark() {
         if (vw <= 640) {
             // Телефон (рішення користувача малюнком): по центру екрана, посередині
             // проміжку між меню й першим ящиком; там тексту немає, тож не ховаємо
+            // однаково на всіх сторінках: посередині 32-пікселевого проміжку під меню
+            // (відступ меню 16 + відступ обгортки 16), як на ФОРМІ; ящик тут міряти
+            // не можна — на ЗВІТАХ і АРХІВІ між меню й ящиком стоїть заголовок
             const nb = nav.getBoundingClientRect().bottom;
-            const c1 = document.querySelector('#app .crate:not(nav)');
-            const ct = c1 ? c1.getBoundingClientRect().top : nb + 32;
             x = (vw - w) / 2;
-            y = nb + (ct - nb - h) / 2;
+            y = nb + (32 - h) / 2;
             v.style.visibility = '';
             v.style.left = Math.round(x + sx) + 'px';
             v.style.top = Math.round(y + sy) + 'px';
