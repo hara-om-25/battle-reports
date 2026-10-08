@@ -648,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-260';
+const APP_VER = 'v.26.10-261';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5307,7 +5307,7 @@ function copyPrev() {
 function toggleFormChk() { state.form.chk = !state.form.chk; render(); }
 
 async function add() {
-    if(state.form.targets.length === 0) {
+    if(state.form.targets.length === 0 && !state.form.chk) {
         showAlert('Додайте результат вильоту, навіть якщо ціль не було уражено');
         return;
     }
@@ -6754,7 +6754,7 @@ function render() {
                     </div>
                 </div>
                 
-                <button onclick="add()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim w-full text-lg mt-4" ${state.form.targets.length===0?'disabled style="opacity:0.38;cursor:not-allowed;pointer-events:none"':'' }>ДОДАТИ ЗАПИС</button>
+                <button onclick="add()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim w-full text-lg mt-4" ${(state.form.targets.length===0 && !state.form.chk)?'disabled style="opacity:0.38;cursor:not-allowed;pointer-events:none"':'' }>ДОДАТИ ЗАПИС</button>
             </div>
         </div></div>`;
     }
