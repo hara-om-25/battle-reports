@@ -648,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-241';
+const APP_VER = 'v.26.10-242';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1824,6 +1824,39 @@ function showVerifyPeriodPicker() {
     document.body.appendChild(_ov);
 }
 
+// ДОСТУП: аркуш «@» таблиці. Показуємо вміст і дописуємо новий рядок у колонку A
+async function openAccess() {
+    state.page = 'access';
+    state.access = Object.assign({ rows: [], input: '', busy: false, err: '' }, state.access || {});
+    render();
+    await loadAccess();
+}
+async function loadAccess() {
+    const A = state.access;
+    if (!state.online || !navigator.onLine) { A.err = 'Потрібна мережа'; render(); return; }
+    A.busy = true; A.err = ''; render();
+    try { A.rows = await apiGet("'@'"); }
+    catch (e) { A.err = 'Не вдалося прочитати аркуш «@»: ' + e.message; }
+    A.busy = false; render();
+}
+async function addAccessRow() {
+    const A = state.access;
+    const txt = (A.input || '').trim();
+    if (!txt || A.busy) return;
+    if (!state.online || !navigator.onLine) { A.err = 'Потрібна мережа'; render(); return; }
+    A.busy = true; A.err = ''; render();
+    try {
+        // перший вільний рядок колонки A (не append: див. розділ про додавання вильоту)
+        const col = await apiGet("'@'!A:A");
+        const n = col.length + 1;
+        await apiUpdate("'@'!A" + n, [[txt]], true);
+        A.input = '';
+        A.rows = await apiGet("'@'");
+        _toast('ДОДАНО');
+    } catch (e) { A.err = 'Не вдалося додати: ' + e.message; }
+    A.busy = false; render();
+}
+
 function showSettings() {
     const _ov = document.createElement('div');
     _ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
@@ -1845,6 +1878,8 @@ function showSettings() {
           go: () => { state.page = 'lists'; render(); } },
         { t: 'СЕРВІС', c: 'btn-black', on: true, why: '',
           go: () => goToArchive('service') },
+        { t: 'ДОСТУП', c: 'btn-blue', on: true, why: '',
+          go: () => openAccess() },
         { t: 'е бали', c: 'btn-green', on: Object.keys(state.scoreTable || {}).length > 0,
           why: 'Прайс ще не завантажено — відкрийте застосунок із мережею',
           go: () => showPrices() }
@@ -6617,6 +6652,21 @@ function render() {
         </div></div>`;
     }
     
+    if(state.page==='access') {
+        const A = state.access || { rows: [], input: '', busy: false, err: '' };
+        const _w = Math.max(1, ...A.rows.map(r => r.length));
+        const _tr = A.rows.map((r, k) => '<tr><td style="color:var(--text-dim);padding:4px 10px 4px 0;text-align:right">' + (k + 1) + '</td>'
+            + Array.from({ length: _w }, (_, c) => '<td style="padding:4px 12px 4px 0;color:var(--text);word-break:break-word">' + esc(r[c] === undefined ? '' : r[c]) + '</td>').join('') + '</tr>').join('');
+        h += `<div class="p-4 max-w-3xl mx-auto space-y-4"><h1 class="stencil-shadow text-3xl" style="color: var(--yellow)">ДОСТУП</h1>
+            <div class="crate p-4"><div style="display:flex;gap:8px;align-items:center">
+                <input id="acc-inp" class="field" style="flex:1;text-align:left" placeholder="Новий рядок у колонку A" value="${esc(A.input)}" oninput="state.access.input=this.value" onkeydown="if(event.key==='Enter'){event.preventDefault();addAccessRow()}"/>
+                <button onclick="addAccessRow()" title="Додати рядок у колонку A" class="btn-stencil btn-green" style="display:inline-flex;align-items:center;justify-content:center;height:40px;min-width:40px;padding:0 10px">${icoPlus(18)}</button>
+            </div>${A.err ? '<div style="color:var(--red-label);margin-top:8px;font-size:0.9em">' + esc(A.err) + '</div>' : ''}</div>
+            <div class="crate p-4"><div class="stencil" style="color:var(--khaki);margin-bottom:8px">АРКУШ «@»${A.busy ? ' — ОБМІН…' : ''}</div>
+                ${A.rows.length ? '<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:0.9em">' + _tr + '</table></div>' : '<div style="color:var(--text-dim)">' + (A.busy ? '' : 'Аркуш порожній') + '</div>'}
+            </div></div>`;
+    }
+
     if(state.page==='lists') {
         h += `<div class="p-4 space-y-4 lists-wrap" style="padding-left:8px;padding-right:8px"><h1 class="stencil-shadow text-3xl px-2" style="color: var(--yellow)">СПИСКИ</h1><div class="crate p-4 lists-bar${state.listFieldW?' fit':''}"><div class="flex gap-2 mb-2 flex-wrap"><button onclick="clearInput()" class="btn-stencil btn-danger" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoCross(28)}</button><input type="text" value="${esc(state.inputVal)}" onchange="state.inputVal=this.value" placeholder="Редагування..." class="field ${state.listFieldW?'lists-edit':'flex-1'}" style="${state.listFieldW?`width:${state.listFieldW}px`:'min-width: 120px'}" /><button onclick="addItem()" class="btn-stencil btn-green" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoPlus(33)}</button><button onclick="editItem()" class="btn-stencil btn-blue" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoPencil(28)}</button><button onclick="deleteItem()" class="btn-stencil btn-black" style="padding:0;width:42px;height:42px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center">${icoTrash(28)}</button></div></div><div id="lists-cols" class="lists-cols">${renderListSection('drones','ДРОНИ')}${renderListSection('ammo','БОЄПРИПАС')}${renderListSection('results','РЕЗУЛЬТАТИ')}</div></div>`;
     }
