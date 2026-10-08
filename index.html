@@ -649,7 +649,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-267';
+const APP_VER = 'v.26.10-268';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2736,7 +2736,7 @@ function generateArchiveReport(recs, periodLabel) {
         lines.push('');
         lines.push('Ефективність ' + _effPct(recs) + '%.');
     }
-    _lastChkCnt = recs.filter(r => r.chk).length;
+    _lastChkCnt = recs.filter(r => r.chk && _hasHit(r)).length;
     return lines;
 }
 function _fmtNum(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
@@ -4338,7 +4338,7 @@ function _pushVerifyLines(lines, recs, ckLine) {
     if (_pt(add)) lines.push('Додано верифікатором ' + _pt(add) + ' ' + _bal(_pt(add)) + '.');
     if (_pt(canc)) lines.push('Скасовано ' + _pt(canc) + ' ' + _bal(_pt(canc)) + '.');
     // бали чекунів — окремим рядком під «Скасовано» (в АРХІВІ; у ЗВІТАХ вони в рядку прогнозу)
-    const _ckn = recs.filter(r => r.chk).length;
+    const _ckn = recs.filter(r => r.chk && _hasHit(r)).length;
     if (ckLine && _ckn) lines.push('За чекуни додано ' + _ckn + ' ' + _bal(_ckn) + '.');
     // різниця між прогнозом і верифікованим: додане мінус скасоване
     const _net = _pt(add - canc);
