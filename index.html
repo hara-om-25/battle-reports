@@ -648,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-247';
+const APP_VER = 'v.26.10-248';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6677,7 +6677,7 @@ function render() {
                 </div>
                 <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px 20px;padding-left:10px">
                 <span class="stencil stencil-shadow" style="color:var(--blue-label);font-size:1.5em;white-space:nowrap;flex:none;line-height:1.2">ВИЛІТ №${state.records.filter(r=>r.reportNum===state.report).length + 1}</span>
-                <span class="stencil" style="color:var(--khaki);font-size:0.9em;white-space:nowrap;flex:none;text-align:center;line-height:1.2">СЬОГОДНІ:<br><span style="color:#ffffff">${todayDate}</span></span>
+                <span class="stencil" style="color:var(--khaki);font-size:0.9em;white-space:nowrap;flex:none;margin-left:auto;text-align:right;line-height:1.2">СЬОГОДНІ:<br><span style="color:#ffffff">${todayDate}</span></span>
                 </div>
             </div>
             
