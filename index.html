@@ -648,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-256';
+const APP_VER = 'v.26.10-257';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6670,15 +6670,11 @@ function render() {
             return pts;
         });
         h += `<div class="p-4 max-w-3xl mx-auto"><div class="crate p-6">
-            <div style="display:grid;grid-template-columns:1fr 1fr;align-items:center;margin-bottom:16px">
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding-right:10px">
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px 20px;margin-bottom:16px">
                 <div style="flex:none;display:flex"><button onclick="newReport()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-danger" style="font-size:0.78em;padding:5px 10px">НОВИЙ ЗВІТ</button></div>
                 <h2 class="stencil-shadow text-3xl" style="color: var(--yellow);flex:none;font-size:1.5em;line-height:1.2">ЗВІТ №${state.report}</h2>
-                </div>
-                <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px 20px;padding-left:10px">
                 <span class="stencil stencil-shadow" style="color:var(--blue-label);font-size:1.5em;white-space:nowrap;flex:none;line-height:1.2">ВИЛІТ №${state.records.filter(r=>r.reportNum===state.report).length + 1}</span>
-                <span class="stencil" style="color:var(--khaki);font-size:1.1em;flex:0 1 auto;margin-left:auto;text-align:right;line-height:1.2">Виліт №${todayCount + 1} за <span style="color:#ffffff">${todayDate}</span></span>
-                </div>
+                <span class="stencil" style="color:var(--khaki);font-size:1.1em;flex:none;width:100%;text-align:right;line-height:1.2">Виліт №${todayCount + 1} за <span style="color:#ffffff">${todayDate}</span></span>
             </div>
             
             <div class="mb-2" style="border-top: 1px dashed var(--khaki); padding-top: 8px; margin-top: 8px">
