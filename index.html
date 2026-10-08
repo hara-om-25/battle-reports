@@ -648,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-245';
+const APP_VER = 'v.26.10-246';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1923,7 +1923,7 @@ function showAccess() {
                 t.style.cssText = 'flex:1;min-width:0;word-break:break-word';
                 t.textContent = txt;
                 line.appendChild(t);
-                line.appendChild(_mk('btn-green', icoPencil(18), 'Редагувати', () => { _mode = { k: k, kind: 'edit' }; _draw(); }));
+                line.appendChild(_mk('btn-blue', icoPencil(18), 'Редагувати', () => { _mode = { k: k, kind: 'edit' }; _draw(); }));
                 line.appendChild(_mk('btn-danger', icoCross(18), 'Видалити', () => { _mode = { k: k, kind: 'del' }; _draw(); }));
             }
             _list.appendChild(line);
