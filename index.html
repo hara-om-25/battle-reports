@@ -648,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-244';
+const APP_VER = 'v.26.10-245';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1856,12 +1856,86 @@ function showAccess() {
     const _close = () => { if (_ov.parentNode) document.body.removeChild(_ov); };
     _x.addEventListener('click', _close);
     let _busy = false;
+    let _all = [], _mode = null;   // _mode: {k, kind:'edit'|'del'}
+    const _mk = (cls, ico, title, fn) => {
+        const bt = document.createElement('button');
+        bt.className = 'btn-stencil ' + cls;
+        bt.title = title;
+        bt.style.cssText = 'flex:none;display:inline-flex;align-items:center;justify-content:center;height:34px;min-width:34px;padding:0 8px';
+        bt.innerHTML = ico;
+        bt.addEventListener('click', fn);
+        return bt;
+    };
     const _draw = all => {
-        const rows = all.slice(1);   // рядок 1 — адміністратор, його не показуємо
-        _list.innerHTML = rows.length ? rows.map((r, k) => '<div style="display:flex;gap:10px;padding:5px 0;border-top:1px dashed rgba(255,255,255,0.08)">'
-            + '<span style="color:var(--text-dim);min-width:1.6em;text-align:right">' + (k + 1) + '</span>'
-            + '<span style="word-break:break-word">' + esc((r || []).filter(x => x !== '').join(' | ')) + '</span></div>').join('')
-            : '<div style="color:var(--text-dim)">' + (_busy ? 'Читаю…' : 'Порожньо') + '</div>';
+        if (all) _all = all;
+        const rows = _all.slice(1);   // рядок 1 — адміністратор, його не показуємо
+        _list.innerHTML = '';
+        if (!rows.length) {
+            _list.innerHTML = '<div style="color:var(--text-dim)">' + (_busy ? 'Читаю…' : 'Порожньо') + '</div>';
+            return;
+        }
+        rows.forEach((r, k) => {
+            const n = k + 2;   // номер рядка в аркуші
+            const line = document.createElement('div');
+            line.style.cssText = 'display:flex;gap:8px;align-items:center;padding:5px 0;border-top:1px dashed rgba(255,255,255,0.08)';
+            const num = document.createElement('span');
+            num.style.cssText = 'color:var(--text-dim);min-width:1.6em;text-align:right;flex:none';
+            num.textContent = k + 1;
+            line.appendChild(num);
+            const txt = (r || []).filter(x => x !== '').join(' | ');
+            if (_mode && _mode.k === k && _mode.kind === 'edit') {
+                const inp = document.createElement('input');
+                inp.className = 'field';
+                inp.style.cssText = 'flex:1;min-width:0;text-align:left';
+                inp.value = (r && r[0]) || '';
+                line.appendChild(inp);
+                const save = async () => {
+                    const v = inp.value.trim();
+                    if (!v || _busy) return;
+                    await _run(async () => { await apiUpdate("'@'!A" + n, [[v]], true); }, 'ЗБЕРЕЖЕНО');
+                };
+                inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+                line.appendChild(_mk('btn-green', icoCheck(18), 'Зберегти', save));
+                line.appendChild(_mk('', icoCross(18), 'Скасувати', () => { _mode = null; _draw(); }));
+                setTimeout(() => inp.focus(), 0);
+            } else if (_mode && _mode.k === k && _mode.kind === 'del') {
+                const q = document.createElement('span');
+                q.style.cssText = 'flex:1;min-width:0;word-break:break-word';
+                q.innerHTML = '<span style="color:var(--red-label)">Видалити рядок?</span> ' + esc(txt);
+                line.appendChild(q);
+                line.appendChild(_mk('btn-danger', icoCheck(18), 'Так, видалити', async () => {
+                    if (_busy) return;
+                    await _run(async () => {
+                        const grid = await _sheetGrid();
+                        const g = grid['@'];
+                        if (!g) throw new Error('аркуша «@» не знайдено');
+                        const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${state.token}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ requests: [{ deleteDimension: { range: { sheetId: g.id, dimension: 'ROWS', startIndex: n - 1, endIndex: n } } }] })
+                        }).then(x => x.json());
+                        if (resp.error) throw new Error(resp.error.message);
+                    }, 'ВИДАЛЕНО');
+                }));
+                line.appendChild(_mk('', icoCross(18), 'Скасувати', () => { _mode = null; _draw(); }));
+            } else {
+                const t = document.createElement('span');
+                t.style.cssText = 'flex:1;min-width:0;word-break:break-word';
+                t.textContent = txt;
+                line.appendChild(t);
+                line.appendChild(_mk('btn-green', icoPencil(18), 'Редагувати', () => { _mode = { k: k, kind: 'edit' }; _draw(); }));
+                line.appendChild(_mk('btn-danger', icoCross(18), 'Видалити', () => { _mode = { k: k, kind: 'del' }; _draw(); }));
+            }
+            _list.appendChild(line);
+        });
+    };
+    // зміна аркуша → перечитування списку
+    const _run = async (fn, okMsg) => {
+        if (!state.online || !navigator.onLine) { _err.textContent = 'Потрібна мережа'; return; }
+        _busy = true; _err.textContent = '';
+        try { await fn(); _mode = null; _draw(await apiGet("'@'")); _toast(okMsg); }
+        catch (e) { _err.textContent = 'Не вдалося: ' + e.message; }
+        _busy = false;
     };
     const _load = async () => {
         if (!state.online || !navigator.onLine) { _err.textContent = 'Потрібна мережа'; _draw([]); return; }
@@ -1915,7 +1989,7 @@ function showSettings() {
           go: () => { state.page = 'lists'; render(); } },
         { t: 'СЕРВІС', c: 'btn-black', on: true, why: '',
           go: () => goToArchive('service') },
-        { t: 'ДОСТУП', c: 'btn-blue', on: true, why: '',
+        { t: 'ДОСТУП', c: 'btn-orange', on: true, why: '',
           go: () => showAccess() },
         { t: 'е бали', c: 'btn-green', on: Object.keys(state.scoreTable || {}).length > 0,
           why: 'Прайс ще не завантажено — відкрийте застосунок із мережею',
