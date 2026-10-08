@@ -648,7 +648,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-243';
+const APP_VER = 'v.26.10-244';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1856,7 +1856,8 @@ function showAccess() {
     const _close = () => { if (_ov.parentNode) document.body.removeChild(_ov); };
     _x.addEventListener('click', _close);
     let _busy = false;
-    const _draw = rows => {
+    const _draw = all => {
+        const rows = all.slice(1);   // рядок 1 — адміністратор, його не показуємо
         _list.innerHTML = rows.length ? rows.map((r, k) => '<div style="display:flex;gap:10px;padding:5px 0;border-top:1px dashed rgba(255,255,255,0.08)">'
             + '<span style="color:var(--text-dim);min-width:1.6em;text-align:right">' + (k + 1) + '</span>'
             + '<span style="word-break:break-word">' + esc((r || []).filter(x => x !== '').join(' | ')) + '</span></div>').join('')
