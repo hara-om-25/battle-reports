@@ -544,6 +544,7 @@
     button[onclick^="state.selReport="]:active, button[onclick^="state.selDate="]:active, .btn-hold.hold.hold-b { color: var(--blue-label) !important; text-shadow: none !important; background: var(--yellow) !important; border-color: #f4d942 !important; }
     /* КОПІЮВАТИ: під час натискання літери жовті */
     button[onclick^="copy"]:not([onclick="copyPrev()"]):active, .btn-hold.hold.hold-y { color: var(--yellow) !important; text-shadow: none !important; }
+    .btn-stencil[data-off="1"] { opacity:0.38; cursor:not-allowed; pointer-events:none; }
     .btn-stencil.chk-btn { background: #2c4666; border-color: #3d5f87; color: var(--yellow); box-shadow: none; }
     .btn-stencil.chk-btn, .btn-stencil.chk-btn:active { transform: none; transition: background 0.1s, border-color 0.1s, color 0.1s, box-shadow 0.1s; }
     .btn-stencil.chk-btn.on { transform: none; box-shadow: inset 0 4px 6px rgba(0,0,0,0.45); background: #5599dd; border-color: #7ab3ec; color: #000; }
@@ -649,7 +650,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-268';
+const APP_VER = 'v.26.10-269';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5846,7 +5847,7 @@ function restoreMemo() {
 // ЧЕКУН і ПОПЕРЕДНІЙ мають бути рівно такої самої висоти, як кнопка вставки
 // (стрілка) біля поля MGRS: міряємо саму стрілку, бо її висота залежить від шрифту й масштабу
 function _syncChkHeight() {
-    [['form-coord', ['form-chk', 'form-prev']], ['er_coord', ['edit-chk']]].forEach(([cid, ids]) => {
+    [['form-coord', ['form-prev']], ['er_coord', ['edit-chk']]].forEach(([cid, ids]) => {
         const c = document.getElementById(cid);
         // у вікні РЕДАГУВАННЯ зразок — зелена «+» біля результату, у ФОРМІ — стрілка вставки
         const paste = cid === 'er_coord' ? document.querySelector('button[onclick^="addEditTarget"]')
@@ -6718,7 +6719,6 @@ function render() {
                         <input id="form-coord" type="text" value="${esc(state.form.coord)}" onchange="state.form.coord=this.value" placeholder="36U UA 24232 91610" style="flex:1;min-width:0;border:none;background:transparent;color:var(--text);padding:10px 12px;font-family:inherit;font-size:inherit;outline:none" />
                         <button onclick="navigator.clipboard.readText().then(t=>{const v=t.trim();state.form.coord=v;const el=document.getElementById('form-coord');if(el)el.value=v;}).catch(()=>{})" onmousedown="this.style.background='#9a9070'" onmouseup="this.style.background=''" ontouchstart="this.style.background='#9a9070'" ontouchend="this.style.background=''" class="btn-stencil" style="flex:0 0 auto;margin:4px 6px 4px 0;padding:0;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center" title="Вставити з буфера">${icoUp(18)}</button>
                         </div>
-                        <button id="form-chk" onclick="toggleFormChk()" class="btn-stencil chk-btn${state.form.chk?' on':''}" title="Чекун: +1 бал до вильоту" style="flex:0 0 auto;align-self:center;font-size:0.78em;padding:3px 10px;white-space:nowrap;display:block">ЧЕКУН</button>
                         </div>
                     </div>
                     <div style="min-width:0">
@@ -6755,7 +6755,10 @@ function render() {
                     </div>
                 </div>
                 
-                <button onclick="add()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim w-full text-lg mt-4" ${(state.form.targets.length===0 && !state.form.chk)?'disabled style="opacity:0.38;cursor:not-allowed;pointer-events:none"':'' }>ДОДАТИ ЗАПИС</button>
+                <div class="mt-4" style="display:flex;gap:.5rem;align-items:stretch">
+                <button onclick="add()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim text-lg" style="flex:1;min-width:0" ${(state.form.targets.length===0 && !state.form.chk)?'disabled data-off="1"':'' }>ДОДАТИ ЗАПИС</button>
+                <button id="form-chk" onclick="toggleFormChk()" class="btn-stencil chk-btn${state.form.chk?' on':''}" title="Чекун: +1 бал до вильоту" style="flex:0 0 auto;white-space:nowrap;padding:0 14px">ЧЕКУН</button>
+                </div>
             </div>
         </div></div>`;
     }
