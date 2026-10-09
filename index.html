@@ -663,7 +663,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-276';
+const APP_VER = 'v.26.10-277';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6372,7 +6372,7 @@ function generateReport(dayRecs) {
     const date = getDateOnly(dayRecs[0].datetime);
     const reportTitle = state.reportTitle || 'ТГ невідомий';
     const totalPoints = _pt(dayRecs.reduce((s, r) => s + (parseFloat(r.points) || 0), 0));
-    lines.push(date+'р.,Тг., "'+reportTitle+'" здійснено '+dayRecs.length+' вильотів, уражено.');
+    lines.push(date+'р.,Тг., "'+reportTitle+'" здійснено '+dayRecs.length+' '+_vyl(dayRecs.length)+', уражено.');
     const hasOs = dayRecs.some(r => r.target.split(', ').some(t => t.trim().toLowerCase().startsWith('ос')));
     const osSum200 = dayRecs.reduce((s, r) => s + (parseInt(r.qty200) || 0), 0);
     const osSum300 = dayRecs.reduce((s, r) => s + (parseInt(r.qty300) || 0), 0);
@@ -7351,7 +7351,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 // доповідь combined for period
                 const _zRepLines=generateReport(_zRecs);
                 const _zReportTitle=state.reportTitle||'ТГ невідомий';
-                _zRepLines[2]='з '+_zFmtDTr(state.zvityFilterFrom)+' по '+_zFmtDTr(state.zvityFilterTo)+',Тг., "'+_zReportTitle+'" здійснено '+_zRecs.length+' вильотів, уражено.';
+                _zRepLines[2]='з '+_zFmtDTr(state.zvityFilterFrom)+' по '+_zFmtDTr(state.zvityFilterTo)+',Тг., "'+_zReportTitle+'" здійснено '+_zRecs.length+' '+_vyl(_zRecs.length)+', уражено.';
                 const _zHdrLabel='з '+_zFmtDT(state.zvityFilterFrom)+' по '+_zFmtDT(state.zvityFilterTo);
                 const _zReports='<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><h3 class="stencil-shadow" style="color:var(--yellow)">ДОПОВІДЬ '+_zHdrLabel+'</h3></div><div class="report-box">'+_zRepLines.join('\n')+'</div></div>';
                 // підсумки
