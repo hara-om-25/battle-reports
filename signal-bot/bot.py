@@ -447,6 +447,9 @@ class Bot:
         self.admins = set(cfg.get("admins") or [])
         self.accept = {normalize_emoji(e) for e in cfg.get("accept_reactions", [])}
         self.decline = {normalize_emoji(e) for e in cfg.get("decline_reactions", [])}
+        # Повідомлення, надіслані до запуску бота (накопичені, поки він був вимкнений),
+        # не пересилаються і не виконуються як команди.
+        self.started_ms = int(self.clock() * 1000)
 
     def setting(self, key):
         return self.state.settings.get(key, self.cfg.get(key, DEFAULT_CONFIG.get(key)))
@@ -468,6 +471,7 @@ class Bot:
             return
         group = (dm.get("groupInfo") or {}).get("groupId", "")
         text = dm.get("message") or ""
+        old = self.is_old(env, dm)
 
         with self.lock:
             if group and group == self.queue_id:
@@ -475,10 +479,25 @@ class Bot:
                     self.handle_reaction(dm["reaction"], sender)
                 elif dm.get("quote") and normalize_emoji(text) in self.accept | self.decline:
                     self.handle_answer(dm["quote"].get("id"), normalize_emoji(text), sender)
-                elif text.startswith(self.prefix):
+                elif text.startswith(self.prefix) and not old:
                     self.handle_command(text, dm.get("mentions") or [], sender)
             elif group and group == self.source_id and not dm.get("reaction"):
-                self.handle_source(text, dm, sender)
+                if old:
+                    log.info("Пропущено повідомлення від %s, надіслане до запуску бота", sender["name"])
+                else:
+                    self.handle_source(text, dm, sender)
+
+    def is_old(self, env, dm):
+        """True, якщо повідомлення надіслане до запуску бота.
+
+        Беремо час отримання сервером Signal (не залежить від годинника телефона
+        відправника), а якщо його немає — час відправлення.
+        """
+        ts = env.get("serverReceivedTimestamp") or env.get("timestamp") or dm.get("timestamp")
+        try:
+            return bool(ts) and int(ts) < self.started_ms
+        except (TypeError, ValueError):
+            return False
 
     def handle_source(self, text, dm, sender):
         result = analyze(text, self.matcher)

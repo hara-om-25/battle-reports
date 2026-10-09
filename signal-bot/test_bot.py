@@ -116,6 +116,23 @@ class BotTest(unittest.TestCase):
         self.assertIn("Черга порожня", msg["text"])
         self.assertEqual(self.bot.state.tasks, [])
 
+    def test_ignores_messages_sent_before_start(self):
+        self.add()
+        start = self.bot.started_ms
+        old = envelope(SOURCE, "приліт")
+        old["envelope"]["timestamp"] = start - 60_000
+        self.bot.handle_envelope(old)
+        old_cmd = envelope(QUEUE, "/clear")
+        old_cmd["envelope"]["serverReceivedTimestamp"] = start - 1
+        self.bot.handle_envelope(old_cmd)
+        self.assertEqual(self.api.sent, [])
+        self.assertEqual(len(self.order()), 3)
+        new = envelope(SOURCE, "приліт")
+        new["envelope"]["timestamp"] = start - 5_000           # годинник телефона відстає,
+        new["envelope"]["serverReceivedTimestamp"] = start + 10  # але сервер отримав після запуску
+        self.bot.handle_envelope(new)
+        self.assertEqual(self.mentioned(self.api.sent[-1])[0], "u1")
+
     # ---- реакції ---------------------------------------------------------- #
 
     def test_accept_closes_task(self):
