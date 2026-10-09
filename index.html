@@ -650,7 +650,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-274';
+const APP_VER = 'v.26.10-275';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6756,7 +6756,7 @@ function render() {
                 </div>
                 
                 <div class="mt-4" style="display:flex;gap:.5rem;align-items:stretch">
-                <button onclick="add()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim stencil-shadow" style="flex:1;min-width:0;text-shadow:1px 1px 0 rgba(255,255,255,0.35),2px 2px 0 rgba(255,255,255,0.15);font-size:0.84rem;padding:7.5px 12px" ${(state.form.targets.length===0 && !state.form.chk)?'disabled data-off="1"':'' }>ДОДАТИ ЗАПИС</button>
+                <button onclick="add()" onmousedown="this.classList.add('active')" onmouseup="this.classList.remove('active')" ontouchstart="this.classList.add('active')" ontouchend="this.classList.remove('active')" class="btn-stencil btn-yellow-dim stencil-shadow" style="flex:1;min-width:0;text-shadow:1px 1px 0 rgba(0,0,0,0.5);font-size:0.84rem;padding:7.5px 12px" ${(state.form.targets.length===0 && !state.form.chk)?'disabled data-off="1"':'' }>ДОДАТИ ЗАПИС</button>
                 <button id="form-chk" onclick="toggleFormChk()" class="btn-stencil chk-btn${state.form.chk?' on':''}" title="Чекун: +1 бал до вильоту" style="flex:0 0 auto;white-space:nowrap;font-size:0.84rem;padding:0 10px">ЧЕКУН</button>
                 </div>
             </div>
