@@ -1,0 +1,6 @@
+zhdun_speech.mp3
+__pycache__/
+*.pyc
+# дані signal-cli (ключі акаунта)
+data/
+config.json
