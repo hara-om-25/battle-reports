@@ -544,6 +544,19 @@
     button[onclick^="state.selReport="]:active, button[onclick^="state.selDate="]:active, .btn-hold.hold.hold-b { color: var(--blue-label) !important; text-shadow: none !important; background: var(--yellow) !important; border-color: #f4d942 !important; }
     /* КОПІЮВАТИ: під час натискання літери жовті */
     button[onclick^="copy"]:not([onclick="copyPrev()"]):active, .btn-hold.hold.hold-y { color: var(--yellow) !important; text-shadow: none !important; }
+    /* ТІНЬ ЛІТЕР КНОПОК — правило для ВСІХ кнопок (рішення користувача): неактивна кнопка —
+       літери (і значки: хрестик, галочка, олівець, плюс тощо) з тінню; натиснута або активна
+       (:active, .active, .on, .pressing, .hold) — тінь під літерами прибрано */
+    button, .btn-stencil, [class*="btn-"], .nav-btn, .btn-archive { text-shadow: 1px 1px 0 rgba(0,0,0,0.5) !important; }
+    button svg, .btn-stencil svg, [class*="btn-"] svg, .nav-btn svg { filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.5)); }
+    button:active, .btn-stencil:active, .btn-stencil.active, .btn-stencil.on,
+    [class*="btn-"]:active, [class*="btn-"].active, [class*="btn-"].on, [class*="btn-"].pressing,
+    .nav-btn:active, .nav-btn.active, .nav-btn.pressing, .btn-archive:active, .btn-archive.pressing,
+    .chk-btn.on, .btn-hold.hold, .hold,
+    button[onclick^="state.selReport="].btn-yellow, button[onclick^="state.selDate="].btn-yellow, button[onclick^="_pickSheet("].btn-yellow { text-shadow: none !important; }
+    button:active svg, .btn-stencil:active svg, .btn-stencil.active svg, .btn-stencil.on svg,
+    [class*="btn-"]:active svg, [class*="btn-"].active svg, [class*="btn-"].on svg, [class*="btn-"].pressing svg,
+    .nav-btn:active svg, .nav-btn.active svg, .chk-btn.on svg, .btn-hold.hold svg, .hold svg { filter: none !important; }
     .btn-stencil[data-off="1"] { opacity:0.38; cursor:not-allowed; pointer-events:none; }
     .btn-stencil.chk-btn { background: #2c4666; border-color: #3d5f87; color: var(--yellow); box-shadow: none; }
     .btn-stencil.chk-btn, .btn-stencil.chk-btn:active { transform: none; transition: background 0.1s, border-color 0.1s, color 0.1s, box-shadow 0.1s; }
@@ -650,7 +663,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-275';
+const APP_VER = 'v.26.10-276';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
