@@ -212,6 +212,7 @@
     .arch-side .btn-black.active, .arch-side .btn-black:active { background: #6a6d62; border-color: #a9a794; color: #fff; }
     .arch-side .btn-yellow { background: #8a7510; border-color: #a8901a; box-shadow: 0 4px 0 #5a4c08, 0 6px 12px rgba(0,0,0,0.4); }
     .arch-side .btn-yellow.active, .arch-side .btn-yellow:active { background: var(--yellow); border-color: #f4d942; color: #1a1d18; }
+    .arch-side.arch-full { width: var(--aw) !important; min-width: 0 !important; margin-left: 0 !important; }
     .arch-side .btn-olive { background: var(--surface); color: var(--text-dim); }
     .arch-side .btn-olive.active, .arch-side .btn-olive:active { background: var(--olive-dark); border-color: var(--olive); color: var(--yellow); }
     .btn-black {
@@ -675,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-307';
+const APP_VER = 'v.26.10-308';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6035,6 +6036,7 @@ document.addEventListener('click', e => {
 }, true);
 
 function _sizeArchRot() {
+    document.querySelectorAll('.arch-side.arch-full').forEach(sd => sd.classList.remove('arch-full'));   // розтягування кнопок на телефоні міряємо заново
     // Передня рамка зсунута праворуч так, щоб відстань від її лівого краю до року
     // задньої рамки дорівнювала відстані від лівого краю задньої рамки до того року
     document.querySelectorAll('.arch-groups').forEach(gr => {
@@ -6103,6 +6105,15 @@ function _sizeArchRot() {
         const cr = [...gr.querySelectorAll('.crate')];
         gr.style.height = Math.max(0, ...cr.map(c => c.offsetHeight)) + 'px';
         gr.style.width = Math.max(0, ...cr.map(c => c.offsetLeft + c.offsetWidth)) + 'px';
+    });
+    // Телефон: колонка кнопок (ПІДСУМКИ, СТАТИСТИКА, ВИЛЬОТИ, ЦІЛІ) стала під блоком років —
+    // розтягуємо її на всю ширину цього блока (від лівого краю задньої рамки до правого краю передньої)
+    if (window.innerWidth <= 640) document.querySelectorAll('.arch-top').forEach(top => {
+        const gr = top.querySelector('.arch-groups'), sd = top.querySelector('.arch-side');
+        if (!gr || !sd || !gr.offsetWidth) return;
+        if (sd.getBoundingClientRect().top < gr.getBoundingClientRect().bottom - 2) return;   // колонка поруч, а не під блоком
+        sd.style.setProperty('--aw', gr.offsetWidth + 'px');
+        sd.classList.add('arch-full');
     });
     // «за період» стоїть по правому краю найширшої рамки року, а не сторінки
     const _hr = document.getElementById('ar-hdr-right');
