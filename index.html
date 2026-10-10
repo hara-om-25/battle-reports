@@ -665,7 +665,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-287';
+const APP_VER = 'v.26.10-288';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6662,7 +6662,13 @@ function render() {
     const app = document.getElementById('app');
     if (state.page !== _prevPage) {
         // Вхід на сторінку ЗВІТИ завжди відкриває актуальний звіт за поточний день, а не загальний перелік
-        if (state.page === 'reports') { state.selReport = state.report; state.selDate = getDateOnly(new Date().toLocaleString('uk-UA')); state.zvityFilterOpen = false; state.zvityFilterShown = false; }
+        if (state.page === 'reports') {
+            const _td = getDateOnly(new Date().toLocaleString('uk-UA'));
+            const _hasToday = state.records.some(r => r.reportNum === state.report && getDateOnly(r.datetime) === _td);
+            // немає вильотів за сьогодні — загальний перелік (усі звіти)
+            state.selReport = _hasToday ? state.report : null; state.selDate = _hasToday ? _td : null;
+            state.zvityFilterOpen = false; state.zvityFilterShown = false;
+        }
         _prevPage = state.page; _gearUntil = Date.now() + 800; setTimeout(_gearApply, 850);
     }
     try { if (state.user && ['form', 'reports', 'archive', 'lists', 'service'].includes(state.page)) localStorage.setItem('br_page', state.page); } catch (e) {}
