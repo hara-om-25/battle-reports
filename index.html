@@ -142,7 +142,7 @@
     .nav-btn-archive.active {
       background: #555;
       border-color: #666;
-      color: #d9d6c4;
+      color: var(--yellow);
     }
     .btn-archive {
       background: #2a2a2a;
@@ -314,7 +314,7 @@
     .nav-btn.nav-set { background: var(--surface); color: var(--text-dim); }
     .nav-btn.active {
       background: var(--olive);
-      color: #fff;
+      color: var(--yellow);
       text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
     }
     /* Меню на телефоні (малюнком користувача): сітка 4 стовпці, перший порожній.
@@ -668,7 +668,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-300';
+const APP_VER = 'v.26.10-301';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
