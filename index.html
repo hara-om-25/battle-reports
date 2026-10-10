@@ -584,6 +584,7 @@
     .up-pop { position: fixed; z-index: 100000; overflow-y: auto; background: var(--surface); border: 2px solid var(--olive); border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.6); -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
     .up-pop div { height: 48px; box-sizing: border-box; display: flex; align-items: center; padding: 0 12px; color: var(--text); border-bottom: 1px solid var(--surface-light); cursor: pointer; }
     .up-pop div:last-child { border-bottom: none; }
+    .up-pop div.up-cur { color: var(--yellow); background: var(--olive-dark); }
     .up-pop div:active { background: var(--olive-dark); color: var(--yellow); }
     .dt-sel { display: flex; gap: 4px; }
     .dt-sel select { width: 58px; height: 42px; padding-left: 4px; padding-right: 18px; text-align: center; }
@@ -673,7 +674,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-303';
+const APP_VER = 'v.26.10-304';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6677,13 +6678,14 @@ function _upOpen(sel) {
     _upClose();
     const vals = Array.from(sel.options).map(o => o.value);
     const cur = sel.value, n = vals.length;
-    let list;
+    let list, si;
     if (sel.dataset.up === 'circ') {
-        const nums = vals.map(v => parseInt(v, 10)).sort((a, b) => a - b), k = nums.indexOf(parseInt(cur, 10));
-        list = []; for (let i = n - 1; i >= 1; i--) list.push(nums[((k - i) % n + n) % n]);
-        list = list.map(v => String(v).padStart(vals[0].length, '0'));
+        const nums = vals.map(v => parseInt(v, 10)).sort((a, b) => a - b), k = nums.indexOf(parseInt(cur, 10)), w = vals[0].length;
+        list = []; for (let i = -(n - 1); i <= n - 1; i++) list.push(String(nums[((k + i) % n + n) % n]).padStart(w, '0'));
+        si = n - 1;
     } else {
-        list = vals.slice().sort((a, b) => b - a).filter(v => v !== cur);
+        list = vals.slice().sort((a, b) => b - a);
+        si = list.indexOf(cur);
     }
     const r = sel.getBoundingClientRect(), vh = window.innerHeight;
     const above = r.top - 8, below = vh - r.bottom - 8, up = above >= Math.min(300, list.length * 48) || above >= below;
@@ -6693,7 +6695,7 @@ function _upOpen(sel) {
     const h = Math.min(list.length * 48 + 4, Math.max(96, up ? above : below));
     pop.style.maxHeight = h + 'px';
     if (up) pop.style.bottom = (vh - r.top + 4) + 'px'; else pop.style.top = (r.bottom + 4) + 'px';
-    pop.innerHTML = list.map(v => '<div data-v="' + v + '">' + v + '</div>').join('');
+    pop.innerHTML = list.map((v, i) => '<div data-v="' + v + '"' + (i === si ? ' class="up-cur"' : '') + '>' + v + '</div>').join('');
     pop.addEventListener('mousedown', e => e.stopPropagation());
     pop.addEventListener('click', e => {
         const d = e.target.closest('div[data-v]'); if (!d) return;
@@ -6704,7 +6706,7 @@ function _upOpen(sel) {
     });
     document.body.appendChild(pop);
     _upPop = pop;
-    pop.scrollTop = up ? pop.scrollHeight : 0;
+    pop.scrollTop = up ? Math.max(0, (si + 1) * 48 + 2 - pop.clientHeight) : si * 48;
 }
 document.addEventListener('mousedown', e => {
     const sel = e.target.closest && e.target.closest('select[data-up]');
