@@ -309,8 +309,6 @@
       background: var(--olive-dark);
       color: var(--text);
     }
-    /* кнопки вікна НАЛАШТУВАННЯ: колір як у натиснутої кнопки меню, але без втопленої тіні */
-    .nav-btn.nav-set { background: var(--olive-dark); color: var(--text); }
     .nav-btn.active {
       background: var(--olive);
       color: #fff;
@@ -667,7 +665,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-291';
+const APP_VER = 'v.26.10-292';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2016,10 +2014,10 @@ function showSettings() {
     ];
     _rows.forEach(o => {
         const b = document.createElement('button');
-        // СПИСКИ, СЕРВІС, ДОСТУП, «е бали» — у стилі кнопок меню (ФОРМА, ЗВІТИ); АРХІВУВАТИ й ВЕРИФІКАЦІЯ лишаються кольоровими
+        // СПИСКИ, СЕРВІС, ДОСТУП, «е бали» — як віджаті ВИЛЬОТИ/ЦІЛІ в АРХІВІ (btn-olive); АРХІВУВАТИ й ВЕРИФІКАЦІЯ лишаються кольоровими
         const _menuLook = ['btn-yellow', 'btn-black', 'btn-orange', 'btn-green'].includes(o.c);
-        b.className = _menuLook ? 'nav-btn nav-set' : 'btn-stencil ' + o.c;
-        b.style.cssText = (_menuLook ? 'display:flex;width:100%;margin-bottom:10px;font-size:0.9em' : 'display:block;width:100%;text-align:center;padding:8px 14px;margin-bottom:10px;font-size:0.9em')
+        b.className = 'btn-stencil ' + (_menuLook ? 'btn-olive' : o.c);
+        b.style.cssText = 'display:block;width:100%;text-align:center;padding:8px 14px;margin-bottom:10px;font-size:0.9em'
             + (o.on ? '' : ';opacity:0.45;cursor:default');
         b.textContent = o.t;
         if (!o.on) b.title = o.why;
