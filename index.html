@@ -675,7 +675,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-306';
+const APP_VER = 'v.26.10-307';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6691,7 +6691,7 @@ let _upPop = null;
 function _upClose() { if (_upPop) { _upPop.remove(); _upPop = null; } }
 function _upOpen(sel) {
     _upClose();
-    let vals = Array.from(sel.options).map(o => o.value);
+    let vals = Array.from(sel.options).map(o => o.value).filter(v => v !== '');   // порожній пункт (є в днях, місяцях, роках) у списку не потрібен
     if (sel.dataset.dim) { const dim = _daysIn(); vals = vals.filter(v => parseInt(v, 10) <= dim || v === sel.value); }
     const cur = sel.value, n = vals.length;
     let list, si;
