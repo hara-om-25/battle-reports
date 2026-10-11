@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-316';
+const APP_VER = 'v.26.10-317';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -3953,6 +3953,7 @@ async function runVerification(file) {
                 // коли рядок нікуди не ляже
                 dt: _vNorm(r[C.date]), rawCoord: _vNorm(r[C.coord]),
                 tgt: _vFileTarget(r[C.vid], r[C.name]),
+                rawRow: r.slice(0, 12).map(_vNorm).join(' | '),
                 res: _vNorm(r[C.res]),
                 // боєприпас є тільки у файлах нового вигляду
                 ammo: C.ammo >= 0 ? _vAmmoKey(_vAmmo(r[C.ammo])) : '',
@@ -4393,6 +4394,9 @@ async function runVerification(file) {
                    + '\n(оцінка й бали не сходяться — не застосовані)'
                    + (oddSample ? '\nПерший такий рядок: оцінка / бали = ' + oddSample : '')
                    + (colInfo ? '\nПрочитано стовпці: ' + colInfo : '') : '')
+        + (() => { const _nn = items.find(i => !i.tgt.name);
+            return _nn ? '\n\nРядок файлу БЕЗ назви цілі (ось що там є):\n' + _nn.rawRow
+                + (colInfo ? '\nПрочитано стовпці: ' + colInfo : '') : ''; })()
         + (sheetsWidened ? '\n\nДодано колонки L і M' : ''));
 }
 
