@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-312';
+const APP_VER = 'v.26.10-313';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1850,15 +1850,18 @@ function showVerifyPeriodPicker() {
         if (!y || y === _newest) { _bx.appendChild(_periodBtn(name)); return; }
         if (!_folds[y]) {
             const yb = document.createElement('button');
-            yb.className = 'btn-stencil btn-yellow';
+            yb.className = 'btn-stencil btn-yellow-dim';
             yb.style.cssText = 'display:block;width:100%;text-align:left;padding:8px 14px;margin-bottom:10px;font-size:0.9em';
             const box = document.createElement('div');
             box.style.cssText = 'display:none;padding-left:14px;border-left:2px solid var(--yellow-dim);margin:0 0 10px 6px';
             const lab = () => y + (box.style.display === 'none' ? '  ▸' : '  ▾');
             yb.textContent = lab();
             yb.addEventListener('click', () => {
-                box.style.display = box.style.display === 'none' ? 'block' : 'none';
+                const open = box.style.display === 'none';
+                box.style.display = open ? 'block' : 'none';
                 yb.textContent = lab();
+                // розкритий рік = натиснута кнопка: яскрава й втоплена
+                yb.className = open ? 'btn-stencil btn-yellow active' : 'btn-stencil btn-yellow-dim';
             });
             _bx.appendChild(yb); _bx.appendChild(box);
             _folds[y] = box;
@@ -1873,9 +1876,9 @@ function showVerifyPeriodPicker() {
     _bx.appendChild(_x);
     // ОБРІЗАТИ — ліворуч від ЗАКРИТИ, відкриває column-cutter.html
     const _cut = document.createElement('button');
-    _cut.className = 'btn-stencil';
+    _cut.className = 'btn-stencil btn-danger';
     _cut.style.cssText = 'float:left;padding:4px 22px;font-size:0.85em;margin-top:6px';
-    _cut.textContent = 'ОБРІЗАТИ';
+    _cut.textContent = 'ПІДГОТУВАТИ ФАЙЛ';
     _cut.addEventListener('click', () => window.open('column-cutter.html', '_blank'));
     _bx.appendChild(_cut);
     _ov.appendChild(_bx);
