@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-317';
+const APP_VER = 'v.26.10-318';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -3103,8 +3103,8 @@ function _vNote(x) {
    вердикту), а бали — одразу за нею. */
 const _V_HEAD = [
     ['date',    ['дата']],
-    ['vid',     ['вид']],
-    ['name',    ['назва']],
+    ['vid',     ['вид', 'скорочення']],
+    ['name',    ['опис цілі', 'назва']],
     ['qty',     ['кількість']],
     ['coord',   ['координат']],
     ['res',     ['результат']],
@@ -3122,9 +3122,15 @@ function _vCols(rows) {
         const map = {}; let hit = 0;
         for (const [key, words] of _V_HEAD) {
             map[key] = -1;
-            for (let c = 0; c < r.length; c++) {
-                const t = _vNorm(r[c]).toLowerCase();
-                if (t && words.some(w => t.indexOf(w) >= 0)) { map[key] = c; hit++; break; }
+            // слова йдуть за пріоритетом: у новому файлі «Опис цілі» несе
+            // ідентифікатор («74-ОС-ОС-2»), а «Назва цілі» — лише слова
+            for (const w of words) {
+                let f = -1;
+                for (let c = 0; c < r.length; c++) {
+                    const t = _vNorm(r[c]).toLowerCase();
+                    if (t && t.indexOf(w) >= 0) { f = c; break; }
+                }
+                if (f >= 0) { map[key] = f; hit++; break; }
             }
         }
         // шапкою вважаємо рядок, де знайшлося головне: координата, дата й оцінка
