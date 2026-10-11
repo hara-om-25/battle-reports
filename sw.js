@@ -1,5 +1,5 @@
-const CACHE = 'battle-reports-v4';
-const PRECACHE = ['/battle-reports/', '/battle-reports/index.html'];
+const CACHE = 'battle-reports-v5';
+const PRECACHE = ['/battle-reports/', '/battle-reports/index.html', '/battle-reports/column-cutter.html'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
