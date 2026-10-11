@@ -197,7 +197,7 @@ body {
 .cols {                              /* два стовпці: №1 згори лівого, далі вниз */
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 262px;
+  grid-auto-columns: 290px;
   justify-content: start;
   gap: 9px 14px;
   margin-bottom: 12px;
@@ -211,11 +211,34 @@ body {
 }
 .cslot { position:relative; display:flex; align-items:center; gap:8px; }
 .cslot .field { width:76px; flex:none; }
+.cinfo { min-width:0; flex:1; }
 .cname {                             /* напис навпроти списку */
+  display:block;
   font-size:.72em;
   line-height:1.25;
   color:var(--text-dim);
   letter-spacing:.02em;
+}
+.cval {                              /* заголовок із 1-го рядка таблиці */
+  display:block;
+  margin-top:3px;
+  padding:3px 6px;
+  border:1px solid var(--surface-light);
+  border-radius:2px;
+  background:var(--fill-field);
+  font-size:.7em;
+  line-height:1.4;
+  color:var(--text-dim);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.cval.ok  { border-color:var(--olive-bright); color:var(--text); }
+.cval.bad {
+  border-color:var(--danger-bright);
+  color:var(--danger-bright);
+  background:rgba(156,69,48,.14);
+  font-weight:700;
 }
 .cslot .cnum {
   position:absolute; top:-6px; left:7px;
@@ -461,7 +484,10 @@ function addSlot() {
     '<span class="cnum">№' + n + '</span>' +
     (n > BASE_SLOTS ? '<button class="rm" onclick="delSlot(this)" title="Прибрати поле">✕</button>' : '') +
     '<select class="field" onchange="markSet(this)">' + OPTIONS + '</select>' +
-    '<span class="cname">' + (TITLES[n - 1] ? esc(TITLES[n - 1]) : '') + '</span>';
+    '<div class="cinfo">' +
+      '<span class="cname">' + (TITLES[n - 1] ? esc(TITLES[n - 1]) : '') + '</span>' +
+      '<span class="cval">—</span>' +
+    '</div>';
   document.getElementById('cols').appendChild(d);
 
   const sel = d.querySelector('select');
@@ -490,7 +516,58 @@ function renumber() {
   layoutCols();
 }
 
-function markSet(sel) { sel.classList.toggle('set', !!sel.value); }
+function markSet(sel) {
+  sel.classList.toggle('set', !!sel.value);
+  clearChecks();                     // після зміни вибору старі заголовки вже не про ці колонки
+}
+
+/* ── ЗВІРКА ЗАГОЛОВКІВ ──────────────────────────── */
+/* Порівнюємо без огляду на регістр, зайві пробіли й пробіли біля / та -. */
+function normTitle(s) {
+  return String(s).toLowerCase()
+    .replace(/\s*([\/\-–—])\s*/g, '$1')
+    .replace(/\s+/g, ' ')
+    .replace(/[.,;:]+$/, '')
+    .trim();
+}
+
+function clearChecks() {
+  document.querySelectorAll('#cols .cval').forEach(function (el) {
+    el.className = 'cval';
+    el.textContent = '—';
+    el.removeAttribute('title');
+  });
+}
+
+/* head — перший рядок нового файлу; його колонки йдуть у тому ж порядку,
+   що й заповнені списки, тож звіряємо їх попарно. */
+function checkHeaders(head) {
+  const seen = [];
+  const bad = [];
+  let pos = 0;
+  document.querySelectorAll('#cols .cslot').forEach(function (slot, i) {
+    const el  = slot.querySelector('.cval');
+    const sel = slot.querySelector('select');
+    el.className = 'cval';
+    el.removeAttribute('title');
+
+    if (!sel.value) { el.textContent = '—'; return; }
+    if (seen.indexOf(sel.value) !== -1) { el.textContent = '(повтор)'; return; }
+    seen.push(sel.value);
+
+    const got = head[pos] == null ? '' : String(head[pos]).trim();
+    pos++;
+    el.textContent = got || '(порожньо)';
+    if (got) el.title = got;
+
+    const want = TITLES[i];
+    if (!want) return;               // у доданих списків підпису немає — нема з чим звіряти
+    if (normTitle(got) === normTitle(want)) { el.className = 'cval ok'; return; }
+    el.className = 'cval bad';
+    bad.push('№' + (i + 1));
+  });
+  return bad;
+}
 
 /* Обрані літери — без повторів, у порядку самих списків. */
 function chosenCols() {
@@ -567,11 +644,21 @@ function handleFile(file) {
         ? '' : ' <span style="color:var(--text-dim)">(єдина сторінка у файлі)</span>';
       const empt = r.dropped
         ? '<br>Прибрано порожніх рядків: <b>' + r.dropped + '</b>' : '';
+
+      const head = XLSX.utils.sheet_to_json(wb.Sheets[SHEET],
+        { header: 1, defval: '', raw: false, blankrows: false })[0] || [];
+      const bad = checkHeaders(head);
+      const hdr = bad.length
+        ? '<br><span style="color:var(--danger-bright)">Заголовки не збігаються з підписами: <b style="color:var(--danger-bright)">' +
+          bad.join(', ') + '</b></span>'
+        : '<br>Заголовки збігаються з підписами.';
+
       setStatus(
         'Сторінка: <b>' + esc(from) + '</b>' + other +
-        '<br>Скопійовано колонки: <b>' + cols.join(', ') + '</b>' + miss + empt +
+        '<br>Скопійовано колонки: <b>' + cols.join(', ') + '</b>' + miss + empt + hdr +
         '<br>Збережено як <b>' + out + '</b> — файл у теці завантажень.', 'ok');
     } catch (err) {
+      clearChecks();
       setStatus('Помилка обробки: ' + (err && err.message ? err.message : err), 'er');
     }
   };
