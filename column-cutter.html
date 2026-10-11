@@ -387,7 +387,7 @@ tbody tr:hover td { background:var(--pick); }
   <span class="stamp">_CUT_OUT</span>
   <span class="hdr-sub">локально · без інтернету · .xlsx / .xls / .csv / .ods</span>
   <!-- ВЕРСІЯ: міняти при кожній зміні застосунку -->
-  <span class="ver">v1.1 · 11.10.2026</span>
+  <span class="ver">v1.2 · 11.10.2026</span>
 </div>
 
 <div class="lay">
@@ -397,7 +397,7 @@ tbody tr:hover td { background:var(--pick); }
     <span class="label">✔ Колонки, які лишаємо</span>
     <div class="cols" id="cols"></div>
     <button class="btn btn-fix" id="bfix" onclick="fixCols()" disabled
-            title="Підібрати літери колонок за заголовками обраного файлу">🔧 ВИПРАВИТИ</button>
+            title="Підібрати літери колонок за заголовками обраного файлу і зберегти новий файл">🔧 ВИПРАВИТИ</button>
     <hr class="divider">
     <div class="hint">
       У новий файл <b>копіюються тільки обрані колонки</b> — решта не копіюється, не показується
@@ -412,8 +412,10 @@ tbody tr:hover td { background:var(--pick); }
     <span class="label">📂 Файл</span>
     <input type="file" id="fi" accept=".xlsx,.xlsm,.xls,.csv,.tsv,.ods" style="display:none">
     <button class="btn btn-yellow btn-full" id="bpick" onclick="pickFile()">📄 ОБРАТИ ФАЙЛ</button>
-    <div class="sline" id="status">Оберіть колонки, потім натисніть «ОБРАТИ ФАЙЛ» — обробка почнеться одразу.</div>
+    <div class="sline" id="status">Оберіть файл — застосунок звірить заголовки. Файл зберігає кнопка «ВИПРАВИТИ».</div>
     <div class="hint" style="margin-top:6px">
+      Порядок роботи: <b>ОБРАТИ ФАЙЛ</b> → перевірити заголовки → <b>ВИПРАВИТИ</b>, яка підбере колонки
+      й збереже новий файл.<br>
       У новий файл іде лише сторінка <b>Результати Роботи</b> — решта сторінок книги стирається.<br>
       Google Таблицю спершу завантажте на диск:
       <b>Файл → Завантажити → Microsoft Excel (.xlsx)</b> або <b>CSV</b>.
@@ -512,7 +514,9 @@ function markSet(sel) {
 /* Заголовки всіх колонок обраної сторінки — тільки перший рядок; самі дані
    невибраних колонок, як і раніше, не читаються. Потрібні, щоб кнопка
    «ВИПРАВИТИ» могла підібрати літери. */
-let srcHead = [];
+let srcHead = [];                    // шапка обраної сторінки
+let srcWs   = null;                  // сама сторінка, доки її не збережено
+let srcName = '';                    // ім'я обраного файлу
 
 function readHead(ws) {
   const out = [];
@@ -540,8 +544,12 @@ function titleOf(col) {
    і ставимо її літеру в список. Те, що вже збігається, лишаємо як є;
    одна колонка дістається лише одному списку. */
 function fixCols() {
-  if (!srcHead.length) {
+  if (!srcWs || !srcHead.length) {
     setStatus('Спершу оберіть файл — тоді буде з чим звіряти.', 'er');
+    return;
+  }
+  if (!chosenCols().length) {
+    setStatus('Жодної колонки не обрано — зберігати нічого.', 'er');
     return;
   }
 
@@ -571,24 +579,31 @@ function fixCols() {
     }
     used.push(hit.col);
     x.sel.classList.add('set');
-
-    const el = x.slot.querySelector('.cval');
-    el.className = 'cval fix';
-    el.textContent = 'Збігається';
-    el.title = hit.title + ' — колонка ' + hit.col;
-    fixed.push('№' + (x.i + 1));
+    fixed.push({ i: x.i, hit: hit });
   });
 
+  // Перезбираємо книгу вже з виправленими колонками і зберігаємо її.
+  const b = buildBook();
+  const slots = document.querySelectorAll('#cols .cslot');
+  fixed.forEach(function (f) {       // позначаємо щойно підібрані списки
+    const el = slots[f.i].querySelector('.cval');
+    el.className = 'cval fix';
+    el.textContent = 'Збігається';
+    el.title = f.hit.title + ' — колонка ' + f.hit.col;
+  });
+
+  const out = saveWorkbook(b.wb, srcName);
+
+  const nums = fixed.map(function (f) { return '№' + (f.i + 1); });
   const miss = missed.length
     ? '<br><span style="color:var(--danger-bright)">Не знайшов у файлі: <b style="color:var(--danger-bright)">' +
       missed.join(', ') + '</b></span>' : '';
+  const what = nums.length
+    ? 'Виправлено: <b>' + nums.join(', ') + '</b>'
+    : 'Виправляти не довелось — літери вже відповідали підписам.';
 
-  if (!fixed.length) {
-    setStatus('Виправляти нічого — усі літери вже відповідають підписам.' + miss, missed.length ? 'er' : 'ok');
-    return;
-  }
-  setStatus('Виправлено: <b>' + fixed.join(', ') + '</b>' + miss +
-            '<br>Натисніть «ОБРАТИ ФАЙЛ», щоб зберегти файл із цими колонками.', 'ok');
+  setStatus(what + miss + b.empt +
+            '<br>Збережено як <b>' + out + '</b> — файл у теці завантажень.', 'ok');
 }
 
 /* Порівнюємо без огляду на регістр, зайві пробіли й пробіли біля / та -. */
@@ -699,45 +714,52 @@ function handleFile(file) {
       const found = pickSheet(src.SheetNames);
       if (!found) throw new Error('у файлі немає сторінки «' + SHEET + '» (є: ' + src.SheetNames.join(', ') + ')');
       const from = found.name;
-      srcHead = readHead(src.Sheets[from]);
+      srcWs   = src.Sheets[from];
+      srcName = file.name;
+      srcHead = readHead(srcWs);
       document.getElementById('bfix').disabled = !srcHead.length;
 
-      // Нову книгу збираємо з нуля: у неї потрапляють лише обрані колонки
-      // однієї сторінки. Ніщо інше з оригіналу — ні інші сторінки, ні інші
-      // колонки, ні властивості книги, ні іменовані діапазони, ні макроси —
-      // сюди не переноситься.
-      const wb = XLSX.utils.book_new();
-      const r  = keepSheet(src.Sheets[from], keep);
-      XLSX.utils.book_append_sheet(wb, r.ws, SHEET);
-
-      const out = saveWorkbook(wb, file.name);
-      render(wb);
-
-      const miss = r.present < cols.length
-        ? ' <span style="color:var(--text-dim)">(частини колонок на сторінці немає — вони порожні)</span>' : '';
+      const b = buildBook();           // тільки дивимось, що вийде — файл ще не зберігаємо
       const other = found.matched
         ? '' : ' <span style="color:var(--text-dim)">(єдина сторінка у файлі)</span>';
-      const empt = r.dropped
-        ? '<br>Прибрано порожніх рядків: <b>' + r.dropped + '</b>' : '';
-
-      const head = XLSX.utils.sheet_to_json(wb.Sheets[SHEET],
-        { header: 1, defval: '', raw: false, blankrows: false })[0] || [];
-      const bad = checkHeaders(head);
-      const hdr = bad.length
-        ? '<br><span style="color:var(--danger-bright)">Заголовки не збігаються з підписами: <b style="color:var(--danger-bright)">' +
-          bad.join(', ') + '</b></span>'
-        : '<br>Заголовки збігаються з підписами.';
 
       setStatus(
         'Сторінка: <b>' + esc(from) + '</b>' + other +
-        '<br>Скопійовано колонки: <b>' + cols.join(', ') + '</b>' + miss + empt + hdr +
-        '<br>Збережено як <b>' + out + '</b> — файл у теці завантажень.', 'ok');
+        '<br>Обрані колонки: <b>' + b.cols.join(', ') + '</b>' + b.miss + b.empt + b.hdr +
+        '<br><b>Файл ще не збережено</b> — натисніть «ВИПРАВИТИ».', 'ok');
     } catch (err) {
       clearChecks();
       setStatus('Помилка обробки: ' + (err && err.message ? err.message : err), 'er');
     }
   };
   rd.readAsArrayBuffer(file);
+}
+
+/* ── ЗБІРКА КНИГИ ДЛЯ ПЕРЕГЛЯДУ Й ЗБЕРЕЖЕННЯ ────── */
+/* Книга збирається з нуля: у неї потрапляють лише обрані колонки однієї
+   сторінки. Ніщо інше з оригіналу — ні інші сторінки, ні інші колонки,
+   ні властивості книги, ні іменовані діапазони, ні макроси — не переноситься. */
+function buildBook() {
+  const cols = chosenCols();
+  const wb = XLSX.utils.book_new();
+  const r  = keepSheet(srcWs, cols.map(colToIdx));
+  XLSX.utils.book_append_sheet(wb, r.ws, SHEET);
+  render(wb);
+
+  const head = XLSX.utils.sheet_to_json(wb.Sheets[SHEET],
+    { header: 1, defval: '', raw: false, blankrows: false })[0] || [];
+  const bad = checkHeaders(head);
+
+  return {
+    wb: wb, cols: cols, bad: bad,
+    miss: r.present < cols.length
+      ? ' <span style="color:var(--text-dim)">(частини колонок на сторінці немає — вони порожні)</span>' : '',
+    empt: r.dropped ? '<br>Прибрано порожніх рядків: <b>' + r.dropped + '</b>' : '',
+    hdr: bad.length
+      ? '<br><span style="color:var(--danger-bright)">Заголовки не збігаються з підписами: <b style="color:var(--danger-bright)">' +
+        bad.join(', ') + '</b></span>'
+      : '<br>Заголовки збігаються з підписами.'
+  };
 }
 
 /* ── ПОШУК ПОТРІБНОЇ СТОРІНКИ ───────────────────── */
