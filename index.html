@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-313';
+const APP_VER = 'v.26.10-314';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1811,6 +1811,27 @@ function _mainPeriodName() {
 }
 
 // ВЕРИФІКАЦІЯ з налаштувань: спершу вибір періоду, потім звичайне вікно верифікації
+// ПІДГОТУВАТИ ФАЙЛ: щоразу береться НАЙСВІЖІША версія column-cutter.html з гілки
+// claude/google-sheets-column-remover-hd1rfm (файл там змінюється). Вікно відкривається
+// одразу, поки триває дотик (інакше телефон заблокує), а вміст підставляється, коли
+// файл прийшов. Без мережі лишається копія з gh-pages (column-cutter.html)
+const _CUTTER_URL = 'https://raw.githubusercontent.com/hara-om-25/battle-reports/claude/google-sheets-column-remover-hd1rfm/column-cutter.html';
+async function openColumnCutter() {
+    const w = window.open('', '_blank');
+    if (!w) { showAlert('Браузер заблокував нове вікно. Дозвольте спливаючі вікна для цього сайту.'); return; }
+    try { w.document.write('<body style="background:#1a1d18;color:#d9d6c4;font-family:sans-serif;padding:24px">Завантажую останню версію…</body>'); } catch (e) {}
+    try {
+        const r = await fetch(_CUTTER_URL + '?t=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const html = await r.text();
+        if (html.indexOf('<html') < 0) throw new Error('не схоже на сторінку');
+        w.location.href = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+    } catch (e) {
+        // немає мережі чи GitHub не відповів — відкриваємо копію з застосунку
+        w.location.href = 'column-cutter.html';
+    }
+}
+
 function showVerifyPeriodPicker() {
     const _ov = document.createElement('div');
     _ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
@@ -1879,7 +1900,7 @@ function showVerifyPeriodPicker() {
     _cut.className = 'btn-stencil btn-danger';
     _cut.style.cssText = 'float:left;padding:4px 22px;font-size:0.85em;margin-top:6px';
     _cut.textContent = 'ПІДГОТУВАТИ ФАЙЛ';
-    _cut.addEventListener('click', () => window.open('column-cutter.html', '_blank'));
+    _cut.addEventListener('click', openColumnCutter);
     _bx.appendChild(_cut);
     _ov.appendChild(_bx);
     _ov.addEventListener('click', e => { if (e.target === _ov) _close(); });
