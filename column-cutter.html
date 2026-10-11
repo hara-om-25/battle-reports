@@ -197,12 +197,26 @@ body {
 .cols {                              /* два стовпці: №1 згори лівого, далі вниз */
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 76px;
+  grid-auto-columns: 262px;
   justify-content: start;
-  gap: 9px 8px;
+  gap: 9px 14px;
   margin-bottom: 12px;
 }
-.cslot { position:relative; }
+@media (max-width: 620px) {          /* на вузькому екрані — один стовпець */
+  .cols {
+    grid-auto-flow: row !important;
+    grid-template-rows: auto !important;
+    grid-auto-columns: auto !important;
+  }
+}
+.cslot { position:relative; display:flex; align-items:center; gap:8px; }
+.cslot .field { width:76px; flex:none; }
+.cname {                             /* напис навпроти списку */
+  font-size:.72em;
+  line-height:1.25;
+  color:var(--text-dim);
+  letter-spacing:.02em;
+}
 .cslot .cnum {
   position:absolute; top:-6px; left:7px;
   background: var(--surface);
@@ -226,7 +240,7 @@ body {
 .field:focus { border-color:var(--olive-bright); outline:none; }
 .field.set   { border-color:var(--olive-bright); background:var(--pick); color:var(--yellow); }
 .cslot .rm {
-  position:absolute; top:-7px; right:5px;
+  position:absolute; top:-7px; left:58px;
   background: var(--black);
   border: 1px solid var(--black-border);
   color: var(--text-dim);
@@ -398,6 +412,19 @@ tbody tr:hover td { background:var(--pick); }
 /* ── КОНСТАНТИ ──────────────────────────────────── */
 const SHEET      = 'Результати Роботи';   // єдина сторінка, яка потрапляє в новий файл
 const DEFAULTS   = ['G', 'H', 'I', 'J', 'K', 'L', 'P', 'X', 'AA', 'AB', 'AD'];  // обрані одразу при відкритті
+const TITLES     = [            // що має бути у відповідній колонці
+  'Дата ураження цілі',
+  'Вид',
+  'Назва',
+  'Кількість',
+  'Координати',
+  'Результат ураження',
+  'Боєприпас/Заряд',
+  'Оцінка верифікатора',
+  'Примітка верифікатора',
+  'Коментар верифікатора',
+  'Бали за ціль'
+];
 const BASE_SLOTS = DEFAULTS.length;   // стільки списків показуємо від початку
 const MAX_COL    = 104;    // A … CZ
 const PREV_ROWS  = 300;    // максимум рядків у попередньому перегляді
@@ -433,7 +460,8 @@ function addSlot() {
   d.innerHTML =
     '<span class="cnum">№' + n + '</span>' +
     (n > BASE_SLOTS ? '<button class="rm" onclick="delSlot(this)" title="Прибрати поле">✕</button>' : '') +
-    '<select class="field" onchange="markSet(this)">' + OPTIONS + '</select>';
+    '<select class="field" onchange="markSet(this)">' + OPTIONS + '</select>' +
+    '<span class="cname">' + (TITLES[n - 1] ? esc(TITLES[n - 1]) : '') + '</span>';
   document.getElementById('cols').appendChild(d);
 
   const sel = d.querySelector('select');
