@@ -234,6 +234,12 @@ body {
   text-overflow:ellipsis;
 }
 .cval.ok  { border-color:var(--olive-bright); color:var(--text); }
+.cval.fix {
+  border-color:var(--yellow);
+  color:var(--yellow);
+  background:rgba(212,184,26,.12);
+  font-weight:700;
+}
 .cval.bad {
   border-color:var(--danger-bright);
   color:var(--danger-bright);
@@ -262,17 +268,6 @@ body {
 }
 .field:focus { border-color:var(--olive-bright); outline:none; }
 .field.set   { border-color:var(--olive-bright); background:var(--pick); color:var(--yellow); }
-.cslot .rm {
-  position:absolute; top:-7px; left:58px;
-  background: var(--black);
-  border: 1px solid var(--black-border);
-  color: var(--text-dim);
-  border-radius: 2px;
-  font-size:.62em; line-height:1;
-  padding: 2px 4px;
-  cursor: pointer;
-}
-.cslot .rm:hover { color:var(--danger-bright); border-color:var(--danger-bright); }
 
 /* ── КНОПКИ ──────────────────────────────────────── */
 .btn {
@@ -300,20 +295,13 @@ body {
 }
 .btn-yellow:hover:not(:disabled) { background:var(--yellow-bright); }
 .btn-yellow:active:not(:disabled){ transform:translateY(2px); box-shadow:0 2px 0 var(--shadow-yellow),0 3px 7px rgba(0,0,0,.4); }
-.btn-plus {
-  background: var(--green);
-  border: 2px solid var(--green-border);
-  color: var(--text);
-  font-size: 1em; font-weight: 700;
-  padding: 5px 18px;
-  border-radius: 2px;
-  cursor: pointer;
-  transition: all .1s;
-  box-shadow: 0 4px 0 var(--shadow-green), 0 5px 10px rgba(0,0,0,.35);
+.btn-fix {
+  background: var(--blue);
+  border-color: var(--blue-border);
+  box-shadow: 0 4px 0 var(--shadow-blue), 0 5px 10px rgba(0,0,0,.4);
 }
-.btn-plus:hover:not(:disabled)  { background:var(--green-press); }
-.btn-plus:active:not(:disabled) { transform:translateY(2px); box-shadow:0 2px 0 var(--shadow-green),0 3px 7px rgba(0,0,0,.35); }
-.btn-plus:disabled { opacity:.35; cursor:not-allowed; }
+.btn-fix:hover:not(:disabled)  { background:var(--blue-press); }
+.btn-fix:active:not(:disabled) { transform:translateY(2px); box-shadow:0 2px 0 var(--shadow-blue),0 3px 7px rgba(0,0,0,.4); }
 .hint { font-size:.72em; color:var(--text-dim); line-height:1.7; }
 .hint b { color:var(--khaki); font-weight:700; }
 
@@ -395,7 +383,8 @@ tbody tr:hover td { background:var(--pick); }
   <div class="crate">
     <span class="label">✔ Колонки, які лишаємо</span>
     <div class="cols" id="cols"></div>
-    <button class="btn-plus" id="badd" onclick="addSlot()" title="Додати ще одне поле">+</button>
+    <button class="btn btn-fix" id="bfix" onclick="fixCols()" disabled
+            title="Підібрати літери колонок за заголовками обраного файлу">🔧 ВИПРАВИТИ</button>
     <hr class="divider">
     <div class="hint">
       У новий файл <b>копіюються тільки обрані колонки</b> — решта не копіюється, не показується
@@ -482,7 +471,6 @@ function addSlot() {
   d.className = 'cslot';
   d.innerHTML =
     '<span class="cnum">№' + n + '</span>' +
-    (n > BASE_SLOTS ? '<button class="rm" onclick="delSlot(this)" title="Прибрати поле">✕</button>' : '') +
     '<select class="field" onchange="markSet(this)">' + OPTIONS + '</select>' +
     '<div class="cinfo">' +
       '<span class="cname">' + (TITLES[n - 1] ? esc(TITLES[n - 1]) : '') + '</span>' +
@@ -493,7 +481,6 @@ function addSlot() {
   const sel = d.querySelector('select');
   if (n <= DEFAULTS.length) { sel.value = DEFAULTS[n - 1]; markSet(sel); }
 
-  document.getElementById('badd').disabled = slots >= MAX_COL;
   layoutCols();
 }
 
@@ -503,25 +490,94 @@ function layoutCols() {
     'repeat(' + Math.max(1, Math.ceil(slots / 2)) + ', auto)';
 }
 
-function delSlot(btn) {
-  btn.closest('.cslot').remove();
-  renumber();
-  document.getElementById('badd').disabled = false;
-}
-
-function renumber() {
-  const list = document.querySelectorAll('#cols .cslot');
-  slots = list.length;
-  list.forEach(function (el, i) { el.querySelector('.cnum').textContent = '№' + (i + 1); });
-  layoutCols();
-}
-
 function markSet(sel) {
   sel.classList.toggle('set', !!sel.value);
   clearChecks();                     // після зміни вибору старі заголовки вже не про ці колонки
 }
 
 /* ── ЗВІРКА ЗАГОЛОВКІВ ──────────────────────────── */
+/* Заголовки всіх колонок обраної сторінки — тільки перший рядок; самі дані
+   невибраних колонок, як і раніше, не читаються. Потрібні, щоб кнопка
+   «ВИПРАВИТИ» могла підібрати літери. */
+let srcHead = [];
+
+function readHead(ws) {
+  const out = [];
+  if (!ws || !ws['!ref']) return out;
+  const rng = XLSX.utils.decode_range(ws['!ref']);
+  for (let r = rng.s.r; r <= rng.e.r; r++) {
+    const row = [];
+    for (let c = rng.s.c; c <= rng.e.c; c++) {
+      const cell = ws[XLSX.utils.encode_cell({ r: r, c: c })];
+      if (isEmpty(cell)) continue;
+      row.push({ col: idxToCol(c), title: String(cell.w != null ? cell.w : cell.v).trim() });
+    }
+    if (row.length) return row;      // перший непорожній рядок — це шапка
+  }
+  return out;
+}
+
+function titleOf(col) {
+  for (let i = 0; i < srcHead.length; i++) if (srcHead[i].col === col) return srcHead[i].title;
+  return '';
+}
+
+/* ── ПІДБІР ЛІТЕР ЗА ЗАГОЛОВКАМИ ────────────────── */
+/* Для кожного підпису шукаємо в шапці файлу колонку з такою ж назвою
+   і ставимо її літеру в список. Те, що вже збігається, лишаємо як є;
+   одна колонка дістається лише одному списку. */
+function fixCols() {
+  if (!srcHead.length) {
+    setStatus('Спершу оберіть файл — тоді буде з чим звіряти.', 'er');
+    return;
+  }
+
+  const used = [];
+  const need = [];
+  document.querySelectorAll('#cols .cslot').forEach(function (slot, i) {
+    const want = TITLES[i];
+    if (!want) return;
+    const sel = slot.querySelector('select');
+    if (sel.value && normTitle(titleOf(sel.value)) === normTitle(want)) { used.push(sel.value); return; }
+    need.push({ slot: slot, sel: sel, i: i, want: want });
+  });
+
+  const fixed = [], missed = [];
+  need.forEach(function (x) {
+    let hit = null;
+    for (let k = 0; k < srcHead.length; k++) {
+      if (used.indexOf(srcHead[k].col) !== -1) continue;
+      if (normTitle(srcHead[k].title) === normTitle(x.want)) { hit = srcHead[k]; break; }
+    }
+    if (!hit) { missed.push('№' + (x.i + 1)); return; }
+
+    x.sel.value = hit.col;
+    if (x.sel.value !== hit.col) {   // колонка далі за CZ — такої літери в списку немає
+      missed.push('№' + (x.i + 1));
+      return;
+    }
+    used.push(hit.col);
+    x.sel.classList.add('set');
+
+    const el = x.slot.querySelector('.cval');
+    el.className = 'cval fix';
+    el.textContent = 'Виправлено';
+    el.title = hit.title + ' — колонка ' + hit.col;
+    fixed.push('№' + (x.i + 1));
+  });
+
+  const miss = missed.length
+    ? '<br><span style="color:var(--danger-bright)">Не знайшов у файлі: <b style="color:var(--danger-bright)">' +
+      missed.join(', ') + '</b></span>' : '';
+
+  if (!fixed.length) {
+    setStatus('Виправляти нічого — усі літери вже відповідають підписам.' + miss, missed.length ? 'er' : 'ok');
+    return;
+  }
+  setStatus('Виправлено: <b>' + fixed.join(', ') + '</b>' + miss +
+            '<br>Натисніть «ОБРАТИ ФАЙЛ», щоб зберегти файл із цими колонками.', 'ok');
+}
+
 /* Порівнюємо без огляду на регістр, зайві пробіли й пробіли біля / та -. */
 function normTitle(s) {
   return String(s).toLowerCase()
@@ -626,6 +682,8 @@ function handleFile(file) {
       const found = pickSheet(src.SheetNames);
       if (!found) throw new Error('у файлі немає сторінки «' + SHEET + '» (є: ' + src.SheetNames.join(', ') + ')');
       const from = found.name;
+      srcHead = readHead(src.Sheets[from]);
+      document.getElementById('bfix').disabled = !srcHead.length;
 
       // Нову книгу збираємо з нуля: у неї потрапляють лише обрані колонки
       // однієї сторінки. Ніщо інше з оригіналу — ні інші сторінки, ні інші
