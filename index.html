@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-318';
+const APP_VER = 'v.26.10-319';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -3603,19 +3603,31 @@ function _tgPts(o) {
 // а не вильоти, бо й числа в ньому про цілі
 function toggleTgFilter(el) {
     const k = el.dataset.k, v = el.dataset.v;
-    const f = state.tgFilter;
-    state.tgFilter = (f && f.k === k && f.v === v) ? null : { k: k, v: v };
+    state.tgFilter = _fToggle(state.tgFilter, k, v);
     render();
 }
+// Фільтр можна складати з кількох рядків статистики: об'єкт {k, v, list},
+// де k/v — останній натиснутий, а list — усі вибрані. Показується те, що
+// підходить під будь-який із них. Друге натискання знімає рядок
+function _fToggle(cur, k, v) {
+    const list = (cur && cur.list) ? cur.list.slice() : [];
+    const i = list.findIndex(x => x.k === k && x.v === v);
+    if (i >= 0) list.splice(i, 1); else list.push({ k: k, v: v });
+    const last = list[list.length - 1];
+    return last ? { k: last.k, v: last.v, list: list } : null;
+}
+function _fHas(f, k, v) { return !!(f && f.list && f.list.some(x => x.k === k && x.v === v)); }
 // «Не звірено» в переліку цілей: ціль, у якої є свій вердикт (верифіковано, відхилено,
 // дублююча), не звірено не є, навіть якщо виліт у цілому вердикту не має
 function _unvTgOk(o) {
-    const f = state.arFilter;
-    return !(f && f.k === 'v' && f.v === 'unv') || !_tgVerdict(o);
+    return !_fHas(state.arFilter, 'v', 'unv') || !_tgVerdict(o);
 }
 function _tgMatch(o) {
     const f = state.tgFilter;
     if (!f) return true;
+    return f.list.some(x => _tgMatch1(o, x));
+}
+function _tgMatch1(o, f) {
     if (f.k === 'result') return String(o.p.ress[o.j] || '').trim() === f.v;
     const st = _tgVerdict(o);
     if (f.v === 'subm') return st === 'ok' || st === 'repl' || st === 'no';
@@ -4709,8 +4721,7 @@ function toggleArchiveFlag(srow, j) {
 // Фільтр переліку вильотів за натиснутим рядком статистики
 function toggleArFilter(el) {
     const k = el.dataset.k, v = el.dataset.v;
-    const f = state.arFilter;
-    state.arFilter = (f && f.k === k && f.v === v) ? null : { k: k, v: v };
+    state.arFilter = _fToggle(state.arFilter, k, v);
     render();
 }
 // Верифікатору потрапляють лише знищені й пошкоджені цілі. Усе інше («НЕвлучання»,
@@ -4722,6 +4733,9 @@ function _isUnv(r) { return !(r.v && r.v.state) && (parseFloat(r.points) || 0) >
 function _arMatch(r) {
     const f = state.arFilter;
     if (!f) return true;
+    return f.list.some(x => _arMatch1(r, x));
+}
+function _arMatch1(r, f) {
     const st = r.v && r.v.state, pts = parseFloat(r.points) || 0;
     if (f.k === 'v') {
         if (f.v === 'zero') return !pts && !st;
@@ -6987,7 +7001,7 @@ function render() {
         // а сам світиться кольором своєї групи. k — вид фільтра, v — значення,
         // c — колір: y жовтий, b блакитний, r червоний, g сірий
         const _rowF=(label,val,suf,k,v,c,sub)=>{
-            const on=state.arFilter&&state.arFilter.k===k&&state.arFilter.v===v;
+            const on=_fHas(state.arFilter,k,v);
             return `<p class="stencil st-row st-${c}${on?' on':''}${sub?' st-sub':''}" data-k="${esc(k)}" data-v="${esc(v)}" onclick="toggleArFilter(this)" style="color:var(--text);margin:1px 0">${label} <span style="color:var(--yellow)">— ${val}${suf}</span></p>`;
         };
         // однаковий для одного архіву й для всіх виїздів разом
@@ -7134,7 +7148,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 _tgAll.forEach(o=>{const _r=String(o.p.ress[o.j]||'').trim();if(_r)_tgResCnt[_r]=(_tgResCnt[_r]||0)+1;});
                 // натискається так само, як у переліку вильотів, тільки відбирає цілі
                 const _rowT=(label,val,suf,k,v,c,sub)=>{
-                    const on=state.tgFilter&&state.tgFilter.k===k&&state.tgFilter.v===v;
+                    const on=_fHas(state.tgFilter,k,v);
                     return `<p class="stencil st-row st-${c}${on?' on':''}${sub?' st-sub':''}" data-k="${esc(k)}" data-v="${esc(v)}" onclick="toggleTgFilter(this)" style="color:var(--text);margin:1px 0">${label} <span style="color:var(--yellow)">— ${val}${suf}</span></p>`;
                 };
                 const _tgResRows=Object.entries(_tgResCnt).sort((a,b)=>b[1]-a[1])
