@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-319';
+const APP_VER = 'v.26.10-320';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -4898,6 +4898,17 @@ async function recalcArchivePoints() {
     });
 }
 
+// З 04.10.2026 застосунок сам пише в стовпець J бал разом із +1 за ЧЕКУН
+// (add()/syncRecordsToAPI), тож для таких вильотів, у яких ЧЕКУН стоїть у
+// колонці P, плюс 1 у J уже є, і додавати його вдруге не можна (картка 17:
+// 18 балів ціль, 20 — наші, «скасовано 2» замість 1). Старіші аркуші мають
+// у J формулу без чекуна — там +1 додаємо при розборі
+function _chkInJ(r) {
+    const m = String((r && r.datetime) || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    if (!m) return false;
+    return (+m[3]) * 10000 + (+m[2]) * 100 + (+m[1]) >= 20261004;
+}
+
 // Рядок аркуша -> запис вильота. Один розбір і для окремого архіву,
 // і для зведення по всіх, і для того, що прочитано з пристрою
 function _parseArchiveRows(rows, name) {
@@ -4926,8 +4937,9 @@ function _parseArchiveRows(rows, name) {
             // чекун: у формулу аркуша бал не вписати, тож +1 додаємо тут
             const _ar = out[out.length - 1];
             _ar.chk = parseInt(row[15]) === 1 ? 1 : 0;
+            const _fromP = !!_ar.chk;
             if (!_ar.chk && _hasChk && _chkNoteOf(_ar)) _ar.chk = 1;
-            if (_ar.chk) _ar.points += 1;
+            if (_ar.chk && !(_fromP && _chkInJ(_ar))) _ar.points += 1;
             if (!_hasHit(_ar)) _ar.points = 0;   // без знищено/пошкоджено балів немає ніде
         }
     }
@@ -6419,7 +6431,7 @@ async function saveEditRecord() {
             // інакше на екрані світилося б наше число, а в таблиці інше
             try {
                 const _j = await apiGet(er.arch.sheet + '!J' + er.arch.srow);
-                r.points = _num((_j[0] || [])[0]) + (er.chk ? 1 : 0);
+                r.points = _num((_j[0] || [])[0]) + ((er.chk && !_chkInJ(r)) ? 1 : 0);
                 if (!_hasHit(r)) r.points = 0;
             } catch (e2) { /* не прочиталося — лишаємо як було */ }
         }
