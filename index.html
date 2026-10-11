@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-310';
+const APP_VER = 'v.26.10-311';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1847,6 +1847,13 @@ function showVerifyPeriodPicker() {
     _x.textContent = 'ЗАКРИТИ';
     _x.addEventListener('click', _close);
     _bx.appendChild(_x);
+    // ОБРІЗАТИ — ліворуч від ЗАКРИТИ, відкриває column-cutter.html
+    const _cut = document.createElement('button');
+    _cut.className = 'btn-stencil';
+    _cut.style.cssText = 'float:left;padding:4px 22px;font-size:0.85em;margin-top:6px';
+    _cut.textContent = 'ОБРІЗАТИ';
+    _cut.addEventListener('click', () => window.open('column-cutter.html', '_blank'));
+    _bx.appendChild(_cut);
     _ov.appendChild(_bx);
     _ov.addEventListener('click', e => { if (e.target === _ov) _close(); });
     document.body.appendChild(_ov);
@@ -2019,8 +2026,6 @@ function showSettings() {
           go: () => goToArchive('service') },
         { t: 'ДОСТУП', c: 'btn-orange', on: true, why: '',
           go: () => showAccess() },
-        { t: 'ОБРІЗАТИ', c: 'btn-black', on: true, why: '',
-          go: () => window.open('column-cutter.html', '_blank') },
         { t: 'е бали', c: 'btn-green', on: Object.keys(state.scoreTable || {}).length > 0,
           why: 'Прайс ще не завантажено — відкрийте застосунок із мережею',
           go: () => showPrices() }
