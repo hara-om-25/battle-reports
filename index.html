@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-314';
+const APP_VER = 'v.26.10-315';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -3114,6 +3114,8 @@ const _V_HEAD = [
     ['comment', ['коментар']],
     ['pts',     ['бал']]
 ];
+// Літера стовпця таблиці за номером: 0 → A, 26 → AA
+function _vColL(n) { let t = '', k = n + 1; while (k > 0) { const m = (k - 1) % 26; t = String.fromCharCode(65 + m) + t; k = Math.floor((k - 1) / 26); } return t; }
 function _vCols(rows) {
     for (let i = 0; i < Math.min(rows.length, 20); i++) {
         const r = rows[i] || [];
@@ -3128,6 +3130,7 @@ function _vCols(rows) {
         // шапкою вважаємо рядок, де знайшлося головне: координата, дата й оцінка
         if (hit >= 4 && map.coord >= 0 && map.date >= 0 && map.verdict >= 0) {
             if (map.pts < 0) map.pts = map.verdict + 1;
+            map.hdr = i;
             return map;
         }
     }
@@ -3137,7 +3140,7 @@ function _vCols(rows) {
     rows.forEach(r => { if (_isW(r[6])) n6++; if (_isW(r[7])) n7++; });
     const wi = n7 > n6 ? 7 : 6;
     return { date: 0, vid: 1, name: 2, qty: 3, coord: 4, res: 5,
-             ammo: wi === 7 ? 6 : -1, verdict: wi, pts: wi + 1, note: -1, comment: -1 };
+             ammo: wi === 7 ? 6 : -1, verdict: wi, pts: wi + 1, note: -1, comment: -1, hdr: -1 };
 }
 
 // У клітинці координат буває дописане зайве: «37U CP 71227 60561, 155».
@@ -3917,11 +3920,15 @@ async function runVerification(file) {
         return;
     }
 
-    let items, oddRows = 0;
+    let items, oddRows = 0, oddSample = null, colInfo = '';
     try {
         const wb = XL.read(new Uint8Array(await file.arrayBuffer()), { type: 'array', cellDates: true });
         const rows = XL.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
         const C = _vCols(rows);
+        // що саме прочитано: назви стовпців із шапки файлу (для діагностики в підсумку)
+        const _hd = C.hdr >= 0 ? (rows[C.hdr] || []) : null;
+        const _cn = k => C[k] >= 0 ? (_hd ? '«' + _vNorm(_hd[C[k]]) + '» (' + _vColL(C[k]) + ')' : _vColL(C[k]) + ' (без шапки)') : 'не знайдено';
+        colInfo = 'оцінка — ' + _cn('verdict') + '; бали — ' + _cn('pts') + '; назва — ' + _cn('name') + '; вид — ' + _cn('vid');
         items = [];
         rows.forEach(r => {
             const coord = _vCoord(r[C.coord]), date = _vDate(r[C.date]);
@@ -3939,7 +3946,7 @@ async function runVerification(file) {
             let verdict = '';
             if (word === 'підтверджено' && hasPts) verdict = 'Підтверджено';
             else if (word === 'відхилено' && !hasPts) verdict = 'Відхилено';
-            else if (word || pts) oddRows++;
+            else if (word || pts) { oddRows++; if (!oddSample) oddSample = '«' + (word || '—') + '» / «' + (pts || '—') + '»'; }
             items.push({
                 coord: coord, date: date, min: _vMinutes(r[C.date]),
                 // як воно написано у файлі — щоб було що показати людині,
@@ -4383,7 +4390,9 @@ async function runVerification(file) {
                         + ' з ' + fixes.length : '')
         // рядок, де оцінка й бали не сходяться, мовчки не зникає
         + (oddRows ? '\n\nСуперечливих рядків у файлі: ' + oddRows
-                   + '\n(оцінка й бали не сходяться — не застосовані)' : '')
+                   + '\n(оцінка й бали не сходяться — не застосовані)'
+                   + (oddSample ? '\nПерший такий рядок: оцінка / бали = ' + oddSample : '')
+                   + (colInfo ? '\nПрочитано стовпці: ' + colInfo : '') : '')
         + (sheetsWidened ? '\n\nДодано колонки L і M' : ''));
 }
 
