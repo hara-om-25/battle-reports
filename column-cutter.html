@@ -387,7 +387,7 @@ tbody tr:hover td { background:var(--pick); }
   <span class="stamp">_CUT_OUT</span>
   <span class="hdr-sub">локально · без інтернету · .xlsx / .xls / .csv / .ods</span>
   <!-- ВЕРСІЯ: міняти при кожній зміні застосунку -->
-  <span class="ver">v1.0 · 11.10.2026</span>
+  <span class="ver">v1.1 · 11.10.2026</span>
 </div>
 
 <div class="lay">
@@ -574,7 +574,7 @@ function fixCols() {
 
     const el = x.slot.querySelector('.cval');
     el.className = 'cval fix';
-    el.textContent = 'Виправлено';
+    el.textContent = 'Збігається';
     el.title = hit.title + ' — колонка ' + hit.col;
     fixed.push('№' + (x.i + 1));
   });
@@ -631,7 +631,11 @@ function checkHeaders(head) {
 
     const want = TITLES[i];
     if (!want) return;               // у доданих списків підпису немає — нема з чим звіряти
-    if (normTitle(got) === normTitle(want)) { el.className = 'cval ok'; return; }
+    if (normTitle(got) === normTitle(want)) {
+      el.className = 'cval ok';
+      el.textContent = 'Збігається';   // сам заголовок лишається в підказці
+      return;
+    }
     el.className = 'cval bad';
     bad.push('№' + (i + 1));
   });
