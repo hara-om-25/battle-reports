@@ -194,9 +194,11 @@ body {
 }
 
 /* ── ПОЛЯ ВИБОРУ КОЛОНОК ─────────────────────────── */
-.cols {
+.cols {                              /* два стовпці: №1 згори лівого, далі вниз */
   display: grid;
-  grid-template-columns: repeat(auto-fill, 76px);
+  grid-auto-flow: column;
+  grid-auto-columns: 76px;
+  justify-content: start;
   gap: 9px 8px;
   margin-bottom: 12px;
 }
@@ -438,6 +440,13 @@ function addSlot() {
   if (n <= DEFAULTS.length) { sel.value = DEFAULTS[n - 1]; markSet(sel); }
 
   document.getElementById('badd').disabled = slots >= MAX_COL;
+  layoutCols();
+}
+
+/* Поля стоять у два стовпці, тож у кожному — половина полів. */
+function layoutCols() {
+  document.getElementById('cols').style.gridTemplateRows =
+    'repeat(' + Math.max(1, Math.ceil(slots / 2)) + ', auto)';
 }
 
 function delSlot(btn) {
@@ -450,6 +459,7 @@ function renumber() {
   const list = document.querySelectorAll('#cols .cslot');
   slots = list.length;
   list.forEach(function (el, i) { el.querySelector('.cnum').textContent = '№' + (i + 1); });
+  layoutCols();
 }
 
 function markSet(sel) { sel.classList.toggle('set', !!sel.value); }
