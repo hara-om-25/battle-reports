@@ -60,6 +60,8 @@ header button { padding: 6px 9px; font-size: 13px; }
 header .ver { color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; }
 #btnInstall { display: none; }
 #btnInstall.on { display: inline-block; }
+#dlgInfo ol { margin: 6px 0 0 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+#dlgInfo b { color: var(--accent2); }
 
 /* ── main 3 panels ────────────────────── */
 main {
@@ -283,6 +285,16 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14
       <button value="ok" class="accent" id="dlgOk">OK</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="dlgInfo">
+  <h3>Встановити плеєр окремим застосунком</h3>
+  <ol>
+    <li>Натисніть меню Chrome <b>⋮</b> (праворуч угорі, біля адреси).</li>
+    <li>Оберіть <b>«Встановити застосунок»</b> або <b>«Додати на головний екран»</b> → <b>«Встановити»</b>.</li>
+    <li>На робочому столі з'явиться іконка <b>«Плеєр»</b> — відкривайте його з неї, він запуститься окремим вікном.</li>
+  </ol>
+  <div class="row"><button class="accent" id="dlgInfoOk">Зрозуміло</button></div>
 </dialog>
 
 <div class="toast" id="toast"></div>
@@ -1075,21 +1087,30 @@ addEventListener('beforeunload', () => { if (data) { data.pos = audio.currentTim
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v2';
+const APP_VER = 'v3';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+// Кнопка «Встановити» видна завжди, поки плеєр відкритий як сторінка браузера.
+// Якщо Chrome дав системне вікно встановлення — показуємо його,
+// якщо ні — інструкцію, як встановити через меню.
 let installEvt = null;
-addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; $('btnInstall').classList.add('on'); });
-addEventListener('appinstalled', () => { installEvt = null; $('btnInstall').classList.remove('on'); toast('Плеєр встановлено'); });
+const standalone = () => matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone;
+if (!standalone() && /^https?:$/.test(location.protocol)) $('btnInstall').classList.add('on');
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+addEventListener('appinstalled', () => { installEvt = null; $('btnInstall').classList.remove('on'); toast('Плеєр встановлено — відкривайте його з іконки на робочому столі'); });
 $('btnInstall').onclick = async () => {
-  if (!installEvt) return;
-  installEvt.prompt();
-  await installEvt.userChoice.catch(() => {});
-  installEvt = null; $('btnInstall').classList.remove('on');
+  if (installEvt) {
+    installEvt.prompt();
+    const r = await installEvt.userChoice.catch(() => null);
+    installEvt = null;
+    if (r && r.outcome === 'accepted') return;
+  }
+  $('dlgInfo').showModal();
 };
+$('dlgInfoOk').onclick = () => $('dlgInfo').close();
 // відкриття файлів через «Відкрити за допомогою» (ПК-версія Chrome/Edge)
 if ('launchQueue' in window) {
   launchQueue.setConsumer(async p => {
