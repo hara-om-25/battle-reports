@@ -292,7 +292,8 @@ dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14
   <ol>
     <li>Натисніть меню Chrome <b>⋮</b> (праворуч угорі, біля адреси).</li>
     <li>Оберіть <b>«Встановити застосунок»</b> або <b>«Додати на головний екран»</b> → <b>«Встановити»</b>.</li>
-    <li>На робочому столі з'явиться іконка <b>«Плеєр»</b> — відкривайте його з неї, він запуститься окремим вікном.</li>
+    <li>Відкривайте <b>«Плеєр»</b> зі списку застосунків — він запуститься окремим вікном.</li>
+    <li>Ярлик зі <b>значком Chrome</b> на іконці («Створити ярлик») завжди відкривається в браузері — його краще видалити.</li>
   </ol>
   <div class="row"><button class="accent" id="dlgInfoOk">Зрозуміло</button></div>
 </dialog>
@@ -1087,7 +1088,7 @@ addEventListener('beforeunload', () => { if (data) { data.pos = audio.currentTim
 addEventListener('resize', renderBar);
 
 /* ═════════ окремий застосунок (PWA) ═════════ */
-const APP_VER = 'v3';
+const APP_VER = 'v4';
 $('ver').textContent = APP_VER;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register('sw.js').catch(() => {});

@@ -1,5 +1,5 @@
 // Офлайн-кеш плеєра. Діє лише в папці /player/ і не чіпає основний застосунок.
-const CACHE = 'player-v3';
+const CACHE = 'player-v4';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
