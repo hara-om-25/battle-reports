@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-331';
+const APP_VER = 'v.26.10-332';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6604,7 +6604,7 @@ function formatRecord(r, num) {
     // f вигляду 'target:1'; голе 'target' могло лишитись у чергах, збережених до поштучного звіряння
     const _c = (f, base) => (_chg.indexOf(f) >= 0 || _chg.indexOf(f.split(':')[0]) >= 0) ? PEND : base;
     const allParts = [
-        ...Array.from({length:Math.max(tgts.length,ress.length)},(_,i)=>{ const name=esc(tgts[i]||''); const rtxt=esc(ress[i]||''); const nameHtml=`<span style="color:${_c('target:'+i,'var(--text)')}">${name}</span>`; const resHtml=`<span style="color:${_c('result:'+i,'var(--khaki)')}">${rtxt}</span>`; return name ? nameHtml+dash+resHtml : resHtml; }),
+        ...Array.from({length:Math.max(tgts.length,ress.length)},(_,i)=>{ const name=esc(tgts[i]||''); const rtxt=esc(ress[i]||''); const nameHtml=name?`<span class="cp cp-hl" onclick="_cpTxt(this)" ondblclick="event.stopPropagation()" style="color:${_c('target:'+i,'var(--text)')}">${name}</span>`:''; const resHtml=`<span style="color:${_c('result:'+i,'var(--khaki)')}">${rtxt}</span>`; return name ? nameHtml+dash+resHtml : resHtml; }),
         r.qty200>0 ? `<span style="color:#e05050">200</span>${dash}<span style="color:${_c('qty200','#fff')}">${r.qty200}</span>` : '',
         r.qty300>0 ? `<span style="color:#5599dd">300</span>${dash}<span style="color:${_c('qty300','#fff')}">${r.qty300}</span>` : ''
     ].filter(Boolean);
