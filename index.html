@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-330';
+const APP_VER = 'v.26.10-331';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6588,6 +6588,8 @@ function exportPDF() {
     setTimeout(() => printWindow.print(), 250);
 }
 
+// ЧЕКУН без координати — засідка, що ще не внесена: без номера, у нумерацію не входить
+function _noNum(r) { return !!r.chk && !String(r.coordinates || '').trim(); }
 function formatRecord(r, num) {
     const idx = state.records.indexOf(r);
     const tgts = r.target ? r.target.split(', ') : [];
@@ -7537,7 +7539,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         const _vyGroups=_vyDates.map(d=>{
             const dayR=_byTime(_vyRecs.filter(r=>getDateOnly(r.datetime)===d));
             const dayAll=_byTime(dayR.concat(_vyGh.filter(r=>getDateOnly(r.datetime)===d)));
-            const cards=dayAll.map(r=>r._ghost?formatRecord(r,''):formatRecord(r,++_vyNum)).join('');
+            const cards=dayAll.map(r=>r._ghost?formatRecord(r,''):formatRecord(r,_noNum(r)?'':++_vyNum)).join('');
             const dayPts=_pt(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
             return `<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">${d}</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--text)">${dayR.length}</span>&nbsp;|&nbsp;Балів: <span style="color:var(--text)">${dayPts}</span></span></div><div class="space-y-2">${cards}</div></div>`;
         }).join('');
@@ -7584,11 +7586,11 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                 // вильоти grouped by day
                 const _zToYMD=s=>{const[d,m,y]=s.split('.');return(y||'')+(m||'').padStart(2,'0')+(d||'').padStart(2,'0');};
                 const _zDates=[...new Set(_zRecs.map(r=>getDateOnly(r.datetime)))].sort((a,b)=>_zToYMD(a)>_zToYMD(b)?-1:1);
-                const _zTotal=_zRecs.length;let _zN=0;
+                const _zTotal=_zRecs.filter(r=>!_noNum(r)).length;let _zN=0;
                 const _zGroups=_zDates.map(d=>{
                     const dayR=_byTimeDesc(_zRecs.filter(r=>getDateOnly(r.datetime)===d));
                     const dayPts=_pt(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
-                    const cards=_byTimeDesc(dayR.concat(_ghostRecords().filter(g=>getDateOnly(g.datetime)===d))).map(r=>r._ghost?formatRecord(r,''):formatRecord(r,_zTotal-_zN++)).join('');
+                    const cards=_byTimeDesc(dayR.concat(_ghostRecords().filter(g=>getDateOnly(g.datetime)===d))).map(r=>r._ghost?formatRecord(r,''):formatRecord(r,_noNum(r)?'':_zTotal-_zN++)).join('');
                     return '<div class="crate p-4"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">'+d+'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--yellow)">'+dayR.length+'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--yellow)">'+dayPts+'</span></span></div><div class="space-y-2">'+cards+'</div></div>';
                 }).join('');
                 // доповідь combined for period
@@ -7623,14 +7625,14 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
   const _recs=state.selDate?dayRecs:(state.selReport?state.records.filter(r=>r.reportNum===state.selReport):state.records);
   if(!_recs.length)return '<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає вильотів</p></div>';
   const _total=_pt(_recs.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
-  let _n=_recs.length;
+  let _n=_recs.filter(r=>!_noNum(r)).length;
   const _toYMD=s=>s.split('.').reverse().join('');
   const _zvGh=_ghostRecords().filter(g=>!state.selReport||g.reportNum===state.selReport);
   const _dates=[...new Set(_recs.concat(_zvGh).map(r=>getDateOnly(r.datetime)))].sort((a,b)=>_toYMD(a)<_toYMD(b)?-1:1).reverse();
   const _groups=_dates.map(d=>{
     const dayR=_byTimeDesc(_recs.filter(r=>getDateOnly(r.datetime)===d));
     const dayAll=_byTimeDesc(dayR.concat(_zvGh.filter(g=>getDateOnly(g.datetime)===d)));
-    const cards=dayAll.map(r=>r._ghost?formatRecord(r,''):formatRecord(r,_n--)).join('');
+    const cards=dayAll.map(r=>r._ghost?formatRecord(r,''):formatRecord(r,_noNum(r)?'':_n--)).join('');
     const dayPts=_pt(dayR.reduce((s,r)=>s+(parseFloat(r.points)||0),0));
     return '<div class="crate p-4">'
       +(state.selDate?'':'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px"><h3 class="stencil-shadow" style="color:var(--yellow)">'+d+'</h3><span class="stencil" style="color:var(--khaki)">Вильотів: <span style="color:var(--yellow)">'+dayR.length+'</span>&nbsp;|&nbsp;Балів: <span style="color:var(--yellow)">'+dayPts+'</span></span></div>')
