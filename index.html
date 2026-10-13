@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-325';
+const APP_VER = 'v.26.10-326';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1469,7 +1469,9 @@ function _initVerMark() {
     // тож під час гортання воно стоїть, а вміст їде під ним. Лежав би напис
     // у сторінці — поїхав би разом зі ЗВІТОМ і відстав би від кнопки
     v.style.cssText = 'position:absolute;z-index:25;color:var(--text-dim);'
-        + 'font-size:0.8em;white-space:nowrap;pointer-events:none';
+        + 'font-size:0.8em;white-space:nowrap;cursor:pointer;-webkit-user-select:none;user-select:none';
+    v.title = 'Поділитися посиланням на застосунок';
+    v.onclick = shareApp;
     document.body.appendChild(v);
     const place = () => {
         // АРХІВ завжди такої ж ширини, як ВИЙТИ (більша з двох)
@@ -4513,6 +4515,18 @@ function _toast(msg) {
     t.classList.add('on');
     clearTimeout(_toastT);
     _toastT = setTimeout(() => t.classList.remove('on'), 500);
+}
+
+// Клік по номеру версії: посилання на застосунок — у буфер і в системне меню
+// «Поділитися» (Android/iOS), де воно є. Той, хто отримав посилання, відкриває
+// його в браузері й встановлює застосунок («Додати на головний екран»)
+const APP_URL = 'https://hara-om-25.github.io/battle-reports/';
+function shareApp() {
+    _copyText(APP_URL);
+    _toast('ПОСИЛАННЯ СКОПІЙОВАНО');
+    if (navigator.share) {
+        try { navigator.share({ title: 'ХАРА ОМ', text: 'Застосунок ХАРА ОМ — відкрий і встанови', url: APP_URL }).catch(() => {}); } catch (e) {}
+    }
 }
 
 // Величина в буфер. Беремо весь напис, а не місце дотику
