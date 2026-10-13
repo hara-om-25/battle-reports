@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-329';
+const APP_VER = 'v.26.10-330';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -4529,9 +4529,10 @@ function shareApp() {
     _shareBusy = Date.now() + 1500;   // поки відкривається меню, номер версії не переставляємо
     let _ok = false;
     try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(APP_URL).catch(() => {}); _ok = true; } } catch (e) {}
-    if (!_ok && !navigator.share) _copyFallback(APP_URL);
+    if (!_ok && !(navigator.share && window.innerWidth <= 640)) _copyFallback(APP_URL);
     _toast('ПОСИЛАННЯ СКОПІЙОВАНО');
-    if (navigator.share) {
+    // Планшет (>640 px): системне меню ховає верхню плашку й смикає екран — лише копіювання
+    if (navigator.share && window.innerWidth <= 640) {
         setTimeout(() => {
             try { navigator.share({ title: 'ХАРА ОМ', text: 'Застосунок ХАРА ОМ — відкрий і встанови', url: APP_URL }).catch(() => {}); } catch (e) {}
         }, 250);
