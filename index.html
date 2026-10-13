@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-328';
+const APP_VER = 'v.26.10-329';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1474,6 +1474,7 @@ function _initVerMark() {
     v.onclick = shareApp;
     document.body.appendChild(v);
     const place = () => {
+        if (Date.now() < _shareBusy) return;
         // АРХІВ завжди такої ж ширини, як ВИЙТИ (більша з двох)
         const _a = document.querySelector('nav.crate .nav-btn-archive'), _l = document.querySelector('nav.crate button.logout');
         if (_a && _l) {
@@ -4520,12 +4521,20 @@ function _toast(msg) {
 // Клік по номеру версії: посилання на застосунок — у буфер і в системне меню
 // «Поділитися» (Android/iOS), де воно є. Той, хто отримав посилання, відкриває
 // його в браузері й встановлює застосунок («Додати на головний екран»)
+let _shareBusy = 0;
 const APP_URL = 'https://hara-om-25.github.io/battle-reports/';
 function shareApp() {
-    _copyText(APP_URL);
+    // Лише буфер через clipboard API: запасне поле з фокусом на планшеті
+    // смикало екран. Запасний спосіб — тільки якщо «Поділитися» немає
+    _shareBusy = Date.now() + 1500;   // поки відкривається меню, номер версії не переставляємо
+    let _ok = false;
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(APP_URL).catch(() => {}); _ok = true; } } catch (e) {}
+    if (!_ok && !navigator.share) _copyFallback(APP_URL);
     _toast('ПОСИЛАННЯ СКОПІЙОВАНО');
     if (navigator.share) {
-        try { navigator.share({ title: 'ХАРА ОМ', text: 'Застосунок ХАРА ОМ — відкрий і встанови', url: APP_URL }).catch(() => {}); } catch (e) {}
+        setTimeout(() => {
+            try { navigator.share({ title: 'ХАРА ОМ', text: 'Застосунок ХАРА ОМ — відкрий і встанови', url: APP_URL }).catch(() => {}); } catch (e) {}
+        }, 250);
     }
 }
 
