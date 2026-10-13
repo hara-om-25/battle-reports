@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-332';
+const APP_VER = 'v.26.10-333';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5526,6 +5526,21 @@ let _addChain = Promise.resolve();
 let _addPending = 0;
 function _addIdle() { return _addChain; }
 
+// Рядок точно в таблиці. Поки писали, виліт могли змінити чи видалити —
+// тоді в черзі лишається правка/видалення вже існуючого рядка
+function _addLanded(rec, snap) {
+    const k = state.queue.findIndex(o => o.uid === rec.uid);
+    if (k >= 0) {
+        const q = state.queue[k];
+        if (q.op === 'add' && JSON.stringify(q.rec) === snap) state.queue.splice(k, 1);
+        else if (q.op === 'add') state.queue[k] = { op: 'edit', uid: rec.uid, rec: q.rec, chg: q.chg || [] };
+    } else if (!state.records.some(r => r.uid === rec.uid)) {
+        state.queue.push({ op: 'del', uid: rec.uid, rec: rec, chg: [] });
+    }
+    saveLocal();
+    _toast('ЗАПИСАНО');
+}
+
 async function _writeAddRow(rec) {
     _addPending++;
     const snap = JSON.stringify(rec);
@@ -5553,23 +5568,28 @@ async function _writeAddRow(rec) {
             _ok = !!(_back[0] && String(_back[0][10] || '').trim() === rec.uid);
         } catch (e) { _ok = false; }
         if (_ok) {
-            // Рядок у таблиці. Поки писали, виліт могли змінити чи видалити —
-            // тоді в черзі лишається правка/видалення вже існуючого рядка
-            const k = state.queue.findIndex(o => o.uid === rec.uid);
-            if (k >= 0) {
-                const q = state.queue[k];
-                if (q.op === 'add' && JSON.stringify(q.rec) === snap) state.queue.splice(k, 1);
-                else if (q.op === 'add') state.queue[k] = { op: 'edit', uid: rec.uid, rec: q.rec, chg: q.chg || [] };
-            } else if (!state.records.some(r => r.uid === rec.uid)) {
-                state.queue.push({ op: 'del', uid: rec.uid, rec: rec, chg: [] });
-            }
-            saveLocal();
-            _toast('ЗАПИСАНО');
+            _addLanded(rec, snap);
         } else {
             _failBar('⚠️ Виліт не записано в таблицю: Google відповів «ок», але рядка на місці немає (A' + _rowN + ', таблиця …' + SHEET_ID.slice(-6) + '). Він у черзі на пристрої — натисніть стрілку вивантаження. Сторінку не оновлюйте.');
         }
     } catch (err) {
+        // Мережа могла обірватись уже ПІСЛЯ того, як Google записав рядок (відповідь
+        // загубилась). Перш ніж лякати «не записано», дивимось у таблицю за uid
+        let _landed = false;
         if (_isNetErr(err)) {
+            for (let t = 0; t < 2 && !_landed; t++) {
+                await new Promise(r => setTimeout(r, t ? 2500 : 800));
+                try {
+                    const _k = await apiGet('ГОЛОВНА!K:K');
+                    _landed = _k.some(x => String((x && x[0]) || '').trim() === rec.uid);
+                    break;   // таблиця відповіла: рішення остаточне
+                } catch (e2) { /* ще немає зв'язку */ }
+            }
+        }
+        if (_landed) {
+            state.online = true;
+            _addLanded(rec, snap);
+        } else if (_isNetErr(err)) {
             state.online = false;
             _failBar('⚠️ Виліт не записано в таблицю: немає мережі. Він у черзі на пристрої й піде при з\'єднанні (стрілка).');
         } else {
