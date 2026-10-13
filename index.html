@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-327';
+const APP_VER = 'v.26.10-328';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -4561,8 +4561,10 @@ function _copyFallback(t) {
         const ta = document.createElement('textarea');
         ta.value = t;
         ta.setAttribute('readonly', '');
-        ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0';
+        ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none';
+        ta.setAttribute('inputmode', 'none');   // без клавіатури, що смикає екран
         document.body.appendChild(ta);
+        ta.focus({ preventScroll: true });   // без прокрутки сторінки до поля
         ta.select();
         ta.setSelectionRange(0, t.length);
         document.execCommand('copy');
