@@ -685,7 +685,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-346';
+const APP_VER = 'v.26.10-347';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6652,23 +6652,38 @@ function _tmWidth() {
         if (w > 0) cells.forEach(c => { c.style.width = w + 'px'; c.style.minWidth = w + 'px'; c.style.boxSizing = 'border-box'; });
     });
 }
-function _tgMatrix(recs) {
+function _tgMatrix(recs, verOnly) {
     const days = {}, rows = {};
     const cell = (name, d) => ((rows[name] = rows[name] || {})[d] = (rows[name][d] || { d: 0, p: 0, n: 0 }));
+    const baseOf = t => { const p = t.split(' '), last = p[p.length - 1]; return (/^\d+$/.test(last) ? p.slice(0, -1).join(' ') : t).trim(); };
     (recs || []).forEach(r => {
         const dt = _recYMD(r.datetime) || '0';        // немає дати в рядку — стовпець «без дати»
-        const tg = String(r.target || '').split(', '), rs = String(r.result || '').split(', ');
-        tg.forEach((t, i) => {
-            t = t.trim(); if (!t) return;
-            const p = t.split(' '), last = p[p.length - 1];
-            const base = (/^\d+$/.test(last) ? p.slice(0, -1).join(' ') : t).trim();
-            if (base === 'ОС') return;                       // ОС рахуються за 200 і 300
-            const res = String(rs[i] || '').trim().toLowerCase();
+        const items = []; let q2 = 0, q3 = 0;
+        if (verOnly) {
+            // лише верифіковані цілі (верифіковано повністю або із заміною); результат — як у верифікатора
+            if (!r.v || !r.v.state || r.v.state === 'pack') return;
+            const P = _arRowParts(r); let osOk = false;
+            for (let j = 0; j < P.tgts.length; j++) {
+                const t = String(P.tgts[j] || '').trim(); if (!t) continue;
+                const vd = _tgVerdict({ r: r, j: j, p: P });
+                if (vd !== 'ok' && vd !== 'repl') continue;
+                const base = baseOf(t);
+                if (base === 'ОС') { osOk = true; continue; }
+                const vr = (r.v.vres && r.v.vres[j]) ? String(r.v.vres[j]) : String(P.ress[j] || '');
+                items.push([base, vr]);
+            }
+            if (osOk) { q2 = r.v.os ? (parseInt(r.v.os.k) || 0) : (parseInt(r.qty200) || 0); q3 = r.v.os ? (parseInt(r.v.os.w) || 0) : (parseInt(r.qty300) || 0); }
+        } else {
+            const tg = String(r.target || '').split(', '), rs = String(r.result || '').split(', ');
+            tg.forEach((t, i) => { t = t.trim(); if (!t) return; const base = baseOf(t); if (base === 'ОС') return; items.push([base, rs[i] || '']); });
+            q2 = parseInt(r.qty200) || 0; q3 = parseInt(r.qty300) || 0;
+        }
+        items.forEach(([base, rr]) => {
+            const res = String(rr || '').trim().toLowerCase();
             const c = cell(base, dt);
             if (res.indexOf('знищ') === 0) c.d++; else if (res.indexOf('пошк') === 0) c.p++; else return;
             days[dt] = 1;
         });
-        const q2 = parseInt(r.qty200) || 0, q3 = parseInt(r.qty300) || 0;
         if (q2 || q3) { const c = cell('ОС', dt); c.d += q2; c.p += q3; days[dt] = 1; }
     });
     const dl = Object.keys(days).sort();
@@ -7632,7 +7647,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             ${state.online?_periodPickerHtml:''}
             ${!state.filterPeriodOpen?_arTop:''}
             ${state.filterPeriodOpen?(state.online?(state.filterPeriodShown?_periodResultHtml:''):''):(state.selArchive?_arContent:_allSection)}
-            ${(!state.filterPeriodOpen&&state.arShowMat)?(()=>{const _mr=state.selArchive?state.archiveRecs:(state.allArchiveLoaded?state.allArchiveRecs:[]);const _mt=_tgMatrix(_mr);return _mt?`<div style="padding:0 8px">${_mt}</div>`:'';})():''}
+            ${(!state.filterPeriodOpen&&state.arShowMat)?(()=>{const _mr=state.selArchive?state.archiveRecs:(state.allArchiveLoaded?state.allArchiveRecs:[]);const _mt=_tgMatrix(_mr,true);return _mt?`<div style="padding:0 8px">${_mt}</div>`:'';})():''}
             ${!state.filterPeriodOpen&&state.arShowList?_arFlights:''}
         </div>`;
         }
