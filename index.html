@@ -476,10 +476,10 @@
     .br-toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
     /* Панель керування списками прилипає під основне меню, а списки їдуть під неї */
     /* ТАБЛИЦЯ ЦІЛЕЙ ПО ДНЯХ: дати й значення гортаються, назви цілей і рядок дат стоять на місці */
-    .tm-scroll { overflow: auto; max-height: 75vh; -webkit-overflow-scrolling: touch; }
+    .tm-scroll { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
     .tm-tbl { border-collapse: separate; border-spacing: 0; font-family: 'Tektur', serif; }
     .tm-tbl th, .tm-tbl td { border-right: 1px solid var(--olive); border-bottom: 1px solid var(--olive); padding: 4px 10px; text-align: center; min-width: 38px; color: var(--text); background: transparent; font-weight: normal; }
-    .tm-tbl thead th { position: sticky; top: 0; z-index: 2; color: var(--yellow); height: 84px; padding: 6px 4px; border-top: 1px solid var(--olive); background: var(--bg); font-weight: normal; }
+    .tm-tbl thead th { position: relative; z-index: 2; color: var(--yellow); height: 84px; padding: 6px 4px; border-top: 1px solid var(--olive); background: var(--bg); font-weight: normal; }
     .tm-tbl thead th span { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-weight: normal; }
     .tm-tbl .tm-name { position: sticky; left: 0; z-index: 1; text-align: left; white-space: nowrap; color: var(--yellow); border-left: 1px solid var(--olive); min-width: 110px; background: var(--bg); }
     .tm-tbl .tm-tot { position: sticky; right: 0; z-index: 1; background: var(--bg); border-left: 1px solid var(--olive); }
@@ -685,7 +685,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-338';
+const APP_VER = 'v.26.10-339';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1536,9 +1536,9 @@ function _initVerMark() {
         v.style.top = Math.round(y + sy) + 'px';
     };
     window.addEventListener('resize', place, { passive: true });
-    window.addEventListener('scroll', place, { passive: true });
+    window.addEventListener('scroll', () => { place(); _tmSticky(); }, { passive: true });
     const app = document.getElementById('app');
-    if (app && window.MutationObserver) new MutationObserver(place).observe(app, { childList: true, subtree: true });
+    if (app && window.MutationObserver) new MutationObserver(() => { place(); _tmSticky(); }).observe(app, { childList: true, subtree: true });
     place();
 }
 
@@ -6626,6 +6626,19 @@ function exportPDF() {
 // Таблиця «цілі по днях»: рядки — види цілей (ОС 200 і ОС 300 окремо), стовпці — дні.
 // Клітинка «знищено/пошкоджено» (червоне/блакитне), для ОС — просто число. Справа
 // стовпець «загалом». Назви, дати й «загалом» зафіксовані, значення гортаються
+// Рядок дат таблиці стоїть під меню, поки сторінку гортають (sticky всередині блока з
+// горизонтальною прокруткою до вікна не липне, тож зсуваємо його самі)
+function _tmSticky() {
+    const nav = document.querySelector('nav.crate');
+    const nb = Math.max(0, nav ? nav.getBoundingClientRect().bottom : 0) + 4;
+    document.querySelectorAll('.tm-scroll').forEach(w => {
+        const t = w.querySelector('table'), ths = w.querySelectorAll('thead th');
+        if (!t || !ths.length) return;
+        const h = ths[0].offsetHeight;
+        const off = Math.max(0, Math.min(nb - w.getBoundingClientRect().top, t.offsetHeight - h - 40));
+        ths.forEach(th => { th.style.transform = off ? 'translateY(' + off + 'px)' : ''; });
+    });
+}
 function _tgMatrix(recs) {
     const days = {}, rows = {};
     const key = d => { const [dd, mm, yy] = d.split('.'); return (yy || '') + (mm || '').padStart(2, '0') + (dd || '').padStart(2, '0'); };
