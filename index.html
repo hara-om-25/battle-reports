@@ -495,6 +495,8 @@
     .stat-cols > .stat-r > * { margin-top: 0 !important; }
     .stat-r > .stat-ver { order: -1; }
     @media (max-width: 640px) { .lists-bar { width: 100%; } nav.crate.sticky { position: static; } }
+    /* над прилиплим меню лишається просвіт 16 px, і крізь нього видно вміст, що гортається (таблицю) — закриваємо його фоном сторінки */
+    @media (min-width: 641px) { nav.crate.sticky::before { content: ''; position: absolute; left: -3px; right: -3px; bottom: 100%; height: 16px; background: var(--bg); pointer-events: none; } }
     /* Ширину поля редагування рахує recalcListFieldWidth() — при синхронізації
        з таблицею і при змінах у списках. Панель обхоплює поле й кнопки */
     .lists-bar.fit { width: fit-content; max-width: 100%; }
@@ -685,7 +687,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-355';
+const APP_VER = 'v.26.10-356';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1443,7 +1445,7 @@ function _initToTop() {
         const vw = document.documentElement.clientWidth;
         let right = 0;
         // шапка — теж «crate», але вона на всю ширину й міряти по ній нічого
-        document.querySelectorAll('#app .crate:not(nav), #app .lists-cols').forEach(el => {
+        document.querySelectorAll('#app .crate:not(nav), #app .lists-cols, #app .tm-scroll').forEach(el => {
             const r = el.getBoundingClientRect();
             if (r.width && r.right > right) right = r.right;
         });
@@ -1527,7 +1529,7 @@ function _initVerMark() {
         // просто на текст. Тому щоразу міряємо, чи не накриває він котрийсь
         // ящик, — накриває, отже його тут просто немає
         let hit = false;
-        document.querySelectorAll('#app .crate:not(nav), #app .lists-cols').forEach(el => {
+        document.querySelectorAll('#app .crate:not(nav), #app .lists-cols, #app .tm-scroll').forEach(el => {
             const r = el.getBoundingClientRect();
             if (r.width && r.left < x + w && r.right > x && r.top < y + h && r.bottom > y) hit = true;
         });
@@ -7624,7 +7626,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             +`</div>`;
         // СЕРВІС: службові переліки в одному місці. Новий такий перелік —
         // це ще один блок у _svcBlocks (він сам ховається, коли порожній)
-        const _matHtml=(!state.filterPeriodOpen&&state.arShowMat)?(()=>{const _mr=state.selArchive?state.archiveRecs:(state.allArchiveLoaded?state.allArchiveRecs:[]);const _mt=_tgMatrix(_mr,true);return _mt?`<div style="padding:0 8px 64px">${_mt}</div>`:'';})():'';
+        const _matHtml=(!state.filterPeriodOpen&&state.arShowMat)?(()=>{const _mr=state.selArchive?state.archiveRecs:(state.allArchiveLoaded?state.allArchiveRecs:[]);const _mt=_tgMatrix(_mr,true);return _mt?`<div style="padding:0 8px">${_mt}</div>`:'';})():'';
         const _matBottom=state.arShowSum&&state.arShowStat&&state.arShowList;   // усі кнопки натиснуті — таблиця в самому низу
         if(state.page==='service'){
             // вильоти без вердикту — з усіх аркушів, де звіряння вже було
@@ -7821,7 +7823,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
              +'<div class="report-box">'+_zvL.map(_rptColor).join('\n')+'</div>'
              +'</div></div>';
         }
-        if(!state.selReport&&!state.selDate)h+='<div style="padding:0 16px 64px">'+(_tgMatrix(state.records)||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає цілей</p>')+'</div>';
+        if(!state.selReport&&!state.selDate)h+='<div style="padding:0 16px">'+(_tgMatrix(state.records)||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає цілей</p>')+'</div>';
     }
     
     app.innerHTML = h;
