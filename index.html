@@ -685,7 +685,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-352';
+const APP_VER = 'v.26.10-353';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6700,7 +6700,7 @@ function _tgMatrix(recs, verOnly) {
         return c.d && c.p ? R + '<span style="color:var(--yellow)">/</span>' + B : (c.d ? R : B);   // риска лише коли є обидва
     };
     const short = d => d === '0' ? 'без дати' : parseInt(d.slice(6)) + '.' + d.slice(4, 6) + '.' + d.slice(2, 4);
-    return '<div class="tm-scroll"><table class="tm-tbl"><thead><tr><th class="tm-name">'+(verOnly?'<span style="color:var(--green-label)">ВЕРИФІКОВАНІ</span>':'')+'</th>'
+    return '<div class="tm-scroll"><table class="tm-tbl"><thead><tr><th class="tm-name">'+(verOnly?'<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-45deg);white-space:nowrap;color:var(--green-label)">ВЕРИФІКОВАНІ</span>':'')+'</th>'
         + dl.map(d => '<th><span>' + short(d) + '</span></th>').join('') + '<th class="tm-tot"><span>загалом</span></th></tr></thead><tbody>'
         + first.concat(rest).map(n => '<tr><td class="tm-name">' + esc(n) + '</td>'
             + dl.map(d => '<td>' + fmt(n, rows[n][d]) + '</td>').join('') + '<td class="tm-tot">' + fmt(n, tot(n)) + '</td></tr>').join('')
@@ -7618,9 +7618,9 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         const _sbCol=`<div class="arch-side" style="margin-left:auto;display:flex;flex-direction:column;gap:8px;flex:0 0 auto;min-width:170px">`
             +_sbBtn('ПІДСУМКИ','btn-black',_sbOpen,"_arToggle('arShowSum')",'',state.arShowSum&&_sbOpen)
             +_sbBtn('СТАТИСТИКА','btn-yellow',_sbOpen,"_arToggle('arShowStat')",'',state.arShowStat&&_sbOpen)
+            +_sbBtn('ТАБЛИЦЯ','btn-yellow',_sbOpen,"_arToggle('arShowMat')",'',state.arShowMat&&_sbOpen)
             +_sbBtn('ВИЛЬОТИ','btn-olive',_sbOpen,"_arSetList(false)",'',state.arShowList&&!state.arTargets&&_sbOpen)
             +_sbBtn('ЦІЛІ','btn-olive',_sbOpen,"_arSetList(true)",'',state.arShowList&&state.arTargets&&_sbOpen)
-            +_sbBtn('ТАБЛИЦЯ','btn-yellow',_sbOpen,"_arToggle('arShowMat')",'',state.arShowMat&&_sbOpen)
             +`</div>`;
         // СЕРВІС: службові переліки в одному місці. Новий такий перелік —
         // це ще один блок у _svcBlocks (він сам ховається, коли порожній)
