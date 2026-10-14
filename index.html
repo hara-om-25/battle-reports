@@ -685,7 +685,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-347';
+const APP_VER = 'v.26.10-348';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6655,7 +6655,8 @@ function _tmWidth() {
 function _tgMatrix(recs, verOnly) {
     const days = {}, rows = {};
     const cell = (name, d) => ((rows[name] = rows[name] || {})[d] = (rows[name][d] || { d: 0, p: 0, n: 0 }));
-    const baseOf = t => { const p = t.split(' '), last = p[p.length - 1]; return (/^\d+$/.test(last) ? p.slice(0, -1).join(' ') : t).trim(); };
+    // назви зводимо до прайсової («ос» і «ОС», «фс» і «ФС», підкреслення, латинські двійники — один рядок)
+    const baseOf = t => String(_abbrOfName(t) || '').trim();
     (recs || []).forEach(r => {
         const dt = _recYMD(r.datetime) || '0';        // немає дати в рядку — стовпець «без дати»
         const items = []; let q2 = 0, q3 = 0;
