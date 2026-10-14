@@ -685,7 +685,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-340';
+const APP_VER = 'v.26.10-341';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6657,19 +6657,16 @@ function _tgMatrix(recs) {
             days[dt] = 1;
         });
         const q2 = parseInt(r.qty200) || 0, q3 = parseInt(r.qty300) || 0;
-        if (q2) { cell('ОС 200', dt).n += q2; days[dt] = 1; }
-        if (q3) { cell('ОС 300', dt).n += q3; days[dt] = 1; }
+        if (q2 || q3) { const c = cell('ОС', dt); c.d += q2; c.p += q3; days[dt] = 1; }
     });
     const dl = Object.keys(days).sort((a, b) => key(a) < key(b) ? -1 : 1);
     if (!dl.length) return '';
-    const isOs = n => n === 'ОС 200' || n === 'ОС 300';
     const tot = n => { const t = { d: 0, p: 0, n: 0 }; Object.values(rows[n]).forEach(c => { t.d += c.d; t.p += c.p; t.n += c.n; }); return t; };
     const sum = n => { const t = tot(n); return t.d + t.p + t.n; };
-    const first = ['ОС 200', 'ОС 300'].filter(n => rows[n]);
-    const rest = Object.keys(rows).filter(n => !isOs(n) && sum(n) > 0).sort((a, b) => sum(b) - sum(a));
+    const first = rows['ОС'] && sum('ОС') > 0 ? ['ОС'] : [];
+    const rest = Object.keys(rows).filter(n => n !== 'ОС' && sum(n) > 0).sort((a, b) => sum(b) - sum(a));
     const fmt = (n, c) => {
         if (!c) return '';
-        if (isOs(n)) return c.n ? String(c.n) : '';
         if (!c.d && !c.p) return '';
         return '<span style="color:var(--red-label)">' + (c.d || '') + '</span><span style="color:var(--text-dim)">/</span><span style="color:var(--blue-label)">' + (c.p || '') + '</span>';
     };
