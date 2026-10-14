@@ -685,7 +685,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-349';
+const APP_VER = 'v.26.10-350';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -7624,6 +7624,8 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             +`</div>`;
         // СЕРВІС: службові переліки в одному місці. Новий такий перелік —
         // це ще один блок у _svcBlocks (він сам ховається, коли порожній)
+        const _matHtml=(!state.filterPeriodOpen&&state.arShowMat)?(()=>{const _mr=state.selArchive?state.archiveRecs:(state.allArchiveLoaded?state.allArchiveRecs:[]);const _mt=_tgMatrix(_mr,true);return _mt?`<div style="padding:0 8px">${_mt}</div>`:'';})():'';
+        const _matBottom=state.arShowSum&&state.arShowStat&&state.arShowList;   // усі кнопки натиснуті — таблиця в самому низу
         if(state.page==='service'){
             // вильоти без вердикту — з усіх аркушів, де звіряння вже було
             let _svcUnv='', _svcPk='';
@@ -7648,8 +7650,9 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             ${state.online?_periodPickerHtml:''}
             ${!state.filterPeriodOpen?_arTop:''}
             ${state.filterPeriodOpen?(state.online?(state.filterPeriodShown?_periodResultHtml:''):''):(state.selArchive?_arContent:_allSection)}
-            ${(!state.filterPeriodOpen&&state.arShowMat)?(()=>{const _mr=state.selArchive?state.archiveRecs:(state.allArchiveLoaded?state.allArchiveRecs:[]);const _mt=_tgMatrix(_mr,true);return _mt?`<div style="padding:0 8px">${_mt}</div>`:'';})():''}
+            ${_matBottom?'':_matHtml}
             ${!state.filterPeriodOpen&&state.arShowList?_arFlights:''}
+            ${_matBottom?_matHtml:''}
         </div>`;
         }
     }
