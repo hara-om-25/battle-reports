@@ -51,6 +51,7 @@
 | `start_bot_debug.bat` | видимий запуск з `pause`, щоб бачити помилки |
 | `stop_bot.bat`        | зупинка: вбиває `pythonw.exe` і `java.exe` |
 | `config.example.json` | зразок `config.json` з номером акаунта |
+| `instruktsiia.pdf`    | покрокова інструкція: встановлення на новому ПК, налаштування, діагностика |
 
 ## Відомі пастки
 
