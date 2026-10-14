@@ -478,11 +478,12 @@
     /* ТАБЛИЦЯ ЦІЛЕЙ ПО ДНЯХ: дати й значення гортаються, назви цілей і рядок дат стоять на місці */
     .tm-scroll { overflow: auto; max-height: 75vh; -webkit-overflow-scrolling: touch; }
     .tm-tbl { border-collapse: separate; border-spacing: 0; font-family: 'Tektur', serif; }
-    .tm-tbl th, .tm-tbl td { border-right: 1px solid var(--olive); border-bottom: 1px solid var(--olive); padding: 4px 10px; text-align: center; min-width: 38px; color: var(--text); background: var(--surface); }
-    .tm-tbl thead th { position: sticky; top: 0; z-index: 2; color: var(--yellow); height: 84px; padding: 6px 4px; border-top: 1px solid var(--olive); }
-    .tm-tbl thead th span { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; }
-    .tm-tbl .tm-name { position: sticky; left: 0; z-index: 1; text-align: left; white-space: nowrap; color: var(--yellow); border-left: 1px solid var(--olive); min-width: 110px; }
-    .tm-tbl thead .tm-name { z-index: 3; }
+    .tm-tbl th, .tm-tbl td { border-right: 1px solid var(--olive); border-bottom: 1px solid var(--olive); padding: 4px 10px; text-align: center; min-width: 38px; color: var(--text); background: transparent; font-weight: normal; }
+    .tm-tbl thead th { position: sticky; top: 0; z-index: 2; color: var(--yellow); height: 84px; padding: 6px 4px; border-top: 1px solid var(--olive); background: var(--bg); font-weight: normal; }
+    .tm-tbl thead th span { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-weight: normal; }
+    .tm-tbl .tm-name { position: sticky; left: 0; z-index: 1; text-align: left; white-space: nowrap; color: var(--yellow); border-left: 1px solid var(--olive); min-width: 110px; background: var(--bg); }
+    .tm-tbl .tm-tot { position: sticky; right: 0; z-index: 1; background: var(--bg); border-left: 1px solid var(--olive); }
+    .tm-tbl thead .tm-name, .tm-tbl thead .tm-tot { z-index: 3; }
     .lists-bar { position: sticky; z-index: 30; top: 0; width: 50vw; margin-left: auto; margin-right: auto; }
     /* СТАТИСТИКА на телефоні: ВЕРИФІКАЦІЯ, РЕЗУЛЬТАТИ, потім ДРОНИ, БОЄПРИПАСИ, ПВР */
     @media (max-width: 640px) {
@@ -684,7 +685,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-337';
+const APP_VER = 'v.26.10-338';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6622,34 +6623,48 @@ function exportPDF() {
     setTimeout(() => printWindow.print(), 250);
 }
 
-// Таблиця «цілі по днях»: рядки — види цілей (ОС 200 і ОС 300 окремо), стовпці — дні,
-// у клітинці кількість уражених цілей. Назви й дати зафіксовані, значення гортаються
+// Таблиця «цілі по днях»: рядки — види цілей (ОС 200 і ОС 300 окремо), стовпці — дні.
+// Клітинка «знищено/пошкоджено» (червоне/блакитне), для ОС — просто число. Справа
+// стовпець «загалом». Назви, дати й «загалом» зафіксовані, значення гортаються
 function _tgMatrix(recs) {
     const days = {}, rows = {};
     const key = d => { const [dd, mm, yy] = d.split('.'); return (yy || '') + (mm || '').padStart(2, '0') + (dd || '').padStart(2, '0'); };
+    const cell = (name, d) => ((rows[name] = rows[name] || {})[d] = (rows[name][d] || { d: 0, p: 0, n: 0 }));
     (recs || []).forEach(r => {
-        const d = getDateOnly(r.datetime); if (!d) return;
-        const add = (name, n) => { if (!name || !n) return; (rows[name] = rows[name] || {})[d] = ((rows[name][d]) || 0) + n; days[d] = 1; };
-        String(r.target || '').split(', ').forEach(t => {
+        const dt = getDateOnly(r.datetime); if (!dt) return;
+        const tg = String(r.target || '').split(', '), rs = String(r.result || '').split(', ');
+        tg.forEach((t, i) => {
             t = t.trim(); if (!t) return;
             const p = t.split(' '), last = p[p.length - 1];
             const base = (/^\d+$/.test(last) ? p.slice(0, -1).join(' ') : t).trim();
-            if (base === 'ОС') return;                 // ОС рахуються за 200 і 300
-            add(base, 1);
+            if (base === 'ОС') return;                       // ОС рахуються за 200 і 300
+            const res = String(rs[i] || '').trim().toLowerCase();
+            const c = cell(base, dt);
+            if (res.indexOf('знищ') === 0) c.d++; else if (res.indexOf('пошк') === 0) c.p++; else return;
+            days[dt] = 1;
         });
-        add('ОС 200', parseInt(r.qty200) || 0);
-        add('ОС 300', parseInt(r.qty300) || 0);
+        const q2 = parseInt(r.qty200) || 0, q3 = parseInt(r.qty300) || 0;
+        if (q2) { cell('ОС 200', dt).n += q2; days[dt] = 1; }
+        if (q3) { cell('ОС 300', dt).n += q3; days[dt] = 1; }
     });
     const dl = Object.keys(days).sort((a, b) => key(a) < key(b) ? -1 : 1);
     if (!dl.length) return '';
-    const tot = n => Object.values(rows[n]).reduce((s, x) => s + x, 0);
+    const isOs = n => n === 'ОС 200' || n === 'ОС 300';
+    const tot = n => { const t = { d: 0, p: 0, n: 0 }; Object.values(rows[n]).forEach(c => { t.d += c.d; t.p += c.p; t.n += c.n; }); return t; };
+    const sum = n => { const t = tot(n); return t.d + t.p + t.n; };
     const first = ['ОС 200', 'ОС 300'].filter(n => rows[n]);
-    const rest = Object.keys(rows).filter(n => n !== 'ОС 200' && n !== 'ОС 300').sort((a, b) => tot(b) - tot(a));
+    const rest = Object.keys(rows).filter(n => !isOs(n) && sum(n) > 0).sort((a, b) => sum(b) - sum(a));
+    const fmt = (n, c) => {
+        if (!c) return '';
+        if (isOs(n)) return c.n ? String(c.n) : '';
+        if (!c.d && !c.p) return '';
+        return '<span style="color:var(--red-label)">' + c.d + '</span><span style="color:var(--text-dim)">/</span><span style="color:var(--blue-label)">' + c.p + '</span>';
+    };
     const short = d => { const [dd, mm, yy] = d.split('.'); return parseInt(dd) + '.' + mm + '.' + String(yy || '').slice(-2); };
     return '<div class="tm-scroll"><table class="tm-tbl"><thead><tr><th class="tm-name"></th>'
-        + dl.map(d => '<th><span>' + short(d) + '</span></th>').join('') + '</tr></thead><tbody>'
+        + dl.map(d => '<th><span>' + short(d) + '</span></th>').join('') + '<th class="tm-tot"><span>загалом</span></th></tr></thead><tbody>'
         + first.concat(rest).map(n => '<tr><td class="tm-name">' + esc(n) + '</td>'
-            + dl.map(d => '<td>' + (rows[n][d] || '') + '</td>').join('') + '</tr>').join('')
+            + dl.map(d => '<td>' + fmt(n, rows[n][d]) + '</td>').join('') + '<td class="tm-tot">' + fmt(n, tot(n)) + '</td></tr>').join('')
         + '</tbody></table></div>';
 }
 // ЧЕКУН без координати — засідка, що ще не внесена: без номера, у нумерацію не входить
@@ -7594,7 +7609,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             ${state.online?_periodPickerHtml:''}
             ${!state.filterPeriodOpen?_arTop:''}
             ${state.filterPeriodOpen?(state.online?(state.filterPeriodShown?_periodResultHtml:''):''):(state.selArchive?_arContent:_allSection)}
-            ${(!state.filterPeriodOpen&&state.arShowMat)?(()=>{const _mr=state.selArchive?state.archiveRecs:(state.allArchiveLoaded?state.allArchiveRecs:[]);const _mt=_tgMatrix(_mr);return _mt?`<div class="crate p-4"><h3 class="stencil-shadow mb-3" style="color:var(--yellow)">ЦІЛІ ПО ДНЯХ — ${state.selArchive?esc(state.selArchive):'ВСІ ПЕРІОДИ'}</h3>${_mt}</div>`:'';})():''}
+            ${(!state.filterPeriodOpen&&state.arShowMat)?(()=>{const _mr=state.selArchive?state.archiveRecs:(state.allArchiveLoaded?state.allArchiveRecs:[]);const _mt=_tgMatrix(_mr);return _mt?`<div style="padding:0 8px">${_mt}</div>`:'';})():''}
             ${!state.filterPeriodOpen&&state.arShowList?_arFlights:''}
         </div>`;
         }
@@ -7738,7 +7753,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         `}
             ${_zvPicker}
             ${state.zvityFilterShown?_zvResult:''}
-            ${(!state.zvityFilterOpen&&state.records.length)?`<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2"><h3 class="stencil-shadow" style="color:var(--yellow)">ЦІЛІ ПО ДНЯХ (ЗА ВЕСЬ ПЕРІОД)</h3><button onclick="state.zvShowMat=!state.zvShowMat;render()" class="btn-stencil ${state.zvShowMat?'btn-yellow':'btn-yellow-dim'}">ТАБЛИЦЯ</button></div>${state.zvShowMat?(_tgMatrix(state.records)||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає цілей</p>'):''}</div>`:''}
+            ${(!state.zvityFilterOpen&&state.records.length)?`<div><div style="display:flex;justify-content:flex-end;padding:0 8px 8px"><button onclick="state.zvShowMat=!state.zvShowMat;render()" class="btn-stencil ${state.zvShowMat?'btn-yellow':'btn-yellow-dim'}">ТАБЛИЦЯ</button></div>${state.zvShowMat?(_tgMatrix(state.records)||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає цілей</p>'):''}</div>`:''}
         </div>`;
         }
     }
