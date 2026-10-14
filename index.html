@@ -496,7 +496,7 @@
     .stat-r > .stat-ver { order: -1; }
     @media (max-width: 640px) { .lists-bar { width: 100%; } nav.crate.sticky { position: static; } }
     /* над прилиплим меню лишається просвіт 16 px, і крізь нього видно вміст, що гортається (таблицю) — закриваємо його фоном сторінки */
-    @media (min-width: 641px) { nav.crate.sticky::before { content: ''; position: absolute; left: -3px; right: -3px; bottom: 100%; height: 16px; background: var(--bg); pointer-events: none; } }
+    @media (min-width: 641px) { body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 16px; background: var(--bg); z-index: 39; pointer-events: none; } }
     /* Ширину поля редагування рахує recalcListFieldWidth() — при синхронізації
        з таблицею і при змінах у списках. Панель обхоплює поле й кнопки */
     .lists-bar.fit { width: fit-content; max-width: 100%; }
@@ -687,7 +687,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-356';
+const APP_VER = 'v.26.10-357';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6702,7 +6702,7 @@ function _tgMatrix(recs, verOnly) {
         return c.d && c.p ? R + '<span style="color:var(--yellow)">/</span>' + B : (c.d ? R : B);   // риска лише коли є обидва
     };
     const short = d => d === '0' ? 'без дати' : parseInt(d.slice(6)) + '.' + d.slice(4, 6) + '.' + d.slice(2, 4);
-    return '<div class="tm-scroll"><table class="tm-tbl"><thead><tr><th class="tm-name">'+(verOnly?'<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-45deg);white-space:nowrap;font-size:.78em;color:var(--green-label)">ВЕРИФІКОВАНІ</span>':'')+'</th>'
+    return '<div class="tm-scroll"><table class="tm-tbl"><thead><tr><th class="tm-name">'+(verOnly?'<span style="writing-mode:horizontal-tb;transform:none;white-space:nowrap;font-size:.78em;color:var(--green-label)">ВЕРИФІКОВАНІ</span>':'')+'</th>'
         + dl.map(d => '<th><span>' + short(d) + '</span></th>').join('') + '<th class="tm-tot"><span>загалом</span></th></tr></thead><tbody>'
         + first.concat(rest).map(n => '<tr><td class="tm-name">' + esc(n) + '</td>'
             + dl.map(d => '<td>' + fmt(n, rows[n][d]) + '</td>').join('') + '<td class="tm-tot">' + fmt(n, tot(n)) + '</td></tr>').join('')
