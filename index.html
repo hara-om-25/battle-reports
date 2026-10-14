@@ -685,7 +685,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-353';
+const APP_VER = 'v.26.10-354';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -7795,7 +7795,6 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         `}
             ${_zvPicker}
             ${state.zvityFilterShown?_zvResult:''}
-            ${(!state.zvityFilterOpen&&state.records.length)?`<div style="padding-bottom:64px">${_tgMatrix(state.records)||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає цілей</p>'}</div>`:''}
         </div>`;
         }
     }
@@ -7822,6 +7821,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
              +'<div class="report-box">'+_zvL.map(_rptColor).join('\n')+'</div>'
              +'</div></div>';
         }
+        if(!state.selReport&&!state.selDate)h+='<div style="padding:0 16px 64px">'+(_tgMatrix(state.records)||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає цілей</p>')+'</div>';
     }
     
     app.innerHTML = h;
