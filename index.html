@@ -685,7 +685,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-344';
+const APP_VER = 'v.26.10-345';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6654,10 +6654,9 @@ function _tmWidth() {
 }
 function _tgMatrix(recs) {
     const days = {}, rows = {};
-    const key = d => { const [dd, mm, yy] = d.split('.'); return (yy || '') + (mm || '').padStart(2, '0') + (dd || '').padStart(2, '0'); };
     const cell = (name, d) => ((rows[name] = rows[name] || {})[d] = (rows[name][d] || { d: 0, p: 0, n: 0 }));
     (recs || []).forEach(r => {
-        const dt = getDateOnly(r.datetime); if (!dt) return;
+        const dt = _recYMD(r.datetime) || '0';        // немає дати в рядку — стовпець «без дати»
         const tg = String(r.target || '').split(', '), rs = String(r.result || '').split(', ');
         tg.forEach((t, i) => {
             t = t.trim(); if (!t) return;
@@ -6672,7 +6671,7 @@ function _tgMatrix(recs) {
         const q2 = parseInt(r.qty200) || 0, q3 = parseInt(r.qty300) || 0;
         if (q2 || q3) { const c = cell('ОС', dt); c.d += q2; c.p += q3; days[dt] = 1; }
     });
-    const dl = Object.keys(days).sort((a, b) => key(a) < key(b) ? -1 : 1);
+    const dl = Object.keys(days).sort();
     if (!dl.length) return '';
     const tot = n => { const t = { d: 0, p: 0, n: 0 }; Object.values(rows[n]).forEach(c => { t.d += c.d; t.p += c.p; t.n += c.n; }); return t; };
     const sum = n => { const t = tot(n); return t.d + t.p + t.n; };
@@ -6684,7 +6683,7 @@ function _tgMatrix(recs) {
         const R = '<span style="color:var(--red-label)">' + c.d + '</span>', B = '<span style="color:var(--blue-label)">' + c.p + '</span>';
         return c.d && c.p ? R + '<span style="color:var(--yellow)">/</span>' + B : (c.d ? R : B);   // риска лише коли є обидва
     };
-    const short = d => { const [dd, mm, yy] = d.split('.'); return parseInt(dd) + '.' + mm + '.' + String(yy || '').slice(-2); };
+    const short = d => d === '0' ? 'без дати' : parseInt(d.slice(6)) + '.' + d.slice(4, 6) + '.' + d.slice(2, 4);
     return '<div class="tm-scroll"><table class="tm-tbl"><thead><tr><th class="tm-name"></th>'
         + dl.map(d => '<th><span>' + short(d) + '</span></th>').join('') + '<th class="tm-tot"><span>загалом</span></th></tr></thead><tbody>'
         + first.concat(rest).map(n => '<tr><td class="tm-name">' + esc(n) + '</td>'
