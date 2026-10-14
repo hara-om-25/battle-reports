@@ -685,7 +685,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-339';
+const APP_VER = 'v.26.10-340';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6671,7 +6671,7 @@ function _tgMatrix(recs) {
         if (!c) return '';
         if (isOs(n)) return c.n ? String(c.n) : '';
         if (!c.d && !c.p) return '';
-        return '<span style="color:var(--red-label)">' + c.d + '</span><span style="color:var(--text-dim)">/</span><span style="color:var(--blue-label)">' + c.p + '</span>';
+        return '<span style="color:var(--red-label)">' + (c.d || '') + '</span><span style="color:var(--text-dim)">/</span><span style="color:var(--blue-label)">' + (c.p || '') + '</span>';
     };
     const short = d => { const [dd, mm, yy] = d.split('.'); return parseInt(dd) + '.' + mm + '.' + String(yy || '').slice(-2); };
     return '<div class="tm-scroll"><table class="tm-tbl"><thead><tr><th class="tm-name"></th>'
@@ -7766,7 +7766,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         `}
             ${_zvPicker}
             ${state.zvityFilterShown?_zvResult:''}
-            ${(!state.zvityFilterOpen&&state.records.length)?`<div><div style="display:flex;justify-content:flex-end;padding:0 8px 8px"><button onclick="state.zvShowMat=!state.zvShowMat;render()" class="btn-stencil ${state.zvShowMat?'btn-yellow':'btn-yellow-dim'}">ТАБЛИЦЯ</button></div>${state.zvShowMat?(_tgMatrix(state.records)||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає цілей</p>'):''}</div>`:''}
+            ${(!state.zvityFilterOpen&&state.records.length)?`<div>${_tgMatrix(state.records)||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає цілей</p>'}</div>`:''}
         </div>`;
         }
     }
