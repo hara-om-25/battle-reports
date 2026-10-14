@@ -476,7 +476,7 @@
     .br-toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
     /* Панель керування списками прилипає під основне меню, а списки їдуть під неї */
     /* ТАБЛИЦЯ ЦІЛЕЙ ПО ДНЯХ: дати й значення гортаються, назви цілей і рядок дат стоять на місці */
-    .tm-scroll { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+    .tm-scroll { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; width: fit-content; max-width: 100%; margin: 0 auto; }
     .tm-tbl { border-collapse: separate; border-spacing: 0; font-family: 'Tektur', serif; }
     .tm-tbl th, .tm-tbl td { border-right: 1px solid var(--olive); border-bottom: 1px solid var(--olive); padding: 4px 10px; text-align: center; min-width: 38px; color: var(--text); background: transparent; font-weight: normal; }
     .tm-tbl thead th { position: relative; z-index: 2; color: var(--yellow); height: 84px; padding: 6px 4px; border-top: 1px solid var(--olive); background: var(--bg); font-weight: normal; }
@@ -685,7 +685,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-345';
+const APP_VER = 'v.26.10-346';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
