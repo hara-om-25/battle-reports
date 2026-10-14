@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-335';
+const APP_VER = 'v.26.10-336';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -7190,7 +7190,7 @@ if(!_st)return (_anyV&&_isUnv(r))?`<p class="stencil" style="color:var(--red-lab
 // або скасовано, або додано, обох одразу не буває
 const _c=Math.max(0,_pt((parseFloat(r.points)||0)-r.v.sum));
 const _a=Math.max(0,_pt(r.v.sum-(parseFloat(r.points)||0)));
-const _clr=_st==='repl'?'var(--blue-label)':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)';return `<p class="stencil" style="color:${_clr}">${_st==='no'?0:_sum} ${_bal(_st==='no'?0:_sum)}${_c?` <span style="color:var(--yellow)">${(r.chk&&_hasHit(r)&&_c===1)?'(засідка не зарахована -1 бал)':`(скасовано ${_c} ${_bal(_c)})`}</span>`:''}${_a?` <span style="color:var(--yellow)">(додано ${_a} ${_bal(_a)})</span>`:''}${(r.chk&&_hasHit(r)&&!_c&&!_a&&_st!=='no')?' <span style="color:var(--yellow)">(за засідку +1 бал)</span>':''}</p>`;})()}${(()=>{const _st=r.v&&r.v.state;
+const _clr=_st==='repl'?'var(--blue-label)':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)';return `<p class="stencil" style="color:${_clr}">${_st==='no'?0:_sum} ${_bal(_st==='no'?0:_sum)}${_c?` <span style="color:var(--yellow)">${(()=>{if(!(r.chk&&_hasHit(r)&&_st!=='no'&&_c>=1))return `(скасовано ${_c} ${_bal(_c)})`;if(_c===1)return '(засідка не зарахована -1 бал)';const _P=_arRowParts(r);let _cr=false;for(let _j=0;_j<_P.tgts.length;_j++)if(_tgChkBonus(r,_j,_P)>0)_cr=true;return _cr?`(скасовано ${_c} ${_bal(_c)})`:`(скасовано ${_pt(_c-1)} ${_bal(_pt(_c-1))}, засідка не зарахована -1 бал)`;})()}</span>`:''}${_a?` <span style="color:var(--yellow)">(додано ${_a} ${_bal(_a)})</span>`:''}${(r.chk&&_hasHit(r)&&!_c&&!_a&&_st!=='no')?' <span style="color:var(--yellow)">(за засідку +1 бал)</span>':''}</p>`;})()}${(()=>{const _st=r.v&&r.v.state;
 // виліт із балами, який не дістав жодного вердикту — саме такі й губляться
 if(!_st) return (_anyV&&_isUnv(r))?`<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:var(--yellow)">НЕ ЗВІРЕНО</span>`:'';
 return `<span class="stencil" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);letter-spacing:0.08em;font-size:1.05em;text-align:right;color:${_st==='pack'?'#e08a2e':_st==='no'?'var(--red-label)':_st==='ok'?'var(--green-label)':'var(--blue-label)'}">${_st==='repl'?'ЗАМІНЕНО':_st==='ok'?'ВЕРИФІКОВАНО':_st==='no'?'ВІДХИЛЕНО':_st==='pack'?'ДУБЛЮЮЧИЙ':'ЧАСТКОВО<br>ВЕРИФІКОВАНО'}</span>`;})()}</div>`;
