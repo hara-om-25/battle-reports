@@ -52,6 +52,7 @@
 | `stop_bot.bat`        | зупинка: вбиває `pythonw.exe` і `java.exe` |
 | `config.example.json` | зразок `config.json` з номером акаунта |
 | `instruktsiia.pdf`    | покрокова інструкція: встановлення на новому ПК, налаштування, діагностика |
+| `instruktsiia-staryi-skrypt.pdf` | те саме для старої версії скрипта, де номер записаний прямо в коді (`ACCOUNT = "+380..."`) |
 
 ## Відомі пастки
 
