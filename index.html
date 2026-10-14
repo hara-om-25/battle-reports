@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-333';
+const APP_VER = 'v.26.10-334';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6904,7 +6904,11 @@ function render() {
         // Вхід на сторінку ЗВІТИ завжди відкриває актуальний звіт за поточний день, а не загальний перелік
         if (state.page === 'reports') {
             // поточний звіт цілком, без прив'язки до сьогоднішньої дати
-            state.selReport = state.report; state.selDate = null;
+            // поточний звіт може бути ще порожнім (щойно натиснули НОВИЙ ЗВІТ) — його в переліку
+            // немає, тож відкриваємо останній звіт, у якому вже є вильоти
+            const _rn = state.records.map(r => r.reportNum).filter(n => n <= state.report);
+            state.selReport = _rn.indexOf(state.report) >= 0 ? state.report : (_rn.length ? Math.max(..._rn) : null);
+            state.selDate = null;
             state.zvityFilterOpen = false; state.zvityFilterShown = false;
         }
         _prevPage = state.page; _gearUntil = Date.now() + 800; setTimeout(_gearApply, 850);
