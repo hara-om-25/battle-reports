@@ -685,7 +685,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-342';
+const APP_VER = 'v.26.10-343';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1535,10 +1535,11 @@ function _initVerMark() {
         v.style.left = Math.round(x + sx) + 'px';
         v.style.top = Math.round(y + sy) + 'px';
     };
-    window.addEventListener('resize', place, { passive: true });
+    window.addEventListener('resize', () => { place(); _tmWidth(); }, { passive: true });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { _tmWidth(); _tmSticky(); });
     window.addEventListener('scroll', () => { place(); _tmSticky(); }, { passive: true });
     const app = document.getElementById('app');
-    if (app && window.MutationObserver) new MutationObserver(() => { place(); _tmSticky(); }).observe(app, { childList: true, subtree: true });
+    if (app && window.MutationObserver) new MutationObserver(() => { place(); _tmWidth(); _tmSticky(); }).observe(app, { childList: true, subtree: true });
     place();
 }
 
@@ -6637,6 +6638,18 @@ function _tmSticky() {
         const h = ths[0].offsetHeight;
         const off = Math.max(0, Math.min(nb - w.getBoundingClientRect().top, t.offsetHeight - h - 40));
         ths.forEach(th => { th.style.transform = off ? 'translateY(' + off + 'px)' : ''; });
+    });
+}
+// Усі стовпці з числами (дати й «загалом») — завширшки з найширший із них
+function _tmWidth() {
+    document.querySelectorAll('.tm-tbl').forEach(t => {
+        const cells = t.querySelectorAll('thead th:not(.tm-name), tbody td:not(.tm-name)');
+        cells.forEach(c => { c.style.width = ''; c.style.minWidth = ''; });
+        let w = 0;
+        t.querySelectorAll('tbody tr:first-child td:not(.tm-name), thead th:not(.tm-name)').forEach(c => { w = Math.max(w, c.getBoundingClientRect().width); });
+        // найширша клітинка серед усіх рядків
+        t.querySelectorAll('tbody td:not(.tm-name)').forEach(c => { w = Math.max(w, c.getBoundingClientRect().width); });
+        if (w > 0) cells.forEach(c => { c.style.width = w + 'px'; c.style.minWidth = w + 'px'; c.style.boxSizing = 'border-box'; });
     });
 }
 function _tgMatrix(recs) {
