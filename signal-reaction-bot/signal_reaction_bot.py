@@ -56,6 +56,10 @@ KEYWORDS = {
 # Слова, що працюють у ВСІХ чатах (навіть якщо ONLY_CHATS обмежує решту слів)
 ALL_CHATS_WORDS = {"тест"}
 
+# Слова, що спрацьовують ЛИШЕ на вихідні повідомлення (надіслані з номера бота).
+# Працює тільки при REACT_TO_OWN = True.
+OWN_ONLY_WORDS = {"тест"}
+
 # Що озвучувати українською (голос Google, потрібен інтернет лише
 # при першому запуску: mp3 зберігається поруч зі скриптом)
 SPEECH_TEXT = "З'явився ждун"
@@ -212,9 +216,11 @@ def handle_envelope(proc, env):
         params["recipient"] = [target or author]
         chat_id = target or author
 
-    # Слово діє, якщо воно "для всіх чатів" або чат дозволений
+    # Слово діє, якщо воно "для всіх чатів" або чат дозволений;
+    # слова з OWN_ONLY_WORDS - лише у власних (вихідних) повідомленнях
     allowed = [(w, e) for w, e in matches
-               if w in ALL_CHATS_WORDS or not ONLY_CHATS or chat_id in ONLY_CHATS]
+               if (w in ALL_CHATS_WORDS or not ONLY_CHATS or chat_id in ONLY_CHATS)
+               and (is_own or w not in OWN_ONLY_WORDS)]
     if not allowed:
         return
     word, emoji = allowed[0]
