@@ -676,7 +676,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-334';
+const APP_VER = 'v.26.10-335';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -4456,7 +4456,13 @@ function _pushVerifyLines(lines, recs, ckLine) {
     if (_pt(add)) lines.push('Додано верифікатором ' + _pt(add) + ' ' + _bal(_pt(add)) + '.');
     if (_pt(canc)) lines.push('Скасовано ' + _pt(canc) + ' ' + _bal(_pt(canc)) + '.');
     // бали чекунів — окремим рядком під «Скасовано» (в АРХІВІ; у ЗВІТАХ вони в рядку прогнозу)
-    const _ckn = recs.filter(r => r.chk && _hasHit(r)).length;
+    // лише ті чекуни, які верифікатор справді зарахував (+1 за чекуна на картці цілі)
+    const _ckn = recs.filter(r => {
+        if (!r.chk || !_hasHit(r) || !r.v || !r.v.state || r.v.state === 'pack') return false;
+        const P = _arRowParts(r);
+        for (let j = 0; j < P.tgts.length; j++) if (_tgChkBonus(r, j, P) > 0) return true;
+        return false;
+    }).length;
     if (ckLine && _ckn) lines.push('За чекуни додано ' + _ckn + ' ' + _bal(_ckn) + '.');
     // різниця між прогнозом і верифікованим: додане мінус скасоване
     const _net = _pt(add - canc);
