@@ -685,7 +685,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-341';
+const APP_VER = 'v.26.10-342';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6668,7 +6668,8 @@ function _tgMatrix(recs) {
     const fmt = (n, c) => {
         if (!c) return '';
         if (!c.d && !c.p) return '';
-        return '<span style="color:var(--red-label)">' + (c.d || '') + '</span><span style="color:var(--text-dim)">/</span><span style="color:var(--blue-label)">' + (c.p || '') + '</span>';
+        const R = '<span style="color:var(--red-label)">' + c.d + '</span>', B = '<span style="color:var(--blue-label)">' + c.p + '</span>';
+        return c.d && c.p ? R + '<span style="color:var(--text-dim)">/</span>' + B : (c.d ? R : B);   // риска лише коли є обидва
     };
     const short = d => { const [dd, mm, yy] = d.split('.'); return parseInt(dd) + '.' + mm + '.' + String(yy || '').slice(-2); };
     return '<div class="tm-scroll"><table class="tm-tbl"><thead><tr><th class="tm-name"></th>'
