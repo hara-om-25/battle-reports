@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-364';
+const APP_VER = 'v.26.10-365';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2093,7 +2093,9 @@ function showSettings() {
           go: () => showAccess() },
         { t: 'е бали', c: 'btn-green', on: Object.keys(state.scoreTable || {}).length > 0,
           why: 'Прайс ще не завантажено — відкрийте застосунок із мережею',
-          go: () => showPrices() }
+          go: () => showPrices() },
+        { t: 'ІНСТРУКЦІЯ', c: 'btn-black', on: true, why: '',
+          go: () => window.open('instruction.pdf', '_blank') }
     ];
     _rows.forEach(o => {
         const b = document.createElement('button');
