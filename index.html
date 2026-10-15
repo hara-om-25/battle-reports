@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-362';
+const APP_VER = 'v.26.10-363';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6635,7 +6635,7 @@ function exportPDF() {
 // горизонтальною прокруткою до вікна не липне, тож зсуваємо його самі)
 function _tmSticky() {
     const nav = document.querySelector('nav.crate');
-    const nb = Math.max(0, nav ? nav.getBoundingClientRect().bottom : 0) + 4;
+    const nb = Math.max(0, nav ? nav.getBoundingClientRect().bottom : 0) - 1;
     document.querySelectorAll('.tm-scroll').forEach(w => {
         const t = w.querySelector('table'), ths = w.querySelectorAll('thead th');
         if (!t || !ths.length) return;
@@ -6643,7 +6643,7 @@ function _tmSticky() {
         w.classList.remove('tm-fit');
         if (window.innerWidth > 640 && w.scrollWidth <= w.clientWidth + 1) {
             w.classList.add('tm-fit');
-            w.style.setProperty('--tm-top', Math.max(0, Math.round(nb - 4) - 1) + 'px');
+            w.style.setProperty('--tm-top', Math.max(0, Math.round(nb)) + 'px');
             ths.forEach(th => { th.style.transform = ''; });
             return;
         }
