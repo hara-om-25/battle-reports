@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-363';
+const APP_VER = 'v.26.10-364';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6664,7 +6664,9 @@ function _tmWidth() {
         if (w > 0) cells.forEach(c => { c.style.width = w + 'px'; c.style.minWidth = w + 'px'; c.style.boxSizing = 'border-box'; });
     });
 }
-function _tgMatrix(recs, verOnly) {
+// mode: 'sub' — усе, що подано; 'ver' (або true) — верифіковане; 'can' — скасоване (відхилене й дублююче); без mode — як подано, без кнопок
+function _tgMatrix(recs, mode) {
+    const m = mode === true ? 'ver' : (mode || ''), verOnly = m === 'ver', canOnly = m === 'can', btns = !!m;
     const days = {}, rows = {};
     const cell = (name, d) => ((rows[name] = rows[name] || {})[d] = (rows[name][d] || { d: 0, p: 0, n: 0 }));
     // назви зводимо до прайсової («ос» і «ОС», «фс» і «ФС», підкреслення, латинські двійники — один рядок)
@@ -6672,7 +6674,20 @@ function _tgMatrix(recs, verOnly) {
     (recs || []).forEach(r => {
         const dt = _recYMD(r.datetime) || '0';        // немає дати в рядку — стовпець «без дати»
         const items = []; let q2 = 0, q3 = 0;
-        if (verOnly) {
+        if (canOnly) {
+            // скасовані цілі: відхилені верифікатором або дублюючі; результат і кількість — наші, як подано
+            if (!r.v || !r.v.state) return;
+            const P = _arRowParts(r); let osCan = false;
+            for (let j = 0; j < P.tgts.length; j++) {
+                const t = String(P.tgts[j] || '').trim(); if (!t) continue;
+                const vd = r.v.state === 'pack' ? 'pack' : _tgVerdict({ r: r, j: j, p: P });
+                if (vd !== 'no' && vd !== 'pack') continue;
+                const base = baseOf(t);
+                if (base === 'ОС') { osCan = true; continue; }
+                items.push([base, String(P.ress[j] || '')]);
+            }
+            if (osCan || (r.v.state === 'pack' && (parseInt(r.qty200) || parseInt(r.qty300)))) { q2 = parseInt(r.qty200) || 0; q3 = parseInt(r.qty300) || 0; }
+        } else if (verOnly) {
             // лише верифіковані цілі (верифіковано повністю або із заміною); результат — як у верифікатора
             if (!r.v || !r.v.state || r.v.state === 'pack') return;
             const P = _arRowParts(r); let osOk = false;
@@ -6700,7 +6715,10 @@ function _tgMatrix(recs, verOnly) {
         if (q2 || q3) { const c = cell('ОС', dt); c.d += q2; c.p += q3; days[dt] = 1; }
     });
     const dl = Object.keys(days).sort();
-    if (!dl.length) return '';
+    // три кнопки в кутку: що показує таблиця (обрана — яскрава й втоплена, решта тьмяні)
+    const bt = (k, cls, txt) => '<button onclick="state.arMatMode=\'' + k + '\';render()" class="btn-stencil ' + cls + (m === k ? ' active' : '') + '" style="display:block;width:100%;margin:2px 0;padding:3px 2px;font-size:.62rem;letter-spacing:0;' + (m === k ? '' : 'opacity:.55;') + '">' + txt + '</button>';
+    const corner = btns ? bt('sub', 'btn-yellow', 'ПОДАНО') + bt('ver', 'btn-green', 'ВЕРИФІКОВАНО') + bt('can', 'btn-danger', 'СКАСОВАНО') : '';
+    if (!dl.length) return btns ? '<div class="tm-scroll"><table class="tm-tbl"><thead><tr><th class="tm-name" style="vertical-align:middle">' + corner + '</th><th style="min-width:160px"><span style="writing-mode:horizontal-tb;transform:none">немає цілей</span></th></tr></thead></table></div>' : '';
     const tot = n => { const t = { d: 0, p: 0, n: 0 }; Object.values(rows[n]).forEach(c => { t.d += c.d; t.p += c.p; t.n += c.n; }); return t; };
     const sum = n => { const t = tot(n); return t.d + t.p + t.n; };
     const first = rows['ОС'] && sum('ОС') > 0 ? ['ОС'] : [];
@@ -6712,7 +6730,7 @@ function _tgMatrix(recs, verOnly) {
         return c.d && c.p ? R + '<span style="color:var(--yellow)">/</span>' + B : (c.d ? R : B);   // риска лише коли є обидва
     };
     const short = d => d === '0' ? 'без дати' : d.slice(6, 8) + '.' + d.slice(4, 6) + '.' + d.slice(2, 4);
-    return '<div class="tm-scroll"><table class="tm-tbl"><thead><tr><th class="tm-name" style="text-align:center;vertical-align:middle">'+(verOnly?'<span style="writing-mode:horizontal-tb;transform:none;white-space:nowrap;font-size:.78em;color:var(--green-label)">ВЕРИФІКОВАНІ</span>':'')+'</th>'
+    return '<div class="tm-scroll"><table class="tm-tbl"><thead><tr><th class="tm-name" style="text-align:center;vertical-align:middle">'+corner+'</th>'
         + dl.map(d => '<th><span>' + short(d) + '</span></th>').join('') + '<th class="tm-tot"><span>загалом</span></th></tr></thead><tbody>'
         + first.concat(rest).map(n => '<tr><td class="tm-name">' + esc(n) + '</td>'
             + dl.map(d => '<td>' + fmt(n, rows[n][d]) + '</td>').join('') + '<td class="tm-tot">' + fmt(n, tot(n)) + '</td></tr>').join('')
@@ -7636,7 +7654,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             +`</div>`;
         // СЕРВІС: службові переліки в одному місці. Новий такий перелік —
         // це ще один блок у _svcBlocks (він сам ховається, коли порожній)
-        const _matHtml=(!state.filterPeriodOpen&&state.arShowMat)?(()=>{const _mr=state.selArchive?state.archiveRecs:(state.allArchiveLoaded?state.allArchiveRecs:[]);const _mt=_tgMatrix(_mr,true);return _mt?`<div style="padding:0 8px">${_mt}</div>`:'';})():'';
+        const _matHtml=(!state.filterPeriodOpen&&state.arShowMat)?(()=>{const _mr=state.selArchive?state.archiveRecs:(state.allArchiveLoaded?state.allArchiveRecs:[]);const _mt=_tgMatrix(_mr,state.arMatMode||'ver');return _mt?`<div style="padding:0 8px">${_mt}</div>`:'';})():'';
         const _matBottom=state.arShowSum&&state.arShowStat&&state.arShowList;   // усі кнопки натиснуті — таблиця в самому низу
         if(state.page==='service'){
             // вильоти без вердикту — з усіх аркушів, де звіряння вже було
