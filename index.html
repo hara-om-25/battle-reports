@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-366';
+const APP_VER = 'v.26.10-367';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -7656,7 +7656,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
             +`</div>`;
         // СЕРВІС: службові переліки в одному місці. Новий такий перелік —
         // це ще один блок у _svcBlocks (він сам ховається, коли порожній)
-        const _matHtml=(!state.filterPeriodOpen&&state.arShowMat)?(()=>{const _mr=state.selArchive?state.archiveRecs:(state.allArchiveLoaded?state.allArchiveRecs:[]);const _mt=_tgMatrix(_mr,state.arMatMode||'ver');return _mt?`<div style="padding:0 8px">${_mt}</div>`:'';})():'';
+        const _matHtml=(!state.filterPeriodOpen&&state.arShowMat)?(()=>{const _mr=state.selArchive?state.archiveRecs:(state.allArchiveLoaded?state.allArchiveRecs:[]);let _mt=_tgMatrix(_mr,state.arMatMode||'ver');if(_mt&&_mt.indexOf('немає цілей')>=0&&['sub','ver','can'].every(k=>{const x=_tgMatrix(_mr,k);return !x||x.indexOf('немає цілей')>=0;}))_mt='';return _mt?`<div style="padding:0 8px">${_mt}</div>`:'';})():'';
         const _matBottom=state.arShowSum&&state.arShowStat&&state.arShowList;   // усі кнопки натиснуті — таблиця в самому низу
         if(state.page==='service'){
             // вильоти без вердикту — з усіх аркушів, де звіряння вже було
