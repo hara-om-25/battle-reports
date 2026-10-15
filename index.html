@@ -479,7 +479,7 @@
     .tm-scroll { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; width: fit-content; max-width: 100%; margin: 0 auto; }
     .tm-tbl { border-collapse: separate; border-spacing: 0; font-family: 'Tektur', serif; }
     .tm-tbl th, .tm-tbl td { border-right: 1px solid var(--olive); border-bottom: 1px solid var(--olive); padding: 4px 10px; text-align: center; min-width: 38px; color: var(--text); background: transparent; font-weight: normal; }
-    .tm-tbl thead th { position: relative; z-index: 2; color: var(--yellow); height: 84px; padding: 6px 4px; border-top: 1px solid var(--olive); background: var(--bg); font-weight: normal; }
+    .tm-tbl thead th { position: relative; z-index: 2; color: var(--yellow); height: 100px; padding: 6px 4px; border-top: 1px solid var(--olive); background: var(--bg); font-weight: normal; }
     .tm-tbl thead th span { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-weight: normal; }
     .tm-tbl .tm-name { position: sticky; left: 0; z-index: 1; text-align: left; white-space: nowrap; color: var(--yellow); border-left: 1px solid var(--olive); min-width: 110px; background: var(--bg); }
     .tm-tbl .tm-tot { position: sticky; right: 0; z-index: 1; background: var(--bg); border-left: 1px solid var(--olive); }
@@ -687,7 +687,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-359';
+const APP_VER = 'v.26.10-360';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
