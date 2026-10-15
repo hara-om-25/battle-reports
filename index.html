@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-367';
+const APP_VER = 'v.26.10-368';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1792,8 +1792,10 @@ function showPrices() {
     _ls.style.cssText = 'overflow-y:auto;flex:1;min-height:120px';
     _bx.appendChild(_ls);
     const _draw = () => {
-        const f = _q.value.trim().toLowerCase();
-        _ls.innerHTML = _rows.filter(r => !f || (r.a + ' ' + r.n).toLowerCase().includes(f)).map(r =>
+        const _lat = 'ABCEHIKMOPTXY', _cyr = 'АВСЕНІКМОРТХУ';
+        const _fold = x => String(x || '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase().replace(/[ABCEHIKMOPTXY]/g, c => _cyr[_lat.indexOf(c)]);
+        const f = _fold(_q.value);
+        _ls.innerHTML = _rows.filter(r => !f || _fold(r.a + ' ' + r.n).includes(f)).map(r =>
             '<div style="display:flex;gap:8px;padding:5px 4px;border-bottom:1px solid rgba(139,139,58,0.18);font-size:0.9em">'
             + '<span style="flex:1;color:var(--text)">' + esc(r.a) + (r.n ? '<span style="color:var(--text-dim)"> — ' + esc(r.n) + '</span>' : '') + '</span>'
             + '<span style="width:128px;text-align:right;color:var(--khaki)">' + esc(String(r.z)) + _priceDiff(r.z, r.oz) + '</span>'
