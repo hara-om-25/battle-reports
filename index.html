@@ -687,7 +687,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-358';
+const APP_VER = 'v.26.10-359';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -7779,6 +7779,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
   const _sh=(_dr||_ar||_pr||_rr)?'<div style="padding:20px 8px 4px"><div class="flex flex-wrap gap-4"><div class="space-y-3" style="flex:2 1 220px">'+_sec('ДРОНИ',_dr)+_sec('БОЄПРИПАСИ',_ar)+_sec('ПВР',_pr)+'</div><div class="space-y-3" style="flex:3 1 280px">'+_sec('РЕЗУЛЬТАТИ',_rr)+'</div></div></div>':''
   const _lbl=state.selDate?'ЗА ДЕНЬ':(state.selReport?'ЗА ЗВІТ':'ЗА ВИЇЗД');
   return '<div>'
+    +((!state.selReport&&!state.selDate)?'<div style="padding:16px 0 20px">'+(_tgMatrix(state.records)||'')+'</div>':'')
     +'<p class="stencil" style="color:var(--khaki);font-size:calc(0.95em + 2px);padding:4px 8px 12px">'+_lbl+' ЗДІЙСНЕНО <span style="color:var(--text)">'+_recs.length+'</span> '+_plu(_recs.length,'ВИЛІТ','ВИЛЬОТИ','ВИЛЬОТІВ')+', ОРІЄНТОВНО НА <span style="color:var(--text)">'+_total+'</span> '+_bal(_total).toUpperCase()+'</p>'
     +'<div class="space-y-4">'+(_groups||'<div class="crate p-4"><p class="stencil text-center py-2" style="color:var(--text-dim)">Немає вильотів</p></div>')+'</div>'+_sh+'</div>';
 })()}
@@ -7823,7 +7824,6 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
              +'<div class="report-box">'+_zvL.map(_rptColor).join('\n')+'</div>'
              +'</div></div>';
         }
-        if(!state.selReport&&!state.selDate)h+='<div style="padding:0 16px">'+(_tgMatrix(state.records)||'<p class="stencil text-center py-2" style="color:var(--text-dim)">Немає цілей</p>')+'</div>';
     }
     
     app.innerHTML = h;
