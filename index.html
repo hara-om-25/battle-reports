@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-378';
+const APP_VER = 'v.26.10-379';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -4652,6 +4652,17 @@ function copyPkLost() {
     if (!_pkLostRows.length) return;
     navigator.clipboard.writeText(_pkLostRows.map(o => _vuLine(o, false) + ' | ' + o.r.v.lost).join('\n')).catch(() => {});
 }
+// СЕРВІС: вильоти, де верифікатор дав ОС (200+300) більше, ніж подано. Нічого не змінює — лише показує, де розходяться цифри
+let _osMoreRows = [];
+function _osMoreBlock(recs) {
+    _osMoreRows = recs.filter(r => r.v && r.v.os && ((parseInt(r.v.os.k) || 0) + (parseInt(r.v.os.w) || 0)) > ((parseInt(r.qty200) || 0) + (parseInt(r.qty300) || 0)))
+        .map(r => ({ r: r, n: _vdNum.get(r) || 0 }));
+    if (!_osMoreRows.length) return '';
+    return '<div class="crate p-4"><div class="flex justify-between items-center mb-3 flex-wrap gap-2">'
+        + '<h3 class="stencil-shadow" style="color:var(--yellow)">ОС: ВЕРИФІКАТОР ДАВ БІЛЬШЕ, НІЖ ПОДАНО</h3>'
+        + '<span class="stencil" style="color:var(--khaki)">' + _osMoreRows.length + ' ' + _vyl(_osMoreRows.length) + '</span>'
+        + '</div><div class="report-box">' + _osMoreRows.map(o => _vuLine(o, true) + ' | подано 200/300: ' + (parseInt(o.r.qty200) || 0) + '/' + (parseInt(o.r.qty300) || 0) + ' | верифікатор: ' + (parseInt(o.r.v.os.k) || 0) + '/' + (parseInt(o.r.v.os.w) || 0)).join('\n') + '</div></div>';
+}
 function _pkLostBlock(recs) {
     _pkLostRows = recs.filter(r => r.v && r.v.lost).map(r => ({ r: r, n: _vdNum.get(r) || 0 }));
     if (!_pkLostRows.length) return '';
@@ -7671,7 +7682,7 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
         const _matBottom=state.arShowSum&&state.arShowStat&&state.arShowList;   // усі кнопки натиснуті — таблиця в самому низу
         if(state.page==='service'){
             // вильоти без вердикту — з усіх аркушів, де звіряння вже було
-            let _svcUnv='', _svcPk='';
+            let _svcUnv='', _svcPk='', _svcOs='';
             if(state.online&&state.allArchiveLoaded){
                 _sheetOrder(state.allArchiveRecs);
                 const _vSheets=new Set(state.allArchiveRecs.filter(r=>r.v&&r.v.state).map(r=>r.sheet));
@@ -7679,9 +7690,10 @@ return `<span class="stencil" style="position:absolute;right:10px;top:50%;transf
                     .map(r=>({r:r,n:_vdNum.get(r)||0}));
                 _svcUnv=_vuBlock(_vuRows,true);
                 _svcPk=_pkLostBlock(state.allArchiveRecs);
+                _svcOs=_osMoreBlock(state.allArchiveRecs);
                 _sheetOrder([...state.allArchiveRecs,...state.records]);
             }
-            const _svcBlocks=[state.online?_vlHtml:'',_svcUnv,_svcPk,_vdHtml,state.online?_vfHtml:''].filter(Boolean);
+            const _svcBlocks=[state.online?_vlHtml:'',_svcUnv,_svcPk,_svcOs,_vdHtml,state.online?_vfHtml:''].filter(Boolean);
             h+=`<div class="p-4 space-y-4 arch-wrap"><h1 class="stencil-shadow text-3xl px-2" style="color:var(--yellow)">СЕРВІС</h1>`
                 +(_svcBlocks.length?_svcBlocks.join(''):'<div class="crate p-4"><p class="stencil text-center py-3" style="color:var(--text-dim)">Нічого перевіряти: службових переліків зараз немає</p></div>')
                 +`</div>`;
