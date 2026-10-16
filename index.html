@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-377';
+const APP_VER = 'v.26.10-378';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6681,16 +6681,25 @@ function _tgMatrix(recs, mode) {
         if (canOnly) {
             // скасовані цілі: відхилені верифікатором або дублюючі; результат і кількість — наші, як подано
             if (!r.v || !r.v.state) return;
-            const P = _arRowParts(r); let osCan = false;
+            const P = _arRowParts(r); let osCan = false, osRed = false;
             for (let j = 0; j < P.tgts.length; j++) {
                 const t = String(P.tgts[j] || '').trim(); if (!t) continue;
                 const vd = r.v.state === 'pack' ? 'pack' : _tgVerdict({ r: r, j: j, p: P });
-                if (vd !== 'no' && vd !== 'pack') continue;
                 const base = baseOf(t);
+                // ОС верифіковано/замінено, але верифікатор дав менше 200 або 300 — різниця скасована (0 балів)
+                if (base === 'ОС' && (vd === 'ok' || vd === 'repl') && r.v.os) osRed = true;
+                if (vd !== 'no' && vd !== 'pack') continue;
                 if (base === 'ОС') { osCan = true; continue; }
                 items.push([base, String(P.ress[j] || '')]);
             }
             if (osCan || (r.v.state === 'pack' && (parseInt(r.qty200) || parseInt(r.qty300)))) { q2 = parseInt(r.qty200) || 0; q3 = parseInt(r.qty300) || 0; }
+            else if (osRed) {
+                // скасовано = наше мінус верифікатора, але перекваліфіковане (200 стало 300 і навпаки) — не скасоване, а верифіковане з іншими балами
+                const k = parseInt(r.qty200) || 0, w = parseInt(r.qty300) || 0, vk = parseInt(r.v.os.k) || 0, vw = parseInt(r.v.os.w) || 0;
+                const dk = Math.max(0, k - vk), dw = Math.max(0, w - vw);
+                const mv1 = Math.min(dk, Math.max(0, vw - w)), mv2 = Math.min(dw, Math.max(0, vk - k));
+                q2 = dk - mv1; q3 = dw - mv2;
+            }
         } else if (verOnly) {
             // лише верифіковані цілі (верифіковано повністю або із заміною); результат — як у верифікатора
             if (!r.v || !r.v.state || r.v.state === 'pack') return;
