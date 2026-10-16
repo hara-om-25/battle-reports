@@ -1,0 +1,31 @@
+{
+  "name": "ХАРА ОМ",
+  "short_name": "ХАРА ОМ",
+  "description": "Система бойових звітів FPV-підрозділу",
+  "start_url": "/battle-reports/",
+  "scope": "/battle-reports/",
+  "display": "standalone",
+  "background_color": "#1a1a12",
+  "theme_color": "#8a8060",
+  "lang": "uk",
+  "icons": [
+    {
+      "src": "/battle-reports/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/battle-reports/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/battle-reports/icons/icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
