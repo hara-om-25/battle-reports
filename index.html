@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-379';
+const APP_VER = 'v.26.10-380';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -6680,6 +6680,24 @@ function _tmWidth() {
     });
 }
 // mode: 'sub' — усе, що подано; 'ver' (або true) — верифіковане; 'can' — скасоване (відхилене й дублююче); без mode — як подано, без кнопок
+// Додано верифікатором: ОС, яких ми не подавали, а верифікатор зарахував (200/300 поза перекваліфікацією). Лише показ, дані не міняються
+function _osAdded(recs) {
+    let a2 = 0, a3 = 0;
+    (recs || []).forEach(r => {
+        if (!r.v || !r.v.state || r.v.state === 'pack' || !r.v.os) return;
+        const P = _arRowParts(r); let ok = false;
+        for (let j = 0; j < P.tgts.length; j++) {
+            const t = String(P.tgts[j] || '').trim(); if (!t || String(_abbrOfName(t) || '').trim() !== 'ОС') continue;
+            const vd = _tgVerdict({ r: r, j: j, p: P }); if (vd === 'ok' || vd === 'repl') ok = true;
+        }
+        if (!ok) return;
+        const k = parseInt(r.qty200) || 0, w = parseInt(r.qty300) || 0, vk = parseInt(r.v.os.k) || 0, vw = parseInt(r.v.os.w) || 0;
+        const dk = Math.max(0, k - vk), dw = Math.max(0, w - vw);
+        const i2 = Math.max(0, vk - k), i3 = Math.max(0, vw - w);
+        a2 += i2 - Math.min(dw, i2); a3 += i3 - Math.min(dk, i3);
+    });
+    return { k: a2, w: a3 };
+}
 function _tgMatrix(recs, mode) {
     const m = mode === true ? 'ver' : (mode || ''), verOnly = m === 'ver', canOnly = m === 'can', btns = !!m;
     const days = {}, rows = {};
@@ -6758,7 +6776,7 @@ function _tgMatrix(recs, mode) {
         + dl.map(d => '<th><span>' + short(d) + '</span></th>').join('') + '<th class="tm-tot"><span>загалом</span></th></tr></thead><tbody>'
         + first.concat(rest).map(n => '<tr><td class="tm-name">' + esc(n) + '</td>'
             + dl.map(d => '<td>' + fmt(n, rows[n][d]) + '</td>').join('') + '<td class="tm-tot">' + fmt(n, tot(n)) + '</td></tr>').join('')
-        + '</tbody></table></div>';
+        + '</tbody></table>' + (btns ? (() => { const ad = _osAdded(recs); return (ad.k || ad.w) ? '<div class="stencil" style="margin-top:8px;color:var(--khaki)">Додано верифікатором: ОС <span style="color:var(--red-label)">' + ad.k + '</span><span style="color:var(--yellow)">/</span><span style="color:var(--blue-label)">' + ad.w + '</span></div>' : ''; })() : '') + '</div>';
 }
 // ЧЕКУН без координати — засідка, що ще не внесена: без номера, у нумерацію не входить
 function _noNum(r) { return !!r.chk && !String(r.coordinates || '').trim(); }
