@@ -93,8 +93,8 @@ img{max-width:none}
 mark.hl{background:#d9c13a;color:#000;padding:0 1px}
 mark.hl.cur{background:#ff9a2e;outline:2px solid #fff}
 body{padding-top:52px}
-</style></head><body><div class="topbar"><input id="q" type="search" placeholder="Пошук по сторінці" autocomplete="off"><span id="qc"></span><button id="qp" title="Попередній">▲</button><button id="qn" title="Наступний">▼</button><a id="ver" class="stencil" href="instruction.pdf" download="ХАРА_ОМ_інструкція.pdf" title="Завантажити інструкцію">v.26.10-9</a></div><div class="page" style="display:flex;flex-direction:column;justify-content:center">
-<h1 style="font-size:40pt">ХАРА ОМ</h1><h2 style="border:0;font-size:22pt">Інструкція користувача <span style="font-size:11pt;color:#8f8c7a">v.26.10-9</span></h2>
+</style></head><body><div class="topbar"><input id="q" type="search" placeholder="Пошук по сторінці" autocomplete="off"><span id="qc"></span><button id="qp" title="Попередній">▲</button><button id="qn" title="Наступний">▼</button><a id="ver" class="stencil" href="instruction.pdf" download="ХАРА_ОМ_інструкція.pdf" title="Завантажити інструкцію">v.26.10-10</a></div><div class="page" style="display:flex;flex-direction:column;justify-content:center">
+<h1 style="font-size:40pt">ХАРА ОМ</h1><h2 style="border:0;font-size:22pt">Інструкція користувача <span style="font-size:11pt;color:#8f8c7a">v.26.10-10</span></h2>
 <p style="font-size:12.5pt">Тут написано, що натиснути, щоб щось зробити, і що після цього станеться. Координати, пошти й назви на знімках змінені.</p>
 <ol class="toc" style="margin-top:8mm;font-size:12pt">
 <li>Записати виліт</li><li>Почати новий звіт</li><li>Виправити або видалити виліт</li><li>Подивитись, що зроблено за день, звіт чи виїзд</li><li>Отримати підсумки й доповідь</li><li>Заархівувати звіт</li><li>Подивитись архів: вильоти, цілі, статистика, таблиця</li><li>Звірити з файлом верифікатора</li><li>Якщо немає мережі</li><li>Списки, ціни, доступ, інша таблиця</li><li>Корисні дотики</li></ol></div><div class="page"><h2>1. Записати виліт</h2><div style="width:calc(1240*var(--u));max-width:100%"><div class="shot" style="padding:6px"><div style="position:relative;width:100%;aspect-ratio:1240/797;overflow:hidden;border-radius:3px"><img src="instr/form.jpg" style="position:absolute;width:161.29%;left:-30.65%;top:-29.49%"><span class="n1" style="left:calc(11.45% - 8px);top:calc(4.14% - 8px)">1</span><span class="n1" style="left:calc(32.10% - 8px);top:calc(4.14% - 8px)">2</span><span class="n1" style="left:calc(80.40% - 8px);top:calc(4.14% - 8px)">3</span><span class="n1" style="left:calc(92.42% - 8px);top:calc(30.24% - 8px)">4</span><span class="n1" style="left:calc(45.56% - 8px);top:calc(52.82% - 8px)">5</span><span class="n1" style="left:calc(72.98% - 8px);top:calc(47.30% - 8px)">6</span><span class="n1" style="left:calc(88.06% - 8px);top:calc(72.15% - 8px)">7</span><span class="n1" style="left:calc(44.60% - 8px);top:calc(85.45% - 8px)">8</span><span class="n1" style="left:calc(90.89% - 8px);top:calc(85.45% - 8px)">9</span></div></div>
@@ -110,4 +110,16 @@ if(hits.length){go(0)}else qc.textContent='нічого'}
 function go(i){if(!hits.length)return;if(cur>=0)hits[cur].classList.remove('cur');cur=(i+hits.length)%hits.length;const h=hits[cur];h.classList.add('cur');h.scrollIntoView({block:'center'});qc.textContent=(cur+1)+' / '+hits.length}
 q.addEventListener('input',run);q.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();go(cur+(e.shiftKey?-1:1))}});
 const tz=document.createElement('div');tz.id='toast';document.body.appendChild(tz);let tt=0;document.getElementById('ver').addEventListener('click',()=>{tz.innerHTML='PDF <b>ХАРА_ОМ_інструкція.pdf</b> зберігається на пристрій';tz.style.display='block';clearTimeout(tt);tt=setTimeout(()=>{tz.style.display='none'},2000)});
-document.getElementById('qn').onclick=()=>go(cur+1);document.getElementById('qp').onclick=()=>go(cur-1)})();</script></body></html>
+document.getElementById('qn').onclick=()=>go(cur+1);document.getElementById('qp').onclick=()=>go(cur-1)})();
+(function(){const ver=document.getElementById('ver'),cur=ver.textContent.trim();let busy=false;
+function note(t,ms){const z=document.getElementById('toast');z.innerHTML=t;z.style.display='block';setTimeout(()=>{z.style.display='none'},ms||3000)}
+try{const d=sessionStorage.getItem('instr_upd');if(d){sessionStorage.removeItem('instr_upd');setTimeout(()=>note('Інструкцію оновлено до <b>'+d+'</b>',3500),600)}}catch(e){}
+async function check(){if(busy||!navigator.onLine)return;busy=true;try{
+const r=await fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'});if(!r.ok)return;
+const m=/id="ver"[^>]*>\s*(v\.[\d.-]+)/.exec(await r.text());if(!m||m[1]===cur)return;
+let tried='';try{tried=sessionStorage.getItem('instr_try')||''}catch(e){}if(tried===m[1])return;
+try{sessionStorage.setItem('instr_try',m[1]);sessionStorage.setItem('instr_upd',m[1])}catch(e){}
+note('Доступне оновлення інструкції <b>'+m[1]+'</b> — оновлюю…',1800);
+try{const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}catch(e){}
+setTimeout(()=>location.reload(),1800)}catch(e){}finally{busy=false}}
+setTimeout(check,2500);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check()});setInterval(check,600000)})();</script></body></html>
