@@ -1,4 +1,4 @@
-const CACHE = 'battle-reports-v17';
+const CACHE = 'battle-reports-v18';
 const PRECACHE = ['/battle-reports/', '/battle-reports/index.html', '/battle-reports/column-cutter.html'];
 
 self.addEventListener('install', e => {
