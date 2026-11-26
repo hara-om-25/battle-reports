@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-388';
+const APP_VER = 'v.26.11-389';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1770,7 +1770,7 @@ function _priceDiff(now, old) {
 
 function showPrices() {
     const _rows = Object.entries(state.scoreTable || {})
-        .map(([a, sc]) => { const d = sc.descr !== undefined ? sc.descr : ((sc.fullName && sc.fullName !== a) ? sc.fullName : ''); return { a: a, n: d === a ? '' : d, z: _priceFor(a).znyshcheno, p: _priceFor(a).poshkodzheno, oz: sc.oldZ, op: sc.oldP }; })
+        .map(([a, sc]) => { const d = sc.descr !== undefined ? sc.descr : ((sc.fullName && sc.fullName !== a) ? sc.fullName : ''); return { a: a, n: d === a ? '' : d, z: _priceFor(a).znyshcheno, p: _priceFor(a).poshkodzheno, oz: (_priceFor(a) !== sc ? sc.znyshcheno : sc.oldZ), op: (_priceFor(a) !== sc ? sc.poshkodzheno : sc.oldP) }; })
         .sort((x, y) => x.a.localeCompare(y.a, 'uk'));
     const _ov = document.createElement('div');
     _ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
