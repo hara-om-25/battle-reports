@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-390';
+const APP_VER = 'v.26.11-391';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2097,7 +2097,9 @@ function showSettings() {
           why: 'Прайс ще не завантажено — відкрийте застосунок із мережею',
           go: () => showPrices() },
         { t: 'ІНСТРУКЦІЯ', c: 'btn-black', on: true, why: '',
-          go: () => window.open('instruction.html', '_blank') }
+          go: () => window.open('instruction.html', '_blank') },
+        { t: 'БАЛИ З ' + _priceFromLabel(), c: 'btn-black', on: state.online, why: 'Потрібна мережа',
+          go: () => recalcFromPriceDate() }
     ];
     _rows.forEach(o => {
         const b = document.createElement('button');
@@ -4956,6 +4958,67 @@ async function recalcArchivePoints() {
         if (!state.allArchiveLoading) loadAllArchiveSheets();
         showAlert('✅ БАЛИ ПЕРЕРАХОВАНО\n\nАркуш: ' + name + '\nЗмінено рядків: ' + diff.length
             + '\nСума: ' + _pt(oldSum) + ' -> ' + _pt(newSum));
+    });
+}
+
+// РАЗОВИЙ перерахунок балів вильотів, проведених з дня зміни цін (_PRICE_FROM2).
+// Чіпає ТІЛЬКИ рядки з датою від цього дня — старі періоди не торкаються
+// (ГОЛОВНЕ ПРАВИЛО ПРО ЦІНИ). Спершу лише рахує й показує перелік, пише після згоди.
+// ГОЛОВНА: бали міняються в пам'яті й іде в чергу (піде стрілкою); архівні аркуші:
+// пишуться лише клітинки J змінених рядків (не весь стовпець — формули старих рядків цілі)
+function _priceFromYMD() { return new Date(_PRICE_FROM2).toISOString().slice(0, 10).replace(/-/g, ''); }
+function _priceFromLabel() { const y = _priceFromYMD(); return y.slice(6, 8) + '.' + y.slice(4, 6) + '.' + y.slice(0, 4); }
+function _newPtsFor(targets, results, q200, q300, dt, chk) {
+    const tg = String(targets || '').split(',').map(x => x.trim()).filter(Boolean);
+    if (tg.some(t => !state.scoreTable[_abbrOfName(t)])) return null;          // ціни немає — не чіпаємо
+    const hit = String(results || '').split(',').some(_isHitRes);
+    if (!hit) return 0;
+    return Math.round((_recPoints(targets, results, q200, q300, dt) + (chk ? 1 : 0)) * 100) / 100;
+}
+async function recalcFromPriceDate() {
+    if (!state.online) { showAlert('Потрібна мережа'); return; }
+    const from = _priceFromYMD(), label = _priceFromLabel();
+    const main = [], arch = [], skipped = [];
+    let oldSum = 0, newSum = 0;
+    (state.records || []).forEach(r => {
+        if (_recYMD(r.datetime) < from) return;
+        const now = _newPtsFor(r.target, r.result, r.qty200, r.qty300, r.datetime, r.chk);
+        if (now === null) { skipped.push('ГОЛОВНА, ' + (r.datetime || '')); return; }
+        const was = parseFloat(r.points) || 0;
+        if (Math.abs(now - was) > 0.001) { main.push({ r: r, was: was, now: now }); oldSum += was; newSum += now; }
+    });
+    for (const name of (state.archiveSheets || [])) {
+        const ds = String(name).match(/\d{1,2}[.\-\/]\d{1,2}[.\-\/]\d{4}/g);
+        if (!ds || _recYMD(ds[ds.length - 1]) < from) continue;                  // аркуш закінчився до зміни цін
+        let rows;
+        try { rows = await apiGet(name); } catch (e) { showAlert('Не вдалося прочитати аркуш ' + name + ': ' + e.message); return; }
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i] || [];
+            if (_recYMD(row[1]) < from) continue;
+            const now = _newPtsFor(row[2], row[8], row[3], row[4], row[1], String(row[15] || '').trim() === '1');
+            if (now === null) { skipped.push(name + ', рядок ' + (i + 1)); continue; }
+            const was = _num(row[9]);
+            if (Math.abs(now - was) > 0.001) { arch.push({ name: name, row: i + 1, was: was, now: now }); oldSum += was; newSum += now; }
+        }
+    }
+    const all = main.length + arch.length;
+    if (!all) { showAlert('Від ' + label + ' бали вже правильні — міняти нічого.' + (skipped.length ? '\n\nБез ціни в «е балах»: ' + skipped.length : '')); return; }
+    const lines = main.map(x => 'ГОЛОВНА, ' + x.r.datetime + ': ' + _pt(x.was) + ' -> ' + _pt(x.now))
+        .concat(arch.map(x => x.name + ', рядок ' + x.row + ': ' + _pt(x.was) + ' -> ' + _pt(x.now)));
+    showConfirm('ПЕРЕРАХУВАТИ БАЛИ З ' + label, 'Зміниться вильотів: ' + all + ' (ГОЛОВНА ' + main.length + ', архіви ' + arch.length + ')'
+        + '\nСума цих вильотів: ' + _pt(oldSum) + ' -> ' + _pt(newSum)
+        + (skipped.length ? '\n\nБез ціни в «е балах» — не чіпаю: ' + skipped.length : '')
+        + '\n\nСтаріші за ' + label + ' вильоти не чіпаються.'
+        + '\n\n' + lines.slice(0, 14).join('\n') + (lines.length > 14 ? '\n…' : '')
+        + '\n\nПерерахувати?', async () => {
+        try {
+            for (const x of arch) await apiUpdate(x.name + '!J' + x.row, [[x.now]], true);
+        } catch (e) { showAlert('Не вдалося записати в архів: ' + e.message); return; }
+        if (arch.length) { state.allArchiveLoaded = false; state.allArchiveRecs = []; if (state.selArchive) await loadArchiveSheet(state.selArchive); }
+        main.forEach(x => { x.r.points = x.now; queueOp('edit', x.r.uid, x.r, ['points']); });
+        saveLocal(); render();
+        if (main.length) { try { await manualPush(); } catch (e) {} }
+        showAlert('✅ БАЛИ ПЕРЕРАХОВАНО З ' + label + '\n\nВильотів: ' + all + '\nСума: ' + _pt(oldSum) + ' -> ' + _pt(newSum));
     });
 }
 
