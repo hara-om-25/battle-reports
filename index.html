@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-401';
+const APP_VER = 'v.26.11-402';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1900,7 +1900,7 @@ async function _relabelPrices(rows, g) {
         reqs.push({ updateBorders: { range: rng(x.col, x.col + 2, 0, total), left: { style: 'SOLID_MEDIUM', color: { red: 0.6, green: 0.6, blue: 0.2 } } } });
         reqs.push({ updateDimensionProperties: { range: { sheetId: sid, dimension: 'COLUMNS', startIndex: x.col, endIndex: x.col + 2 }, properties: { pixelSize: 105 }, fields: 'pixelSize' } });
     });
-    reqs.push({ updateDimensionProperties: { range: { sheetId: sid, dimension: 'ROWS', startIndex: 0, endIndex: 1 }, properties: { pixelSize: 64 }, fields: 'pixelSize' } });
+    reqs.push({ updateDimensionProperties: { range: { sheetId: sid, dimension: 'ROWS', startIndex: 0, endIndex: 1 }, properties: { pixelSize: 104 }, fields: 'pixelSize' } });
     const resp = await _retryOnAuth(async () => fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`,
         { method: 'POST', headers: { 'Authorization': `Bearer ${state.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ requests: reqs }) }
