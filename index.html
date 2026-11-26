@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-389';
+const APP_VER = 'v.26.11-390';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5370,7 +5370,7 @@ function spinnerSvg(px, still) {
 // ОС 200 = 12, ОС 300 = 4. Діють з _PRICE_FROM2 включно; вильоти до цієї дати рахуються за
 // ціною з аркуша «е бали» БЕЗ змін — тож у рядках КОПТЕР_Ж та ОС цього аркуша ціни не чіпати.
 // Щоб змінити дату — міняти лише _PRICE_FROM2 (місяць у Date.UTC рахується з нуля: 10 = листопад)
-const _PRICE_FROM2 = Date.UTC(2026, 10, 25);
+const _PRICE_FROM2 = Date.UTC(2026, 10, 9);
 const _PRICE2 = { 'КОПТЕР Ж': { z: 4, p: 0 }, 'ОС': { z: 12, p: 4 } };
 // dt: мілісекунди, рядок дати/часу вильоту або нічого (= зараз)
 function _dateMs(dt) {
