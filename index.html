@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-393';
+const APP_VER = 'v.26.11-394';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1769,9 +1769,18 @@ function _priceDiff(now, old) {
 }
 
 function showPrices() {
+    // B/C — ціна зараз; у дужках зміна проти попередньої пари історії (або «бали до 12.09.2026», коли пара одна)
     const _rows = Object.entries(state.scoreTable || {})
-        .map(([a, sc]) => { const d = sc.descr !== undefined ? sc.descr : ((sc.fullName && sc.fullName !== a) ? sc.fullName : ''); return { a: a, n: d === a ? '' : d, z: _priceFor(a).znyshcheno, p: _priceFor(a).poshkodzheno, oz: (_priceFor(a) !== sc ? sc.znyshcheno : sc.oldZ), op: (_priceFor(a) !== sc ? sc.poshkodzheno : sc.oldP) }; })
+        .map(([a, sc]) => {
+            const d = sc.descr !== undefined ? sc.descr : ((sc.fullName && sc.fullName !== a) ? sc.fullName : '');
+            const h = sc.hist || [], now = Date.now();
+            const cur = h.filter(x => x.ms <= now), pr = cur.length >= 2 ? cur[cur.length - 2] : null;
+            const pf = _priceFor(a) || sc;
+            return { a: a, n: d === a ? '' : d, z: pf.znyshcheno, p: pf.poshkodzheno,
+                     oz: pr ? pr.z : sc.oldZ, op: pr ? pr.p : sc.oldP };
+        })
         .sort((x, y) => x.a.localeCompare(y.a, 'uk'));
+    let _sel = null, _lastTap = { a: null, t: 0 };
     const _ov = document.createElement('div');
     _ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
     const _bx = document.createElement('div');
@@ -1789,28 +1798,215 @@ function showPrices() {
     _hd.innerHTML = '<span style="flex:1">ЦІЛЬ</span><span style="width:128px;text-align:right">ЗНИЩЕНО</span><span style="width:128px;text-align:right">ПОШКОДЖЕНО</span>';
     _bx.appendChild(_hd);
     const _ls = document.createElement('div');
-    _ls.style.cssText = 'overflow-y:auto;flex:1;min-height:120px';
+    _ls.style.cssText = 'overflow-y:auto;flex:1;min-height:120px;-webkit-user-select:none;user-select:none';
     _bx.appendChild(_ls);
+    // кнопка внизу списку: з'являється, коли подвійним тапом вибрано ціль
+    const _go = document.createElement('button');
+    _go.className = 'btn-stencil btn-orange';
+    _go.style.cssText = 'display:none;width:100%;padding:8px 14px;margin-top:10px;font-size:0.9em';
+    _bx.appendChild(_go);
+    const _setSel = a => {
+        _sel = a;
+        if (a) { _go.style.display = 'block'; _go.textContent = 'ВНЕСТИ ЗМІНИ В ' + a; }
+        else _go.style.display = 'none';
+        _draw();
+    };
     const _draw = () => {
         const _lat = 'ABCEHIKMOPTXY', _cyr = 'АВСЕНІКМОРТХУ';
         const _fold = x => String(x || '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase().replace(/[ABCEHIKMOPTXY]/g, c => _cyr[_lat.indexOf(c)]);
         const f = _fold(_q.value);
         _ls.innerHTML = _rows.filter(r => !f || _fold(r.a + ' ' + r.n).includes(f)).map(r =>
-            '<div style="display:flex;gap:8px;padding:5px 4px;border-bottom:1px solid rgba(139,139,58,0.18);font-size:0.9em">'
+            '<div data-a="' + esc(r.a) + '" style="display:flex;gap:8px;padding:5px 4px;border-bottom:1px solid rgba(139,139,58,0.18);font-size:0.9em'
+            + (r.a === _sel ? ';background:rgba(139,139,58,0.28);outline:1px solid var(--yellow)' : '') + '">'
             + '<span style="flex:1;color:var(--text)">' + esc(r.a) + (r.n ? '<span style="color:var(--text-dim)"> — ' + esc(r.n) + '</span>' : '') + '</span>'
             + '<span style="width:128px;text-align:right;color:var(--khaki)">' + esc(String(r.z)) + _priceDiff(r.z, r.oz) + '</span>'
             + '<span style="width:128px;text-align:right;color:var(--khaki)">' + esc(String(r.p)) + _priceDiff(r.p, r.op) + '</span></div>'
         ).join('') || '<div style="padding:12px 4px;color:var(--text-dim)">Нічого не знайдено</div>';
     };
+    // подвійний тап (або подвійний клік) по цілі — виділення; ще раз подвійний — знімає
+    _ls.addEventListener('click', e => {
+        const row = e.target.closest('[data-a]');
+        if (!row) return;
+        const a = row.getAttribute('data-a'), t = Date.now();
+        if (_lastTap.a === a && t - _lastTap.t < 420) { _lastTap = { a: null, t: 0 }; _setSel(_sel === a ? null : a); }
+        else _lastTap = { a: a, t: t };
+    });
     _q.addEventListener('input', _draw);
     _draw();
     const _close = () => { if (_ov.parentNode) document.body.removeChild(_ov); };
+    _go.addEventListener('click', () => { if (_sel) showPriceEdit(_sel, () => { _close(); showPrices(); }); });
     const _x = document.createElement('button');
     _x.className = 'btn-stencil';
     _x.style.cssText = 'align-self:flex-end;padding:4px 22px;font-size:0.85em;margin-top:12px';
     _x.textContent = 'ЗАКРИТИ';
     _x.addEventListener('click', _close);
     _bx.appendChild(_x);
+    _ov.appendChild(_bx);
+    _ov.addEventListener('click', e => { if (e.target === _ov) _close(); });
+    document.body.appendChild(_ov);
+}
+
+// ---- Зміна цін з вікна «е бали» (рішення користувача 26.11.2026: правило «ціни з застосунку не змінюємо» знято) ----
+function _colLetter(n) { let t = ''; n++; while (n > 0) { const m = (n - 1) % 26; t = String.fromCharCode(65 + m) + t; n = Math.floor((n - 1) / 26); } return t; }
+function _dmyMs(str) {
+    const m = String(str || '').trim().match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})$/);
+    if (!m) return null;
+    const ms = Date.UTC(+m[3], +m[2] - 1, +m[1]), d = new Date(ms);
+    return d.getUTCDate() === +m[1] && d.getUTCMonth() === +m[2] - 1 ? ms : null;
+}
+function _msDmy(ms) { const d = new Date(ms); return String(d.getUTCDate()).padStart(2, '0') + '.' + String(d.getUTCMonth() + 1).padStart(2, '0') + '.' + d.getUTCFullYear(); }
+function _todayDmy() { const d = new Date(); return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear(); }
+
+// Дописує пару колонок історії правіше за все, що є в аркуші; cells — {номер рядка аркуша: [знищено, пошкоджено]}
+async function _addPricePair(rows, g, col, ms, cells) {
+    const total = rows.length;                         // рядки 1..total
+    if (g.cols < col + 2) { await _widenSheet({ 'е бали': g }, 'е бали', col + 2); g.cols = col + 2; }
+    const label = 'З ' + _msDmy(ms);
+    await apiUpdate("'е бали'!" + _colLetter(col) + '1:' + _colLetter(col + 1) + '1', [[label, label]], true);
+    const body = [];
+    for (let r = 2; r <= total; r++) body.push(cells[r] ? [cells[r][0], cells[r][1]] : ['', '']);
+    if (body.length) await apiUpdate("'е бали'!" + _colLetter(col) + '2:' + _colLetter(col + 1) + total, body, true);
+}
+
+async function _savePriceEdit(abbr, v) {
+    const T = 'е бали', q = "'" + T + "'!";
+    let rows = await apiGet(T);
+    const idx = rows.findIndex((r, i) => i > 0 && r && r[0] === abbr);
+    if (idx < 0) throw new Error('Ціль «' + abbr + '» не знайдено в аркуші «е бали»');
+    const R = idx + 1;
+    // текстові поля: A — скорочена назва, D — група цілей, E — опис
+    if (v.a !== abbr) await apiUpdate(q + 'A' + R, [[v.a]], true);
+    if (v.d !== undefined) await apiUpdate(q + 'D' + R, [[v.d]], true);
+    if (v.e !== undefined) await apiUpdate(q + 'E' + R, [[v.e]], true);
+    if (v.priceMs !== null && v.priceMs !== undefined) {
+        const grid = await _sheetGrid(), g = grid[T];
+        let pairs = _histPairs(rows[0]);
+        let nextCol = rows.reduce((m, r) => Math.max(m, (r || []).length), 0);
+        if (!pairs.length) {
+            // перший раз: історії ще нема — фіксуємо те, що діяло досі. «З 12.09.2026» — поточні B/C усіх цілей,
+            // «З 09.11.2026» — ОС і КОПТЕР_Ж за новими цінами (вони досі були вшиті в застосунок)
+            const snap = {}, nw = {};
+            rows.forEach((r, i) => {
+                if (i === 0 || !r || !r[0]) return;
+                if (String(r[1] === undefined ? '' : r[1]).trim() === '' && String(r[2] === undefined ? '' : r[2]).trim() === '') return;
+                snap[i + 1] = [_num(r[1]), _num(r[2])];
+                const k = String(r[0]).replace(/_/g, ' ').toUpperCase();
+                if (_PRICE2[k]) nw[i + 1] = [_PRICE2[k].z !== undefined ? _PRICE2[k].z : _num(r[1]), _PRICE2[k].p !== undefined ? _PRICE2[k].p : _num(r[2])];
+            });
+            const ms1 = Date.UTC(2026, 8, 12), ms2 = _PRICE_FROM2;
+            await _addPricePair(rows, g, nextCol, ms1, snap);
+            pairs.push({ ms: ms1, col: nextCol }); nextCol += 2;
+            await _addPricePair(rows, g, nextCol, ms2, nw);
+            pairs.push({ ms: ms2, col: nextCol }); nextCol += 2;
+        }
+        const hit = pairs.find(x => x.ms === v.priceMs);
+        if (hit) await apiUpdate(q + _colLetter(hit.col) + R + ':' + _colLetter(hit.col + 1) + R, [[v.z, v.p]], true);
+        else await _addPricePair(rows, g, nextCol, v.priceMs, { [R]: [v.z, v.p] });
+    }
+    // B/C — ціна ЗАРАЗ: дзеркало останньої пари, що вже діє. Звіряємо всі цілі, пишемо лише розбіжні
+    rows = await apiGet(T);
+    const tbl = _parseScoreRows(rows), now = Date.now();
+    for (const [a, it] of Object.entries(tbl)) {
+        const cur = (it.hist || []).filter(x => x.ms <= now).pop();
+        if (cur && (cur.z !== it.znyshcheno || cur.p !== it.poshkodzheno)) {
+            await apiUpdate(q + 'B' + it.srow + ':C' + it.srow, [[cur.z, cur.p]], true);
+            it.znyshcheno = cur.z; it.poshkodzheno = cur.p;
+        }
+    }
+    state.scoreTable = tbl;
+    saveLocal();
+}
+
+function showPriceEdit(abbr, onDone) {
+    const it = state.scoreTable[abbr];
+    if (!it) return;
+    const orig = { a: abbr, z: it.znyshcheno, p: it.poshkodzheno, d: it.rawD || '', e: it.rawE || '', f: _todayDmy() };
+    const val = Object.assign({}, orig);
+    const fields = [
+        { k: 'a', t: 'Скорочена назва' }, { k: 'z', t: 'Бал за знищено' }, { k: 'p', t: 'Бал за пошкоджено' },
+        { k: 'd', t: 'Група цілей' }, { k: 'e', t: 'Опис' }, { k: 'f', t: 'Бали актуальні з дд.мм.рррр.' }
+    ];
+    const _ov = document.createElement('div');
+    _ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px';
+    const _bx = document.createElement('div');
+    _bx.style.cssText = 'background:var(--surface);border:1px solid var(--olive-dark);box-shadow:4px 4px 0 var(--olive-dark);padding:22px 24px 18px;max-width:520px;width:100%;max-height:92vh;overflow-y:auto;box-sizing:border-box;font-family:Tektur,monospace;color:var(--text)';
+    const _ti = document.createElement('div');
+    _ti.style.cssText = 'color:var(--yellow);font-size:0.7em;letter-spacing:0.15em;margin-bottom:12px;font-weight:700';
+    _ti.textContent = 'ЗМІНИ В ' + abbr;
+    _bx.appendChild(_ti);
+    const _msg = document.createElement('div');
+    _msg.style.cssText = 'color:#e07060;font-size:0.8em;min-height:1em;margin:6px 0';
+    fields.forEach(f => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px';
+        const col = document.createElement('div');
+        col.style.cssText = 'flex:1;min-width:0';
+        const lb = document.createElement('div');
+        lb.style.cssText = 'font-size:0.7em;color:var(--text-dim);letter-spacing:0.08em;margin-bottom:2px';
+        lb.textContent = f.t;
+        const shown = document.createElement('div');
+        shown.style.cssText = 'font-size:0.95em;word-break:break-word;min-height:1.3em';
+        const inp = document.createElement('input');
+        inp.type = 'text'; inp.style.cssText = 'display:none;width:100%;box-sizing:border-box;padding:6px 8px;background:var(--bg,#181b16);color:var(--text);border:1px solid var(--yellow);font-family:inherit;font-size:0.95em';
+        if (f.k === 'z' || f.k === 'p') inp.inputMode = 'decimal';
+        const paint = () => { shown.textContent = String(val[f.k]); shown.style.color = String(val[f.k]) !== String(orig[f.k]) ? 'var(--yellow)' : 'var(--text)'; };
+        paint();
+        inp.addEventListener('input', () => { val[f.k] = inp.value; paint(); });
+        const pen = document.createElement('button');
+        pen.className = 'btn-stencil btn-blue';
+        pen.style.cssText = 'padding:0;width:38px;height:38px;flex:none;display:inline-flex;align-items:center;justify-content:center';
+        pen.innerHTML = icoPencil(18);
+        pen.title = 'Змінити';
+        pen.addEventListener('click', () => {
+            const on = inp.style.display === 'none';
+            inp.style.display = on ? 'block' : 'none';
+            shown.style.display = on ? 'none' : 'block';
+            if (on) { inp.value = String(val[f.k]); inp.focus(); } else paint();
+        });
+        col.appendChild(lb); col.appendChild(shown); col.appendChild(inp);
+        row.appendChild(col); row.appendChild(pen);
+        _bx.appendChild(row);
+    });
+    _bx.appendChild(_msg);
+    const _close = () => { if (_ov.parentNode) document.body.removeChild(_ov); };
+    const _btns = document.createElement('div');
+    _btns.style.cssText = 'display:flex;gap:10px;margin-top:8px';
+    const _ok = document.createElement('button');
+    _ok.className = 'btn-stencil btn-green';
+    _ok.style.cssText = 'flex:2;padding:8px 14px;font-size:0.9em';
+    _ok.textContent = 'ЗБЕРЕГТИ';
+    const _no = document.createElement('button');
+    _no.className = 'btn-stencil';
+    _no.style.cssText = 'flex:1;padding:8px 14px;font-size:0.9em';
+    _no.textContent = 'ЗАКРИТИ';
+    _no.addEventListener('click', _close);
+    _ok.addEventListener('click', async () => {
+        _msg.textContent = '';
+        const a = String(val.a).trim();
+        if (!a) { _msg.textContent = 'Скорочена назва не може бути порожньою'; return; }
+        if (a !== abbr && state.scoreTable[a]) { _msg.textContent = 'Ціль «' + a + '» уже є в прайсі'; return; }
+        const z = _num(val.z), pp = _num(val.p);
+        if (String(val.z).trim() === '' || String(val.p).trim() === '' || isNaN(parseFloat(String(val.z).replace(',', '.'))) || isNaN(parseFloat(String(val.p).replace(',', '.')))) { _msg.textContent = 'Бали мають бути числами'; return; }
+        const priceChanged = z !== orig.z || pp !== orig.p;
+        let priceMs = null;
+        if (priceChanged) {
+            priceMs = _dmyMs(val.f);
+            if (priceMs === null) { _msg.textContent = 'Дата має вигляд дд.мм.рррр'; return; }
+            if (priceMs < Date.UTC(2026, 8, 12)) { _msg.textContent = 'Раніше 12.09.2026 історії цін немає'; return; }
+        }
+        const textChanged = a !== abbr || val.d !== orig.d || val.e !== orig.e;
+        if (!priceChanged && !textChanged) { _close(); return; }
+        if (!state.online) { _msg.textContent = 'Потрібна мережа'; return; }
+        _ok.disabled = true; _ok.style.opacity = '.5';
+        try {
+            await _savePriceEdit(abbr, { a: a, z: z, p: pp, d: val.d !== orig.d ? val.d : undefined, e: val.e !== orig.e ? val.e : undefined, priceMs: priceMs });
+        } catch (e) { _ok.disabled = false; _ok.style.opacity = ''; _msg.textContent = 'Не вдалося записати: ' + e.message; return; }
+        _close();
+        showAlert('✅ ЗБЕРЕЖЕНО' + (priceChanged ? '\n\nЦіни ' + a + ' діють з ' + _msDmy(priceMs) + '.\nБали вильотів не змінились — щоб перерахувати їх, натисни ПЕРЕРАХУВАТИ БАЛИ в НАЛАШТУВАННЯХ.' : ''));
+        if (onDone) onDone();
+    });
+    _btns.appendChild(_ok); _btns.appendChild(_no);
+    _bx.appendChild(_btns);
     _ov.appendChild(_bx);
     _ov.addEventListener('click', e => { if (e.target === _ov) _close(); });
     document.body.appendChild(_ov);
@@ -2098,8 +2294,8 @@ function showSettings() {
           go: () => showPrices() },
         { t: 'ІНСТРУКЦІЯ', c: 'btn-black', on: true, why: '',
           go: () => window.open('instruction.html', '_blank') },
-        { t: 'БАЛИ З ' + _priceFromLabel(), c: 'btn-black', on: state.online, why: 'Потрібна мережа',
-          go: () => recalcFromPriceDate() }
+        { t: 'ПЕРЕРАХУВАТИ БАЛИ', c: 'btn-black', on: state.online, why: 'Потрібна мережа',
+          go: () => askRecalcPoints() }
     ];
     _rows.forEach(o => {
         const b = document.createElement('button');
@@ -2533,7 +2729,7 @@ function _parseMainRows(rows) {
                 drone: (row[6] || '').trim(),
                 ammo: (row[7] || '').trim(),
                 result: row[8] || '',
-                points: _num(row[9]), jRaw: _num(row[9]),
+                points: _num(row[9]),
                 // колонка P: 1 — ЧЕКУН (+1 бал уже в J, коли вписано застосунком)
                 // (якщо правіше є ще дані — це зсунутий рядок, і в P лежить номер звіту, а не ЧЕКУН)
                 chk: row[16] ? (parseInt(row[30]) === 1 ? 1 : 0) : (parseInt(row[15]) === 1 ? 1 : 0),
@@ -2543,7 +2739,6 @@ function _parseMainRows(rows) {
             if (row[16]) _strayMain = true;
             rec.uid = (row[10] || '').trim() || _contentUid(rec);
             if (!_hasHit(rec)) rec.points = 0;   // без знищено/пошкоджено балів немає ніде
-            _applyNewPrices(rec);
             if (!rec.chk && _anyChk() && _chkNoteOf(rec)) rec.chk = 1;
             out.push(rec);
         } else if (row[16] && (row[17] || row[20])) {
@@ -2555,13 +2750,12 @@ function _parseMainRows(rows) {
                 reportNum: parseInt(row[o]) || 0, datetime: row[o + 1] || '', target: row[o + 2] || '',
                 qty200: parseInt(row[o + 3]) || 0, qty300: parseInt(row[o + 4]) || 0,
                 coordinates: row[o + 5] || '', drone: (row[o + 6] || '').trim(), ammo: (row[o + 7] || '').trim(),
-                result: row[o + 8] || '', points: _num(row[o + 9]), jRaw: -999, stray: 1,
+                result: row[o + 8] || '', points: _num(row[o + 9]),
                 chk: parseInt(row[o + 15]) === 1 ? 1 : 0,
                 sheet: 'ГОЛОВНА', srow: i + 1
             };
             rec.uid = (row[o + 10] || '').trim() || _contentUid(rec);
             if (!_hasHit(rec)) rec.points = 0;
-            _applyNewPrices(rec);
             out.push(rec);
         }
     }
@@ -2980,12 +3174,12 @@ async function loadAllArchiveSheets() {
         const allRecs = [];
         let _quotaHit = false;
         for (const name of state.archiveSheets) {
-            let rows = null, _fresh = false;
+            let rows = null;
             // Аркуш, збережений на пристрої менше 5 хвилин тому, з таблиці не
             // перечитуємо: Google дає лише ~60 читань на хвилину на користувача,
             // а всі аркуші разом перечитувались при кожному вході в АРХІВ
             if (state.online && !_quotaHit && _archAgeMs(name) > 300000) {
-                try { rows = await apiGet(name); _archCachePut(name, rows); _fresh = true; }
+                try { rows = await apiGet(name); _archCachePut(name, rows); }
                 catch (e) {
                     if (/quota/i.test(e.message || '')) _quotaHit = true;   // ліміт — решту беремо з пристрою
                     else if (!_isNetErr(e)) throw e;
@@ -2993,9 +3187,7 @@ async function loadAllArchiveSheets() {
             }
             if (!rows) rows = _archOne(name);
             if (!rows) continue;   // цього аркуша на пристрої немає — пропускаємо
-            const _pr = _parseArchiveRows(rows, name);
-            allRecs.push.apply(allRecs, _pr);
-            if (_fresh) _pricesWriteBack(_pr);
+            allRecs.push.apply(allRecs, _parseArchiveRows(rows, name));
         }
         _markPacks(allRecs);
         state.allArchiveRecs = allRecs;
@@ -4835,6 +5027,63 @@ function copyVerifyFix() {
     navigator.clipboard.writeText(out.join('\n')).catch(() => {});
 }
 
+// Аркуш «е бали»: A — скорочена назва, B/C — ціна ЗАРАЗ (знищено/пошкоджено), D — група цілей,
+// E — опис, F/G — бали до 12.09.2026, H — назва для підсумків. Далі правіше — ІСТОРІЯ ЦІН: після
+// кожної зміни ціни додаються дві колонки із заголовком «З дд.мм.рррр» (знищено, пошкоджено) —
+// дата, з якої цілі рахуються за новими балами. Клітинка пари порожня — ціни цієї цілі в той день
+// не змінювались (діє попередня пара)
+function _histDate(txt) {
+    const m = String(txt || '').match(/^\s*з\s+(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})/i);
+    return m ? Date.UTC(+m[3], +m[2] - 1, +m[1]) : null;
+}
+// [{ms, col}] — перші колонки пар з рядка заголовків (друга колонка пари має той самий текст)
+function _histPairs(hdr) {
+    const out = [];
+    (hdr || []).forEach((h, c) => {
+        const ms = _histDate(h);
+        if (ms === null) return;
+        if (c > 0 && _histDate(hdr[c - 1]) === ms) return;        // друга колонка пари
+        out.push({ ms: ms, col: c });
+    });
+    return out.sort((x, y) => x.ms - y.ms);
+}
+function _parseScoreRows(scoreRows) {
+    const table = {};
+    const pairs = _histPairs((scoreRows || [])[0]);
+    for (let i = 1; i < (scoreRows || []).length; i++) {
+        const row = scoreRows[i];
+        if (!row || !row[0]) continue;
+        // рядок із порожніми B і C — це ціль, якої сьогодні немає: вона лишилась у прайсі
+        // лише заради старих звітів. Нуль теж ціна, тому дивимось на порожнечу, а не на значення
+        const _z = String(row[1] === undefined ? '' : row[1]).trim();
+        const _p = String(row[2] === undefined ? '' : row[2]).trim();
+        if (!_z && !_p) continue;
+        const hist = [];
+        pairs.forEach(pr => {
+            const hz = String(row[pr.col] === undefined ? '' : row[pr.col]).trim();
+            const hp = String(row[pr.col + 1] === undefined ? '' : row[pr.col + 1]).trim();
+            if (hz === '' && hp === '') return;
+            hist.push({ ms: pr.ms, z: _num(hz), p: _num(hp) });
+        });
+        table[row[0]] = {
+            znyshcheno: _num(row[1]),
+            poshkodzheno: _num(row[2]),
+            fullName: row[3] || row[0],
+            rawD: String(row[3] || '').trim(), rawE: String(row[4] || '').trim(),
+            srow: i + 1,
+            hist: hist,
+            // опис для вікна «е бали»: колонка E, а коли порожня — D
+            // назва цілі в ПІДСУМКАХ доповіді — колонка H
+            hName: String(row[7] || '').trim(),
+            descr: String(row[4] || '').trim() || String(row[3] || '').trim(),
+            // колонки F/G — попередній прайс (до 12.09.2026); порожньо = позиції раніше не було
+            oldZ: String(row[5] === undefined ? '' : row[5]).trim() === '' ? null : _num(row[5]),
+            oldP: String(row[6] === undefined ? '' : row[6]).trim() === '' ? null : _num(row[6])
+        };
+    }
+    return table;
+}
+
 // Бали вильота за нинішньою таблицею «е бали». Логіка та сама, що й у формі:
 // проходимо цілі вильоту й додаємо ціну кожної за її результатом
 function _recPoints(targets, results, q200, q300, dt) {
@@ -4970,38 +5219,6 @@ async function recalcArchivePoints() {
 // (ГОЛОВНЕ ПРАВИЛО ПРО ЦІНИ). Спершу лише рахує й показує перелік, пише після згоди.
 // ГОЛОВНА: бали міняються в пам'яті й іде в чергу (піде стрілкою); архівні аркуші:
 // пишуться лише клітинки J змінених рядків (не весь стовпець — формули старих рядків цілі)
-function _priceFromYMD() { return new Date(_PRICE_FROM2).toISOString().slice(0, 10).replace(/-/g, ''); }
-function _priceFromLabel() { const y = _priceFromYMD(); return y.slice(6, 8) + '.' + y.slice(4, 6) + '.' + y.slice(0, 4); }
-// Від дня зміни цін (_PRICE_FROM2) бали вильотів ЗАВЖДИ рахуються за новими цінами —
-// при читанні будь-якого аркуша (ГОЛОВНА, архів, кеш пристрою), незалежно від того,
-// що записано в J. Старіші вильоти не чіпаємо (ГОЛОВНЕ ПРАВИЛО ПРО ЦІНИ).
-// Лише в пам'яті: таблицю це саме не переписує (для запису є кнопка БАЛИ З ...)
-function _applyNewPrices(r) {
-    if (!r || _recYMD(r.datetime) < _priceFromYMD()) return;
-    const now = _newPtsFor(r.target, r.result, r.qty200, r.qty300, r.datetime, r.chk);
-    if (now === null) return;
-    r.points = now;
-    // у таблиці в J інше число — запам'ятовуємо, щоб дописати його в таблицю (_pricesWriteBack)
-    if (!r.stray && r.jRaw !== undefined && Math.abs(now - r.jRaw) > 0.001) r.pJ = now;
-}
-// Дописує нові бали у стовпець J САМОЇ ТАБЛИЦІ (ГОЛОВНА й архіви), лише для рядків від дня
-// зміни цін, які щойно прочитано з таблиці й де J відрізняється. Пише по одній клітинці
-// (формули решти рядків цілі), не більше 40 за раз — решта піде наступного разу
-let _pwBusy = false;
-async function _pricesWriteBack(recs) {
-    if (_pwBusy || !state.online) return;
-    const todo = (recs || []).filter(r => r && r.pJ !== undefined && r.sheet && r.srow);
-    if (!todo.length) return;
-    _pwBusy = true;
-    try {
-        for (const r of todo.slice(0, 40)) {
-            await apiUpdate(r.sheet + '!J' + r.srow, [[r.pJ]], true);
-            r.jRaw = r.pJ; delete r.pJ;
-            await new Promise(res => setTimeout(res, 350));
-        }
-    } catch (e) { /* не вдалося — повториться при наступному читанні */ }
-    _pwBusy = false;
-}
 function _newPtsFor(targets, results, q200, q300, dt, chk) {
     const tg = String(targets || '').split(',').map(x => x.trim()).filter(Boolean);
     if (tg.some(t => !state.scoreTable[_abbrOfName(t)])) return null;          // ціни немає — не чіпаємо
@@ -5009,9 +5226,52 @@ function _newPtsFor(targets, results, q200, q300, dt, chk) {
     if (!hit) return 0;
     return Math.round((_recPoints(targets, results, q200, q300, dt) + (chk ? 1 : 0)) * 100) / 100;
 }
-async function recalcFromPriceDate() {
+// Кнопка ПЕРЕРАХУВАТИ БАЛИ (НАЛАШТУВАННЯ): питає дату й перераховує всі вильоти від неї до сьогодні
+// за цінами, актуальними на дату кожного вильоту (історія цін — пари колонок «З дд.мм.рррр» в «е бали»).
+// Що раніше — не чіпається. Ціна на дату береться з історії, тому перерахунок можна запускати й через
+// кілька періодів зі зміненими цінами — кожен вильот отримає ціну свого періоду
+function askRecalcPoints() {
+    const floor = 20260912;
+    const _ov = document.createElement('div');
+    _ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px';
+    const _bx = document.createElement('div');
+    _bx.style.cssText = 'background:var(--surface);border:1px solid var(--olive-dark);box-shadow:4px 4px 0 var(--olive-dark);padding:22px 24px 18px;max-width:420px;width:100%;box-sizing:border-box;font-family:Tektur,monospace;color:var(--text)';
+    _bx.innerHTML = '<div style="color:var(--yellow);font-size:0.7em;letter-spacing:0.15em;margin-bottom:12px;font-weight:700">ПЕРЕРАХУВАТИ БАЛИ</div>'
+        + '<div style="font-size:0.9em;line-height:1.5;margin-bottom:12px">З якої дати перерахувати бали? Усі вильоти від цієї дати до сьогодні перерахуються за цінами, що діяли на дату кожного вильоту. Раніші вильоти не чіпаються.</div>';
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.placeholder = 'дд.мм.рррр'; inp.value = '12.09.2026';
+    inp.style.cssText = 'width:100%;box-sizing:border-box;padding:8px 10px;background:var(--bg,#181b16);color:var(--text);border:1px solid var(--yellow);font-family:inherit;font-size:1em';
+    _bx.appendChild(inp);
+    const msg = document.createElement('div');
+    msg.style.cssText = 'color:#e07060;font-size:0.8em;min-height:1em;margin:6px 0';
+    _bx.appendChild(msg);
+    const btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:10px';
+    const ok = document.createElement('button');
+    ok.className = 'btn-stencil btn-green'; ok.style.cssText = 'flex:2;padding:8px 14px;font-size:0.9em'; ok.textContent = 'ПЕРЕРАХУВАТИ';
+    const no = document.createElement('button');
+    no.className = 'btn-stencil'; no.style.cssText = 'flex:1;padding:8px 14px;font-size:0.9em'; no.textContent = 'ЗАКРИТИ';
+    const close = () => { if (_ov.parentNode) document.body.removeChild(_ov); };
+    no.addEventListener('click', close);
+    ok.addEventListener('click', () => {
+        const ms = _dmyMs(inp.value);
+        if (ms === null) { msg.textContent = 'Дата має вигляд дд.мм.рррр'; return; }
+        const d = new Date(ms), ymd = d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+        if (ymd < floor) { msg.textContent = 'Раніше 12.09.2026 історії цін немає'; return; }
+        close();
+        recalcFromPriceDate(String(ymd));
+    });
+    btns.appendChild(ok); btns.appendChild(no);
+    _bx.appendChild(btns);
+    _ov.appendChild(_bx);
+    _ov.addEventListener('click', e => { if (e.target === _ov) close(); });
+    document.body.appendChild(_ov);
+    inp.focus();
+}
+
+async function recalcFromPriceDate(from) {
     if (!state.online) { showAlert('Потрібна мережа'); return; }
-    const from = _priceFromYMD(), label = _priceFromLabel();
+    const label = from.slice(6, 8) + '.' + from.slice(4, 6) + '.' + from.slice(0, 4);
     const main = [], arch = [], skipped = [];
     let oldSum = 0, newSum = 0;
     (state.records || []).forEach(r => {
@@ -5085,7 +5345,7 @@ function _parseArchiveRows(rows, name) {
                 drone: (row[6] || '').trim(),
                 ammo: (row[7] || '').trim(),
                 result: row[8] || '',
-                points: _num(row[9]), jRaw: _num(row[9]),
+                points: _num(row[9]),
                 uid: (row[10] || '').trim(),
                 v: _verdictInfo(row[2] || '', row[11], row[12], row[3], row[4], row[13], row[14]),
                 // примітка й коментар верифікатора, по рядку на ціль
@@ -5099,7 +5359,6 @@ function _parseArchiveRows(rows, name) {
             if (!_ar.chk && _hasChk && _chkNoteOf(_ar)) _ar.chk = 1;
             if (_ar.chk && !(_fromP && _chkInJ(_ar))) _ar.points += 1;
             if (!_hasHit(_ar)) _ar.points = 0;   // без знищено/пошкоджено балів немає ніде
-            _applyNewPrices(_ar);
         }
     }
     return out;
@@ -5245,7 +5504,6 @@ async function loadArchiveSheet(name) {
         if (!rows) throw new Error('Цього архіву немає на пристрої');
         state.archiveRecs = _parseArchiveRows(rows, name);
         _markPacks(state.archiveRecs);
-        if (state.online) _pricesWriteBack(state.archiveRecs);
     } catch(e) {
         showAlert('Помилка: ' + e.message);
     } finally {
@@ -5260,29 +5518,7 @@ async function loadDataFromAPI() {
         
         // "е бали": A=абревіатура, B=коеф. за знищено, C=коеф. за пошкоджено
         const scoreRows = await apiGet('е бали');
-        state.scoreTable = {};
-        for (let i = 1; i < scoreRows.length; i++) {
-            if (scoreRows[i] && scoreRows[i][0]) {
-                // рядок із порожніми B і C — це ціль, якої сьогодні немає:
-                // вона лишилась у прайсі лише заради старих звітів. Нуль там
-                // теж ціна, тому дивимось саме на порожнечу, а не на значення
-                const _z = String(scoreRows[i][1] === undefined ? '' : scoreRows[i][1]).trim();
-                const _p = String(scoreRows[i][2] === undefined ? '' : scoreRows[i][2]).trim();
-                if (!_z && !_p) continue;
-                state.scoreTable[scoreRows[i][0]] = {
-                    znyshcheno: _num(scoreRows[i][1]),
-                    poshkodzheno: _num(scoreRows[i][2]),
-                    fullName: scoreRows[i][3] || scoreRows[i][0],
-                    // опис для вікна «е бали»: колонка E, а коли порожня — D
-                    // назва цілі в ПІДСУМКАХ доповіді — колонка H
-                    hName: String(scoreRows[i][7] || '').trim(),
-                    descr: String(scoreRows[i][4] || '').trim() || String(scoreRows[i][3] || '').trim(),
-                    // колонки F/G — попередній прайс (до 12.09.2026); порожньо = позиції раніше не було
-                    oldZ: String(scoreRows[i][5] === undefined ? '' : scoreRows[i][5]).trim() === '' ? null : _num(scoreRows[i][5]),
-                    oldP: String(scoreRows[i][6] === undefined ? '' : scoreRows[i][6]).trim() === '' ? null : _num(scoreRows[i][6])
-                };
-            }
-        }
+        state.scoreTable = _parseScoreRows(scoreRows);
         
         const listRows = await apiGet('СПИСКИ');
         const _rdr = [], _rrs = [], _ram = [];
@@ -5304,9 +5540,7 @@ async function loadDataFromAPI() {
         try { await _notesPull(); } catch (e) { /* лишаємось на локальних */ }
         const _pvHdr=listRows[0]||[];state.pvr=[3,4,5,6].map(ci=>{const name=(_pvHdr[ci]||'').trim();if(!name)return null;const map={};for(let i=1;i<listRows.length;i++){const row=listRows[i]||[];const ammo=(row[2]||'').trim();const val=(row[ci]||'').toString().trim().replace(',','.');if(ammo&&val&&val!=='0'){const c=parseFloat(val);if(c)map[ammo]=c;}}return Object.keys(map).length?{name,map}:null;}).filter(Boolean);
         const mainRows = await apiGet('ГОЛОВНА');
-        const _mainParsed = _parseMainRows(mainRows);
-        state.records = _applyQueue(_mainParsed);
-        _pricesWriteBack(_mainParsed);
+        state.records = _applyQueue(_parseMainRows(mainRows));
         state.records.forEach(r=>{if((r.qty200||r.qty300)&&!r.target.split(', ').some(t=>{const _p=t.trim().split(' '),_l=_p[_p.length-1],_a=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.trim();return _a==='ОС';})){r.qty200=0;r.qty300=0;}});
         
         if (state.records.length > 0) {
@@ -5484,7 +5718,20 @@ function _dateMs(dt) {
 function _priceFor(abbr, dt) {
     const base = state.scoreTable[abbr];
     if (!base) return base;
-    const ms = _dateMs(dt), _k = x => String(x || '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase(), _kk = _k(abbr), ov = _PRICE2[Object.keys(_PRICE2).find(k => _k(k) === _kk)];
+    const ms = _dateMs(dt);
+    // є історія цін (пари колонок «З дд.мм.рррр») — ціна на ДАТУ вильоту: остання пара не пізніша за неї.
+    // Раніше за першу пару — «бали до 12.09.2026» (F/G), а коли їх немає — найперша пара
+    if (base.hist && base.hist.length) {
+        if (isNaN(ms)) return base;
+        let pick = null;
+        base.hist.forEach(h => { if (h.ms <= ms) pick = h; });
+        if (pick) return Object.assign({}, base, { znyshcheno: pick.z, poshkodzheno: pick.p });
+        if (base.oldZ !== null && base.oldZ !== undefined)
+            return Object.assign({}, base, { znyshcheno: base.oldZ, poshkodzheno: base.oldP === null || base.oldP === undefined ? base.poshkodzheno : base.oldP });
+        return Object.assign({}, base, { znyshcheno: base.hist[0].z, poshkodzheno: base.hist[0].p });
+    }
+    // історії ще немає: ціна з аркуша, а для КОПТЕР_Ж і ОС від 09.11.2026 — вшиті нові ціни
+    const ov = _PRICE2[_abbrOfName(abbr)] || _PRICE2[String(abbr).replace(/_/g, ' ').toUpperCase()];
     if (!ov || isNaN(ms) || ms < _PRICE_FROM2) return base;
     return Object.assign({}, base, ov.z !== undefined ? { znyshcheno: ov.z } : {}, ov.p !== undefined ? { poshkodzheno: ov.p } : {});
 }
