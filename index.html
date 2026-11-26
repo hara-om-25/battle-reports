@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-400';
+const APP_VER = 'v.26.11-401';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5380,7 +5380,8 @@ async function recalcFromPriceDate(from) {
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i] || [];
             if (_recYMD(row[1]) < from) continue;
-            const now = _newPtsFor(row[2], row[8], row[3], row[4], row[1], String(row[15] || '').trim() === '1');
+            // до 04.10.2026 застосунок додає +1 за ЧЕКУН при розборі (J його не містить, див. _chkInJ) — тут не додаємо, інакше бал порахується двічі
+            const now = _newPtsFor(row[2], row[8], row[3], row[4], row[1], String(row[15] || '').trim() === '1' && _chkInJ({ datetime: row[1] }));
             if (now === null) { skipped.push(name + ', рядок ' + (i + 1)); continue; }
             const was = _num(row[9]);
             if (Math.abs(now - was) > 0.001) { arch.push({ name: name, row: i + 1, was: was, now: now }); oldSum += was; newSum += now; }
