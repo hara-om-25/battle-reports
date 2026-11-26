@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-394';
+const APP_VER = 'v.26.11-395';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1868,6 +1868,46 @@ async function _addPricePair(rows, g, col, ms, cells) {
     if (body.length) await apiUpdate("'е бали'!" + _colLetter(col) + '2:' + _colLetter(col + 1) + total, body, true);
 }
 
+// Підписи й вигляд історії цін в аркуші «е бали» (щоб у таблиці було видно, яка ціна до якого періоду):
+// заголовок пари — «З дд.мм.рррр по дд.мм.рррр» (останньої — «і далі») + другий рядок «знищено»/«пошкоджено»;
+// B/C підписані «зараз (з дд.мм.рррр)»; усі колонки історії однакового вигляду, число з одним знаком,
+// ліва межа в початку кожної пари. Викликається після кожної зміни цін
+async function _relabelPrices(rows, g) {
+    const T = 'е бали', q = "'" + T + "'!";
+    const pairs = _histPairs(rows[0]);
+    if (!pairs.length) return;
+    const DAY = 86400000, total = Math.max(rows.length, 2), now = Date.now();
+    for (let k = 0; k < pairs.length; k++) {
+        const pr = pairs[k];
+        const per = 'З ' + _msDmy(pr.ms) + (k + 1 < pairs.length ? ' по ' + _msDmy(pairs[k + 1].ms - DAY) : ' і далі');
+        await apiUpdate(q + _colLetter(pr.col) + '1:' + _colLetter(pr.col + 1) + '1', [[per + '\nзнищено', per + '\nпошкоджено']], true);
+    }
+    const cur = pairs.filter(x => x.ms <= now).pop();
+    const since = cur ? ' (з ' + _msDmy(cur.ms) + ')' : '';
+    await apiUpdate(q + 'B1:C1', [['Бал знищ.\nзараз' + since, 'Бал пошк.\nзараз' + since]], true);
+    // вигляд
+    const sid = g.id, rng = (c1, c2, r1, r2) => ({ sheetId: sid, startRowIndex: r1, endRowIndex: r2, startColumnIndex: c1, endColumnIndex: c2 });
+    const reqs = [];
+    const hdrCols = [[1, 3]].concat(pairs.map(x => [x.col, x.col + 2]));
+    hdrCols.forEach(([c1, c2]) => reqs.push({ repeatCell: { range: rng(c1, c2, 0, 1),
+        cell: { userEnteredFormat: { backgroundColor: { red: 0.11, green: 0.15, blue: 0.25 }, horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE', wrapStrategy: 'WRAP',
+            textFormat: { bold: true, foregroundColor: { red: 1, green: 1, blue: 1 } } } },
+        fields: 'userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)' } }));
+    pairs.forEach(x => {
+        reqs.push({ repeatCell: { range: rng(x.col, x.col + 2, 1, total),
+            cell: { userEnteredFormat: { numberFormat: { type: 'NUMBER', pattern: '0.0' }, horizontalAlignment: 'CENTER' } },
+            fields: 'userEnteredFormat(numberFormat,horizontalAlignment)' } });
+        reqs.push({ updateBorders: { range: rng(x.col, x.col + 2, 0, total), left: { style: 'SOLID_MEDIUM', color: { red: 0.6, green: 0.6, blue: 0.2 } } } });
+        reqs.push({ updateDimensionProperties: { range: { sheetId: sid, dimension: 'COLUMNS', startIndex: x.col, endIndex: x.col + 2 }, properties: { pixelSize: 105 }, fields: 'pixelSize' } });
+    });
+    reqs.push({ updateDimensionProperties: { range: { sheetId: sid, dimension: 'ROWS', startIndex: 0, endIndex: 1 }, properties: { pixelSize: 64 }, fields: 'pixelSize' } });
+    const resp = await _retryOnAuth(async () => fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`,
+        { method: 'POST', headers: { 'Authorization': `Bearer ${state.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ requests: reqs }) }
+    ).then(r => r.json()));
+    if (resp && resp.error) throw new Error(resp.error.message);
+}
+
 async function _savePriceEdit(abbr, v) {
     const T = 'е бали', q = "'" + T + "'!";
     let rows = await apiGet(T);
@@ -1913,6 +1953,8 @@ async function _savePriceEdit(abbr, v) {
             it.znyshcheno = cur.z; it.poshkodzheno = cur.p;
         }
     }
+    // підписи й вигляд колонок історії (помилка оформлення не має скасовувати вже записані ціни)
+    try { rows = await apiGet(T); const grid2 = await _sheetGrid(); await _relabelPrices(rows, grid2[T]); } catch (e) { console.warn('relabel', e); }
     state.scoreTable = tbl;
     saveLocal();
 }
