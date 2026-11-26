@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-398';
+const APP_VER = 'v.26.11-399';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2064,11 +2064,15 @@ async function _autoPriceHistory(scoreRows) {
         const n = parseInt(localStorage.getItem(key) || '0', 10) || 0;
         if (n >= 3) return;
         localStorage.setItem(key, String(n + 1));
+        _toast('СТВОРЮЮ ІСТОРІЮ ЦІН В «Е БАЛИ»…', 2500);
         await _savePriceEdit('ОС', { a: 'ОС', z: _PRICE2['ОС'].z, p: _PRICE2['ОС'].p, priceMs: _PRICE_FROM2 });
         localStorage.setItem(key, '99');
         _toast('ІСТОРІЮ ЦІН СТВОРЕНО В «Е БАЛИ»', 3000);
         render();
-    } catch (e) { console.warn('auto price history', e); }
+    } catch (e) {
+        console.warn('auto price history', e);
+        showAlert('Не вдалося створити історію цін в «е бали»:\n' + (e && e.message ? e.message : e) + '\n\nЗастосунок спробує ще раз при наступному відкритті. Запасний варіант — НАЛАШТУВАННЯ → СТВОРИТИ ІСТОРІЮ ЦІН.');
+    }
 }
 
 // Одноразове створення історії цін у «е бали» (НАЛАШТУВАННЯ → СТВОРИТИ ІСТОРІЮ ЦІН): пара «З 12.09.2026» (нинішні B/C),
