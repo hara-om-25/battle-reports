@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-391';
+const APP_VER = 'v.26.11-392';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2543,6 +2543,7 @@ function _parseMainRows(rows) {
             if (row[16]) _strayMain = true;
             rec.uid = (row[10] || '').trim() || _contentUid(rec);
             if (!_hasHit(rec)) rec.points = 0;   // без знищено/пошкоджено балів немає ніде
+            _applyNewPrices(rec);
             if (!rec.chk && _anyChk() && _chkNoteOf(rec)) rec.chk = 1;
             out.push(rec);
         } else if (row[16] && (row[17] || row[20])) {
@@ -2560,6 +2561,7 @@ function _parseMainRows(rows) {
             };
             rec.uid = (row[o + 10] || '').trim() || _contentUid(rec);
             if (!_hasHit(rec)) rec.points = 0;
+            _applyNewPrices(rec);
             out.push(rec);
         }
     }
@@ -4968,6 +4970,15 @@ async function recalcArchivePoints() {
 // пишуться лише клітинки J змінених рядків (не весь стовпець — формули старих рядків цілі)
 function _priceFromYMD() { return new Date(_PRICE_FROM2).toISOString().slice(0, 10).replace(/-/g, ''); }
 function _priceFromLabel() { const y = _priceFromYMD(); return y.slice(6, 8) + '.' + y.slice(4, 6) + '.' + y.slice(0, 4); }
+// Від дня зміни цін (_PRICE_FROM2) бали вильотів ЗАВЖДИ рахуються за новими цінами —
+// при читанні будь-якого аркуша (ГОЛОВНА, архів, кеш пристрою), незалежно від того,
+// що записано в J. Старіші вильоти не чіпаємо (ГОЛОВНЕ ПРАВИЛО ПРО ЦІНИ).
+// Лише в пам'яті: таблицю це саме не переписує (для запису є кнопка БАЛИ З ...)
+function _applyNewPrices(r) {
+    if (!r || _recYMD(r.datetime) < _priceFromYMD()) return;
+    const now = _newPtsFor(r.target, r.result, r.qty200, r.qty300, r.datetime, r.chk);
+    if (now !== null) r.points = now;
+}
 function _newPtsFor(targets, results, q200, q300, dt, chk) {
     const tg = String(targets || '').split(',').map(x => x.trim()).filter(Boolean);
     if (tg.some(t => !state.scoreTable[_abbrOfName(t)])) return null;          // ціни немає — не чіпаємо
@@ -5065,6 +5076,7 @@ function _parseArchiveRows(rows, name) {
             if (!_ar.chk && _hasChk && _chkNoteOf(_ar)) _ar.chk = 1;
             if (_ar.chk && !(_fromP && _chkInJ(_ar))) _ar.points += 1;
             if (!_hasHit(_ar)) _ar.points = 0;   // без знищено/пошкоджено балів немає ніде
+            _applyNewPrices(_ar);
         }
     }
     return out;
