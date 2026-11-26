@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-387';
+const APP_VER = 'v.26.11-388';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -5383,7 +5383,7 @@ function _dateMs(dt) {
 function _priceFor(abbr, dt) {
     const base = state.scoreTable[abbr];
     if (!base) return base;
-    const ms = _dateMs(dt), ov = _PRICE2[_abbrOfName(abbr)];
+    const ms = _dateMs(dt), _k = x => String(x || '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase(), _kk = _k(abbr), ov = _PRICE2[Object.keys(_PRICE2).find(k => _k(k) === _kk)];
     if (!ov || isNaN(ms) || ms < _PRICE_FROM2) return base;
     return Object.assign({}, base, ov.z !== undefined ? { znyshcheno: ov.z } : {}, ov.p !== undefined ? { poshkodzheno: ov.p } : {});
 }
