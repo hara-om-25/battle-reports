@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-397';
+const APP_VER = 'v.26.11-398';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2052,6 +2052,23 @@ function showPriceEdit(abbr, onDone) {
     _ov.appendChild(_bx);
     _ov.addEventListener('click', e => { if (e.target === _ov) _close(); });
     document.body.appendChild(_ov);
+}
+
+// Автоматичне створення історії цін: коли в «е бали» ще немає жодної пари «З дд.мм.рррр», при відкритті з мережею
+// один раз (до 3 спроб на таблицю) створюється стартова історія — так само, як кнопкою СТВОРИТИ ІСТОРІЮ ЦІН.
+// Колонки F/G («бали до 12.09.2026р.») не чіпаються: для вильотів до 12.09.2026 ціна й далі береться з них
+async function _autoPriceHistory(scoreRows) {
+    try {
+        if (!state.online || !navigator.onLine || _histPairs((scoreRows || [])[0]).length) return;
+        const key = 'br_hist_auto:' + SHEET_ID;
+        const n = parseInt(localStorage.getItem(key) || '0', 10) || 0;
+        if (n >= 3) return;
+        localStorage.setItem(key, String(n + 1));
+        await _savePriceEdit('ОС', { a: 'ОС', z: _PRICE2['ОС'].z, p: _PRICE2['ОС'].p, priceMs: _PRICE_FROM2 });
+        localStorage.setItem(key, '99');
+        _toast('ІСТОРІЮ ЦІН СТВОРЕНО В «Е БАЛИ»', 3000);
+        render();
+    } catch (e) { console.warn('auto price history', e); }
 }
 
 // Одноразове створення історії цін у «е бали» (НАЛАШТУВАННЯ → СТВОРИТИ ІСТОРІЮ ЦІН): пара «З 12.09.2026» (нинішні B/C),
@@ -5581,6 +5598,7 @@ async function loadDataFromAPI() {
         // "е бали": A=абревіатура, B=коеф. за знищено, C=коеф. за пошкоджено
         const scoreRows = await apiGet('е бали');
         state.scoreTable = _parseScoreRows(scoreRows);
+        _autoPriceHistory(scoreRows);
         
         const listRows = await apiGet('СПИСКИ');
         const _rdr = [], _rrs = [], _ram = [];
