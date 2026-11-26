@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ЩО ПРИЙМАЄ ЗАСТОСУНОК</title>
+<link href="https://fonts.googleapis.com/css2?family=Tektur:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #1a1d18; --surface: #252a23; --olive: #5a6b2f; --olive-dark: #3d4720;
+  --khaki: #8b8b3a; --yellow: #d4b81a; --text: #c8c8a8; --text-dim: #8a8870;
+  --red: #a33c2a;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 16px; background: var(--bg); color: var(--text);
+  font-family: 'Tektur', monospace; font-size: 15px; line-height: 1.5;
+}
+h1 { color: var(--yellow); font-size: 1.5em; letter-spacing: 0.1em; margin: 0 0 4px; }
+/* Версія у правому куті — щоб одразу було видно, чи підтягнулась нова
+   сторінка, чи браузер віддав стару з пам'яті */
+.top { display: flex; justify-content: space-between; align-items: baseline;
+       gap: 12px; flex-wrap: wrap; }
+.ver { color: var(--khaki); font-size: 0.8em; letter-spacing: 0.1em; white-space: nowrap; }
+.sub { color: var(--text-dim); font-size: 0.85em; margin-bottom: 16px; }
+.crate {
+  background: var(--surface); border: 2px solid var(--olive); border-radius: 4px;
+  padding: 14px; margin-bottom: 14px;
+}
+label.pick {
+  display: block; text-align: center; padding: 18px 12px; cursor: pointer;
+  color: var(--yellow); letter-spacing: 0.12em; font-weight: 700;
+  border: 2px dashed var(--olive); border-radius: 4px;
+}
+label.pick:active { background: var(--olive-dark); }
+input[type=file] { display: none; }
+button {
+  font-family: inherit; font-size: 0.9em; letter-spacing: 0.1em; font-weight: 700;
+  color: var(--yellow); background: var(--surface); border: 2px solid var(--olive);
+  border-radius: 4px; padding: 10px 16px; cursor: pointer; margin-right: 8px;
+}
+button:active { background: var(--olive-dark); }
+button[disabled] { opacity: 0.4; }
+pre {
+  white-space: pre-wrap; word-break: break-word; margin: 0;
+  font-family: inherit; font-size: 0.85em; color: var(--text);
+}
+.err { color: #e08a2e; }
+.hit { color: var(--yellow); }
+.muted { color: var(--text-dim); }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>ЩО ПРИЙМАЄ ЗАСТОСУНОК</h1>
+  <span class="ver">ВЕРСІЯ 5 &middot; 25.09.2026</span>
+</div>
+<div class="sub">Читає файл .apk просто тут, на пристрої. Нікуди нічого не надсилає.</div>
+
+<div class="crate">
+  <label class="pick" for="f">ВИБРАТИ ФАЙЛ .APK</label>
+  <input type="file" id="f" accept=".apk,application/vnd.android.package-archive">
+</div>
+
+<div class="crate" id="out-box" style="display:none">
+  <div style="margin-bottom:10px">
+    <button id="copy">КОПІЮВАТИ</button>
+    <button id="dex" disabled>ШУКАТИ ВХОДИ В КОДІ</button>
+  </div>
+  <pre id="out"></pre>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const out = $('#out');
+let report = '';
+let theFile = null;
+
+function say(s) { report += s + '\n'; out.textContent = report; }
+function reset() { report = ''; out.textContent = ''; $('#out-box').style.display = ''; }
+
+/* ---------- читання zip: беремо лише потрібні шматки, весь файл у пам'ять
+              не тягнемо — .apk буває на десятки мегабайтів ---------- */
+async function bytes(blob) { return new Uint8Array(await blob.arrayBuffer()); }
+
+async function zipEntries(file) {
+  const tailLen = Math.min(file.size, 66000);
+  const tail = await bytes(file.slice(file.size - tailLen));
+  const dv = new DataView(tail.buffer);
+  let eocd = -1;
+  for (let i = tail.length - 22; i >= 0; i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('це не схоже на .apk — не знайшов кінця архіву');
+  const cdSize = dv.getUint32(eocd + 12, true);
+  const cdOff = dv.getUint32(eocd + 16, true);
+  if (cdOff === 0xFFFFFFFF) throw new Error('архів надвеликого вигляду (zip64) — не вмію');
+  const cd = await bytes(file.slice(cdOff, cdOff + cdSize));
+  const cdv = new DataView(cd.buffer);
+  const list = [];
+  let p = 0;
+  while (p + 46 <= cd.length && cdv.getUint32(p, true) === 0x02014b50) {
+    const method = cdv.getUint16(p + 10, true);
+    const compSize = cdv.getUint32(p + 20, true);
+    const nameLen = cdv.getUint16(p + 28, true);
+    const extraLen = cdv.getUint16(p + 30, true);
+    const cmtLen = cdv.getUint16(p + 32, true);
+    const local = cdv.getUint32(p + 42, true);
+    const name = new TextDecoder('utf-8').decode(cd.subarray(p + 46, p + 46 + nameLen));
+    list.push({ name, method, compSize, local });
+    p += 46 + nameLen + extraLen + cmtLen;
+  }
+  return list;
+}
+
+async function readEntry(file, e) {
+  const head = await bytes(file.slice(e.local, e.local + 30));
+  const hv = new DataView(head.buffer);
+  if (hv.getUint32(0, true) !== 0x04034b50) throw new Error('битий запис у архіві: ' + e.name);
+  const start = e.local + 30 + hv.getUint16(26, true) + hv.getUint16(28, true);
+  const raw = file.slice(start, start + e.compSize);
+  if (e.method === 0) return await bytes(raw);
+  if (e.method !== 8) throw new Error('невідомий спосіб стиснення у ' + e.name);
+  if (typeof DecompressionStream === 'undefined')
+    throw new Error('браузер застарий — немає розпакування');
+  const st = raw.stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(st).arrayBuffer());
+}
+
+/* ---------- розбір двійкового AndroidManifest.xml ----------
+   Будова: заголовок, набір рядків, таблиця номерів, далі вузли —
+   початок і кінець кожного теґа. Рядки бувають у двох виглядах,
+   UTF-16 і UTF-8, тож читаємо обидва. */
+function parseAxml(buf) {
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  if (dv.getUint16(0, true) !== 0x0003) throw new Error('це не двійковий маніфест');
+  let pool = [];
+  const nodes = [];
+  let p = dv.getUint16(2, true);          // одразу за заголовком
+  while (p + 8 <= buf.length) {
+    const type = dv.getUint16(p, true);
+    const hSize = dv.getUint16(p + 2, true);
+    const size = dv.getUint32(p + 4, true);
+    if (size < 8) break;
+    if (type === 0x0001) pool = readPool(dv, p, buf);
+    else if (type === 0x0102) nodes.push(readStart(dv, p, hSize, pool));
+    else if (type === 0x0103) nodes.push({ t: 'end', name: pool[dv.getUint32(p + hSize + 4, true)] });
+    p += size;
+  }
+  return nodes;
+}
+
+function readPool(dv, p, buf) {
+  const count = dv.getUint32(p + 8, true);
+  const flags = dv.getUint32(p + 16, true);
+  const strStart = dv.getUint32(p + 20, true);
+  const utf8 = !!(flags & 0x100);
+  const res = [];
+  for (let i = 0; i < count; i++) {
+    const off = p + strStart + dv.getUint32(p + 28 + i * 4, true);
+    res.push(utf8 ? readUtf8(dv, buf, off) : readUtf16(dv, off));
+  }
+  return res;
+}
+function readUtf16(dv, o) {
+  let len = dv.getUint16(o, true); o += 2;
+  if (len & 0x8000) { len = ((len & 0x7FFF) << 16) | dv.getUint16(o, true); o += 2; }
+  let s = '';
+  for (let i = 0; i < len; i++) s += String.fromCharCode(dv.getUint16(o + i * 2, true));
+  return s;
+}
+function readUtf8(dv, buf, o) {
+  let n = dv.getUint8(o); o += 1;                    // довжина в знаках
+  if (n & 0x80) { o += 1; }
+  let b = dv.getUint8(o); o += 1;                    // довжина в байтах
+  if (b & 0x80) { b = ((b & 0x7F) << 8) | dv.getUint8(o); o += 1; }
+  return new TextDecoder('utf-8').decode(buf.subarray(o, o + b));
+}
+
+function readStart(dv, p, hSize, pool) {
+  const base = p + hSize;
+  const name = pool[dv.getUint32(base + 4, true)];
+  const aStart = dv.getUint16(base + 8, true);
+  const aSize = dv.getUint16(base + 10, true);
+  const aCount = dv.getUint16(base + 12, true);
+  const attrs = {};
+  for (let i = 0; i < aCount; i++) {
+    const a = base + aStart + i * aSize;
+    const an = pool[dv.getUint32(a + 4, true)] || '?';
+    const raw = dv.getUint32(a + 8, true);
+    const dType = dv.getUint8(a + 15);
+    const data = dv.getUint32(a + 16, true);
+    let v;
+    if (dType === 0x03) v = pool[data];
+    else if (dType === 0x12) v = data ? 'true' : 'false';
+    else if (dType === 0x10) v = String(data | 0);
+    else if (raw !== 0xFFFFFFFF && pool[raw] !== undefined) v = pool[raw];
+    else v = '0x' + data.toString(16);
+    attrs[an] = v;
+  }
+  return { t: 'start', name, attrs };
+}
+
+/* ---------- звіт ---------- */
+function makeReport(nodes) {
+  let pkg = '', ver = '';
+  const comps = [], perms = [];
+  let cur = null, filt = null;
+  for (const n of nodes) {
+    if (n.t === 'end') {
+      if (n.name === 'intent-filter') filt = null;
+      else if (cur && n.name === cur.kind) { comps.push(cur); cur = null; }
+      continue;
+    }
+    const a = n.attrs;
+    if (n.name === 'manifest') { pkg = a.package || ''; ver = a.versionName || ''; }
+    else if (/^uses-permission/.test(n.name)) { if (a.name) perms.push(a.name); }
+    else if (['activity', 'activity-alias', 'service', 'receiver', 'provider'].includes(n.name)) {
+      cur = { kind: n.name, name: a.name || '?', authorities: a.authorities || '', filters: [] };
+    } else if (n.name === 'intent-filter' && cur) {
+      filt = { actions: [], cats: [], datas: [] };
+      cur.filters.push(filt);
+    } else if (filt) {
+      if (n.name === 'action') filt.actions.push(a.name || '?');
+      else if (n.name === 'category') filt.cats.push(a.name || '?');
+      else if (n.name === 'data') filt.datas.push(a);
+    }
+  }
+  say('НАЗВА ПАКЕТА: ' + (pkg || '(не знайдено)'));
+  if (ver) say('ВЕРСІЯ: ' + ver);
+  say('');
+  // Дозволи — за ними видно, куди застосунок може дотягтись.
+  // Ті, що варті уваги, виносимо окремо й позначаємо
+  const WATCH = {
+    'INTERNET': 'вихід у мережу',
+    'ACCESS_FINE_LOCATION': 'точне місце',
+    'ACCESS_COARSE_LOCATION': 'приблизне місце',
+    'ACCESS_BACKGROUND_LOCATION': 'місце у тлі',
+    'CAMERA': 'камера',
+    'RECORD_AUDIO': 'запис звуку',
+    'READ_CONTACTS': 'контакти',
+    'READ_SMS': 'читання повідомлень',
+    'RECEIVE_SMS': 'отримання повідомлень',
+    'CALL_PHONE': 'дзвінки',
+    'READ_CALL_LOG': 'журнал дзвінків',
+    'READ_PHONE_STATE': 'дані телефона',
+    'QUERY_ALL_PACKAGES': 'перелік усіх програм',
+    'SYSTEM_ALERT_WINDOW': 'вікна поверх інших',
+    'MANAGE_EXTERNAL_STORAGE': 'уся пам\'ять пристрою',
+    'REQUEST_INSTALL_PACKAGES': 'установлення програм',
+    'PACKAGE_USAGE_STATS': 'що і коли ви запускали',
+    'BIND_ACCESSIBILITY_SERVICE': 'керування екраном'
+  };
+  const shortName = s => s.split('.').pop();
+  const hot = perms.filter(p => WATCH[shortName(p)]);
+  const rest = perms.filter(p => !WATCH[shortName(p)]);
+  say('ДОЗВОЛІВ УСЬОГО: ' + perms.length);
+  if (hot.length) {
+    say('');
+    say('ВАРТІ УВАГИ:');
+    for (const p of [...new Set(hot)].sort()) say('   ' + shortName(p) + ' — ' + WATCH[shortName(p)]);
+  }
+  if (rest.length) {
+    say('');
+    say('РЕШТА ДОЗВОЛІВ:');
+    for (const p of [...new Set(rest)].sort()) say('   ' + shortName(p));
+  }
+  say('');
+  const withF = comps.filter(c => c.filters.length);
+  say('СКЛАДОВИХ ІЗ ЗОВНІШНІМИ ВХОДАМИ: ' + withF.length);
+  say('');
+  for (const c of withF) {
+    say('[' + c.kind + '] ' + c.name);
+    for (const f of c.filters) {
+      say('   дія: ' + (f.actions.join(', ') || '—'));
+      if (f.cats.length) say('   розряд: ' + f.cats.join(', '));
+      for (const d of f.datas) {
+        const parts = [];
+        for (const k of ['scheme', 'host', 'port', 'path', 'pathPrefix', 'pathPattern', 'mimeType'])
+          if (d[k]) parts.push(k + '=' + d[k]);
+        if (parts.length) say('   дані: ' + parts.join(' '));
+      }
+      say('');
+    }
+  }
+  const provs = comps.filter(c => c.kind === 'provider' && c.authorities);
+  if (provs.length) {
+    say('ПОСТАЧАЛЬНИКИ ДАНИХ:');
+    for (const p of provs) say('   ' + p.authorities);
+    say('');
+  }
+  return pkg;
+}
+
+/* ---------- пошук у коді ----------
+   Пастка: у зібраному коді назви класів записані **через скісну риску**
+   (`Lua/mil/kropyva/...;`), а не через крапку. Перший підхід шукав
+   крапки й не знайшов нічого. Тепер дивимось обидва вигляди. */
+async function scanDex(file, list, pkg) {
+  say('');
+  say('=== ПОШУК У КОДІ ===');
+  const dexes = list.filter(e => /^classes\d*\.dex$/.test(e.name));
+  if (!dexes.length) { say('файлів коду не знайшов'); return; }
+  const uri = new Set(), key = new Set(), pkgs = new Set(), inner = new Set(), kro = new Set();
+  const reUri = /[a-z][a-z0-9+.\-]{1,20}:\/\/[A-Za-z0-9_\-./?=&%{}]*/g;
+  // тільки те, що справді про координати: «point» і «coord» дають сотні
+  // рядків із криптографічної бібліотеки й користі не мають
+  const reKey = /[A-Za-z0-9_.]*(?:mgrs|MGRS|Mgrs|latlon|latLon|LatLon|utmZone)[A-Za-z0-9_.]*/g;
+  const rePkg = /\b[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]{1,})+\b/g;
+  // клас у коді записаний як `Lua/mil/kropyva/mapa/MapActivity;` —
+  // беремо з нього початок малими літерами, це і є назва гілки
+  const reDesc = /L([a-z][A-Za-z0-9_$\/]*);/g;
+  const reKro = /[A-Za-z0-9_.\/\-]*(?:kropyva|kropiva|Kropyva|KROPYVA)[A-Za-z0-9_.\/\-]*/g;
+  const root = (pkg || '').split('.').slice(0, 2).join('.');   // напр. ua.mil
+  const mine = s => (root && s.startsWith(root + '.')) || /kropyva|kropiva|mapa/i.test(s);
+  for (const e of dexes) {
+    say('дивлюсь ' + e.name + '...');
+    out.scrollTop = out.scrollHeight;
+    await new Promise(r => setTimeout(r, 10));
+    let data;
+    try { data = await readEntry(file, e); }
+    catch (err) { say('   не вийшло: ' + err.message); continue; }
+    const txt = new TextDecoder('utf-8', { fatal: false }).decode(data);
+    let m;
+    reUri.lastIndex = 0;
+    while ((m = reUri.exec(txt))) if (m[0].length < 120) uri.add(m[0]);
+    reKey.lastIndex = 0;
+    while ((m = reKey.exec(txt))) if (m[0].length > 3 && m[0].length < 120) key.add(m[0]);
+    reKro.lastIndex = 0;
+    while ((m = reKro.exec(txt))) if (m[0].length < 120) kro.add(m[0]);
+    rePkg.lastIndex = 0;
+    while ((m = rePkg.exec(txt))) {
+      const s = m[0];
+      if (s.length < 120 && s.split('.').length >= 3 && mine(s)) pkgs.add(s);
+    }
+    reDesc.lastIndex = 0;
+    while ((m = reDesc.exec(txt))) {
+      const seg = [];
+      for (const part of m[1].split('/')) {
+        if (/^[a-z][a-z0-9_]*$/.test(part)) seg.push(part); else break;
+      }
+      if (seg.length >= 3) {
+        const s = seg.join('.');
+        if (s.length < 120 && mine(s)) inner.add(s);
+      }
+    }
+  }
+  const block = (title, arr, limit) => {
+    say('');
+    say(title + ': ' + arr.length);
+    for (const k of arr.slice(0, limit)) say('   ' + k);
+    if (arr.length > limit) say('   ... і ще ' + (arr.length - limit));
+  };
+  const dots = s => s.split('.').length;
+  const byLen = (a, b) => dots(a) - dots(b) || (a < b ? -1 : 1);
+  // назва застосунку коротка — такі найімовірніші; довгі це нутрощі коду
+  const named = [...pkgs].filter(s => s !== pkg).sort(byLen);
+  block('НАЗВИ ЗАСТОСУНКІВ, ЗАПИСАНІ ЯК ТЕКСТ (короткі — найімовірніші)', named, 120);
+  // з внутрішніх назв лишаємо тільки коріння: за ним видно, які гілки є
+  const roots = new Set();
+  for (const s of inner) {
+    const p = s.split('.');
+    for (let n = 3; n <= Math.min(4, p.length); n++) roots.add(p.slice(0, n).join('.'));
+  }
+  block('ГІЛКИ ВНУТРІШНІХ НАЗВ', [...roots].filter(s => s !== pkg).sort(byLen), 120);
+  block('УСЕ ЗІ СЛОВОМ «KROPYVA»', [...kro].sort(byLen), 200);
+  block('ПОСИЛАННЯ', [...uri].sort(), 200);
+  block('MGRS І КООРДИНАТИ', [...key].sort(), 200);
+}
+
+/* ---------- робота ---------- */
+$('#f').addEventListener('change', async ev => {
+  const file = ev.target.files[0];
+  if (!file) return;
+  theFile = file;
+  reset();
+  say('ФАЙЛ: ' + file.name + '  (' + (file.size / 1048576).toFixed(1) + ' МБ)');
+  say('');
+  try {
+    const list = await zipEntries(file);
+    const man = list.find(e => e.name === 'AndroidManifest.xml');
+    if (!man) throw new Error('у архіві немає AndroidManifest.xml');
+    const raw = await readEntry(file, man);
+    window.__pkg = makeReport(parseAxml(raw));
+    window.__list = list;
+    $('#dex').disabled = false;
+  } catch (e) {
+    say('');
+    say('ПОМИЛКА: ' + e.message);
+  }
+});
+
+$('#dex').addEventListener('click', async () => {
+  $('#dex').disabled = true;
+  try { await scanDex(theFile, window.__list, window.__pkg); }
+  catch (e) { say('ПОМИЛКА: ' + e.message); }
+});
+
+$('#copy').addEventListener('click', () => {
+  const t = report;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t).catch(fallback);
+  } else fallback();
+  function fallback() {
+    const ta = document.createElement('textarea');
+    ta.value = t; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    ta.remove();
+  }
+  $('#copy').textContent = 'СКОПІЙОВАНО';
+  setTimeout(() => { $('#copy').textContent = 'КОПІЮВАТИ'; }, 1200);
+});
+</script>
+</body>
+</html>
