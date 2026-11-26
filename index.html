@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-399';
+const APP_VER = 'v.26.11-400';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2034,7 +2034,7 @@ function showPriceEdit(abbr, onDone) {
         if (priceChanged) {
             priceMs = _dmyMs(val.f);
             if (priceMs === null) { _msg.textContent = 'Дата має вигляд дд.мм.рррр'; return; }
-            if (priceMs < Date.UTC(2026, 8, 12)) { _msg.textContent = 'Раніше 12.09.2026 історії цін немає'; return; }
+            if (priceMs < Date.UTC(2020, 0, 1)) { _msg.textContent = 'Дата надто рання'; return; }
         }
         const textChanged = a !== abbr || val.d !== orig.d || val.e !== orig.e;
         if (!priceChanged && !textChanged) { _close(); return; }
@@ -5314,7 +5314,7 @@ function _newPtsFor(targets, results, q200, q300, dt, chk) {
 // Що раніше — не чіпається. Ціна на дату береться з історії, тому перерахунок можна запускати й через
 // кілька періодів зі зміненими цінами — кожен вильот отримає ціну свого періоду
 function askRecalcPoints() {
-    const floor = 20260912;
+    const floor = 20200101;
     const _ov = document.createElement('div');
     _ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px';
     const _bx = document.createElement('div');
@@ -5340,7 +5340,7 @@ function askRecalcPoints() {
         const ms = _dmyMs(inp.value);
         if (ms === null) { msg.textContent = 'Дата має вигляд дд.мм.рррр'; return; }
         const d = new Date(ms), ymd = d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
-        if (ymd < floor) { msg.textContent = 'Раніше 12.09.2026 історії цін немає'; return; }
+        if (ymd < floor) { msg.textContent = 'Дата надто рання'; return; }
         close();
         recalcFromPriceDate(String(ymd));
     });
@@ -5352,6 +5352,14 @@ function askRecalcPoints() {
     inp.focus();
 }
 
+// Найраніша дата в історії цін (РРРРММДД) серед усіх цілей; '' коли історії нема
+function _histStartYMD() {
+    let m = null;
+    Object.values(state.scoreTable || {}).forEach(it => (it.hist || []).forEach(h => { if (m === null || h.ms < m) m = h.ms; }));
+    if (m === null) return '';
+    const d = new Date(m);
+    return String(d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate());
+}
 async function recalcFromPriceDate(from) {
     if (!state.online) { showAlert('Потрібна мережа'); return; }
     const label = from.slice(6, 8) + '.' + from.slice(4, 6) + '.' + from.slice(0, 4);
@@ -5386,6 +5394,7 @@ async function recalcFromPriceDate(from) {
         + '\nСума цих вильотів: ' + _pt(oldSum) + ' -> ' + _pt(newSum)
         + (skipped.length ? '\n\nБез ціни в «е балах» — не чіпаю: ' + skipped.length : '')
         + '\n\nСтаріші за ' + label + ' вильоти не чіпаються.'
+        + (_histStartYMD() && from < _histStartYMD() ? '\n\nУвага: у таблиці немає колонок цін раніше ' + _histStartYMD().slice(6, 8) + '.' + _histStartYMD().slice(4, 6) + '.' + _histStartYMD().slice(0, 4) + ' — для старіших дат береться «бали до 12.09.2026р.» (F/G). Якщо ціни тоді змінювались, спершу внеси ті періоди через ВНЕСТИ ЗМІНИ.' : '')
         + '\n\n' + lines.slice(0, 14).join('\n') + (lines.length > 14 ? '\n…' : '')
         + '\n\nПерерахувати?', async () => {
         try {
