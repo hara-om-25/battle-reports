@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-392';
+const APP_VER = 'v.26.11-393';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2533,7 +2533,7 @@ function _parseMainRows(rows) {
                 drone: (row[6] || '').trim(),
                 ammo: (row[7] || '').trim(),
                 result: row[8] || '',
-                points: _num(row[9]),
+                points: _num(row[9]), jRaw: _num(row[9]),
                 // колонка P: 1 — ЧЕКУН (+1 бал уже в J, коли вписано застосунком)
                 // (якщо правіше є ще дані — це зсунутий рядок, і в P лежить номер звіту, а не ЧЕКУН)
                 chk: row[16] ? (parseInt(row[30]) === 1 ? 1 : 0) : (parseInt(row[15]) === 1 ? 1 : 0),
@@ -2555,7 +2555,7 @@ function _parseMainRows(rows) {
                 reportNum: parseInt(row[o]) || 0, datetime: row[o + 1] || '', target: row[o + 2] || '',
                 qty200: parseInt(row[o + 3]) || 0, qty300: parseInt(row[o + 4]) || 0,
                 coordinates: row[o + 5] || '', drone: (row[o + 6] || '').trim(), ammo: (row[o + 7] || '').trim(),
-                result: row[o + 8] || '', points: _num(row[o + 9]),
+                result: row[o + 8] || '', points: _num(row[o + 9]), jRaw: -999, stray: 1,
                 chk: parseInt(row[o + 15]) === 1 ? 1 : 0,
                 sheet: 'ГОЛОВНА', srow: i + 1
             };
@@ -2980,12 +2980,12 @@ async function loadAllArchiveSheets() {
         const allRecs = [];
         let _quotaHit = false;
         for (const name of state.archiveSheets) {
-            let rows = null;
+            let rows = null, _fresh = false;
             // Аркуш, збережений на пристрої менше 5 хвилин тому, з таблиці не
             // перечитуємо: Google дає лише ~60 читань на хвилину на користувача,
             // а всі аркуші разом перечитувались при кожному вході в АРХІВ
             if (state.online && !_quotaHit && _archAgeMs(name) > 300000) {
-                try { rows = await apiGet(name); _archCachePut(name, rows); }
+                try { rows = await apiGet(name); _archCachePut(name, rows); _fresh = true; }
                 catch (e) {
                     if (/quota/i.test(e.message || '')) _quotaHit = true;   // ліміт — решту беремо з пристрою
                     else if (!_isNetErr(e)) throw e;
@@ -2993,7 +2993,9 @@ async function loadAllArchiveSheets() {
             }
             if (!rows) rows = _archOne(name);
             if (!rows) continue;   // цього аркуша на пристрої немає — пропускаємо
-            allRecs.push.apply(allRecs, _parseArchiveRows(rows, name));
+            const _pr = _parseArchiveRows(rows, name);
+            allRecs.push.apply(allRecs, _pr);
+            if (_fresh) _pricesWriteBack(_pr);
         }
         _markPacks(allRecs);
         state.allArchiveRecs = allRecs;
@@ -4977,7 +4979,28 @@ function _priceFromLabel() { const y = _priceFromYMD(); return y.slice(6, 8) + '
 function _applyNewPrices(r) {
     if (!r || _recYMD(r.datetime) < _priceFromYMD()) return;
     const now = _newPtsFor(r.target, r.result, r.qty200, r.qty300, r.datetime, r.chk);
-    if (now !== null) r.points = now;
+    if (now === null) return;
+    r.points = now;
+    // у таблиці в J інше число — запам'ятовуємо, щоб дописати його в таблицю (_pricesWriteBack)
+    if (!r.stray && r.jRaw !== undefined && Math.abs(now - r.jRaw) > 0.001) r.pJ = now;
+}
+// Дописує нові бали у стовпець J САМОЇ ТАБЛИЦІ (ГОЛОВНА й архіви), лише для рядків від дня
+// зміни цін, які щойно прочитано з таблиці й де J відрізняється. Пише по одній клітинці
+// (формули решти рядків цілі), не більше 40 за раз — решта піде наступного разу
+let _pwBusy = false;
+async function _pricesWriteBack(recs) {
+    if (_pwBusy || !state.online) return;
+    const todo = (recs || []).filter(r => r && r.pJ !== undefined && r.sheet && r.srow);
+    if (!todo.length) return;
+    _pwBusy = true;
+    try {
+        for (const r of todo.slice(0, 40)) {
+            await apiUpdate(r.sheet + '!J' + r.srow, [[r.pJ]], true);
+            r.jRaw = r.pJ; delete r.pJ;
+            await new Promise(res => setTimeout(res, 350));
+        }
+    } catch (e) { /* не вдалося — повториться при наступному читанні */ }
+    _pwBusy = false;
 }
 function _newPtsFor(targets, results, q200, q300, dt, chk) {
     const tg = String(targets || '').split(',').map(x => x.trim()).filter(Boolean);
@@ -5062,7 +5085,7 @@ function _parseArchiveRows(rows, name) {
                 drone: (row[6] || '').trim(),
                 ammo: (row[7] || '').trim(),
                 result: row[8] || '',
-                points: _num(row[9]),
+                points: _num(row[9]), jRaw: _num(row[9]),
                 uid: (row[10] || '').trim(),
                 v: _verdictInfo(row[2] || '', row[11], row[12], row[3], row[4], row[13], row[14]),
                 // примітка й коментар верифікатора, по рядку на ціль
@@ -5222,6 +5245,7 @@ async function loadArchiveSheet(name) {
         if (!rows) throw new Error('Цього архіву немає на пристрої');
         state.archiveRecs = _parseArchiveRows(rows, name);
         _markPacks(state.archiveRecs);
+        if (state.online) _pricesWriteBack(state.archiveRecs);
     } catch(e) {
         showAlert('Помилка: ' + e.message);
     } finally {
@@ -5280,7 +5304,9 @@ async function loadDataFromAPI() {
         try { await _notesPull(); } catch (e) { /* лишаємось на локальних */ }
         const _pvHdr=listRows[0]||[];state.pvr=[3,4,5,6].map(ci=>{const name=(_pvHdr[ci]||'').trim();if(!name)return null;const map={};for(let i=1;i<listRows.length;i++){const row=listRows[i]||[];const ammo=(row[2]||'').trim();const val=(row[ci]||'').toString().trim().replace(',','.');if(ammo&&val&&val!=='0'){const c=parseFloat(val);if(c)map[ammo]=c;}}return Object.keys(map).length?{name,map}:null;}).filter(Boolean);
         const mainRows = await apiGet('ГОЛОВНА');
-        state.records = _applyQueue(_parseMainRows(mainRows));
+        const _mainParsed = _parseMainRows(mainRows);
+        state.records = _applyQueue(_mainParsed);
+        _pricesWriteBack(_mainParsed);
         state.records.forEach(r=>{if((r.qty200||r.qty300)&&!r.target.split(', ').some(t=>{const _p=t.trim().split(' '),_l=_p[_p.length-1],_a=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.trim();return _a==='ОС';})){r.qty200=0;r.qty300=0;}});
         
         if (state.records.length > 0) {
