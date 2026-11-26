@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-396';
+const APP_VER = 'v.26.11-397';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -2054,6 +2054,24 @@ function showPriceEdit(abbr, onDone) {
     document.body.appendChild(_ov);
 }
 
+// Одноразове створення історії цін у «е бали» (НАЛАШТУВАННЯ → СТВОРИТИ ІСТОРІЮ ЦІН): пара «З 12.09.2026» (нинішні B/C),
+// пара «З 09.11.2026» (ОС 12/4, КОПТЕР_Ж 4/0), B/C стають актуальними, заголовки підписані. Повторно не робить нічого
+async function createPriceHistory() {
+    if (!state.online) { showAlert('Потрібна мережа'); return; }
+    let rows;
+    try { rows = await apiGet('е бали'); } catch (e) { showAlert('Не вдалося прочитати аркуш: ' + e.message); return; }
+    if (_histPairs(rows[0]).length) { showAlert('Історія цін у «е бали» вже є — створювати нічого.'); return; }
+    showConfirm('СТВОРИТИ ІСТОРІЮ ЦІН', 'У аркуші «е бали» правіше за все, що там є, з\'являться дві пари колонок:\n'
+        + '• «З 12.09.2026» — нинішні ціни B і C всіх цілей;\n'
+        + '• «З 09.11.2026» — ОС 12/4 і КОПТЕР_Ж 4/0.\n\n'
+        + 'B і C для ОС і КОПТЕР_Ж стануть 12/4 і 4/0, заголовки колонок буде підписано. Бали вильотів не зміняться.\n\nСтворити?', async () => {
+        try {
+            await _savePriceEdit('ОС', { a: 'ОС', z: _PRICE2['ОС'].z, p: _PRICE2['ОС'].p, priceMs: _PRICE_FROM2 });
+        } catch (e) { showAlert('Не вдалося записати: ' + e.message); return; }
+        showAlert('✅ ІСТОРІЮ ЦІН СТВОРЕНО\n\nВ «е бали» тепер є колонки «З 12.09.2026» і «З 09.11.2026». B і C показують ціни на сьогодні. Щоб перерахувати бали вильотів, натисни ПЕРЕРАХУВАТИ БАЛИ з датою 12.09.2026.');
+    });
+}
+
 // Назва періоду, який зараз лежить у ГОЛОВНІЙ (за датами самих записів): «24-30.09.2026»
 function _mainPeriodName() {
     if (!state.records.length) return '';
@@ -2337,7 +2355,9 @@ function showSettings() {
         { t: 'ІНСТРУКЦІЯ', c: 'btn-black', on: true, why: '',
           go: () => window.open('instruction.html', '_blank') },
         { t: 'ПЕРЕРАХУВАТИ БАЛИ', c: 'btn-black', on: state.online, why: 'Потрібна мережа',
-          go: () => askRecalcPoints() }
+          go: () => askRecalcPoints() },
+        { t: 'СТВОРИТИ ІСТОРІЮ ЦІН', c: 'btn-black', on: state.online, why: 'Потрібна мережа',
+          go: () => createPriceHistory() }
     ];
     _rows.forEach(o => {
         const b = document.createElement('button');
