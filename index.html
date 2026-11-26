@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.10-384';
+const APP_VER = 'v.26.11-385';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -3586,7 +3586,7 @@ function _tgOwn(r, j, P) {
     if (!sc) return null;
     const res = String(P.ress[j] || '').trim();
     if (_newPrices(r)) {
-        const n = calculatePoints(ab, r.qty200, r.qty300, res);
+        const n = calculatePoints(ab, r.qty200, r.qty300, res, r.datetime);
         return isNaN(n) ? null : n;
     }
     // виліт до 12.09.2026 — за старим прайсом (колонки F/G); немає старої
@@ -4831,11 +4831,11 @@ function copyVerifyFix() {
 
 // Бали вильота за нинішньою таблицею «е бали». Логіка та сама, що й у формі:
 // проходимо цілі вильоту й додаємо ціну кожної за її результатом
-function _recPoints(targets, results, q200, q300) {
+function _recPoints(targets, results, q200, q300, dt) {
     const tg = String(targets || '').split(',').map(x => x.trim()).filter(Boolean);
     const rs = String(results || '').split(',').map(x => x.trim());
     let sum = 0;
-    tg.forEach((t, i) => { sum += calculatePoints(_abbrOfName(t), q200, q300, rs[i] || '') || 0; });
+    tg.forEach((t, i) => { sum += calculatePoints(_abbrOfName(t), q200, q300, rs[i] || '', dt) || 0; });
     return Math.round(sum * 100) / 100;
 }
 
@@ -4929,7 +4929,7 @@ async function recalcArchivePoints() {
             oldSum += was; newSum += was;
             continue;
         }
-        const now = _recPoints(row[2], row[8], row[3], row[4]);
+        const now = _recPoints(row[2], row[8], row[3], row[4], row[1]);
         col.push([now]);
         oldSum += was; newSum += now;
         if (Math.abs(now - was) > 0.001) diff.push('рядок ' + (i + 1) + ': ' + _pt(was) + ' -> ' + _pt(now));
@@ -5366,14 +5366,35 @@ function spinnerSvg(px, still) {
         + '</svg>';
 }
 
-function calculatePoints(abbr, q200, q300, result) {
+// Ціни, що змінились з певної дати (рішення користувача, 26.11.2026): КОПТЕР_Ж знищено 4,
+// ОС 200 = 12, ОС 300 = 4. Діють з _PRICE_FROM2 включно; вильоти до цієї дати рахуються за
+// ціною з аркуша «е бали» БЕЗ змін — тож у рядках КОПТЕР_Ж та ОС цього аркуша ціни не чіпати.
+// Щоб змінити дату — міняти лише _PRICE_FROM2 (місяць у Date.UTC рахується з нуля: 10 = листопад)
+const _PRICE_FROM2 = Date.UTC(2026, 10, 25);
+const _PRICE2 = { 'КОПТЕР Ж': { z: 4 }, 'ОС': { z: 12, p: 4 } };
+// dt: мілісекунди, рядок дати/часу вильоту або нічого (= зараз)
+function _dateMs(dt) {
+    if (dt === undefined || dt === null || dt === '') return Date.now();
+    if (typeof dt === 'number') return dt;
+    const m = getDateOnly(String(dt)).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    return m ? Date.UTC(+m[3], +m[2] - 1, +m[1]) : NaN;
+}
+// Ціна цілі за датою: рядок аркуша, поверх нього — нова ціна, якщо дата не раніша за _PRICE_FROM2
+function _priceFor(abbr, dt) {
+    const base = state.scoreTable[abbr];
+    if (!base) return base;
+    const ms = _dateMs(dt), ov = _PRICE2[_abbrOfName(abbr)];
+    if (!ov || isNaN(ms) || ms < _PRICE_FROM2) return base;
+    return Object.assign({}, base, ov.z !== undefined ? { znyshcheno: ov.z } : {}, ov.p !== undefined ? { poshkodzheno: ov.p } : {});
+}
+function calculatePoints(abbr, q200, q300, result, dt) {
     if (abbr === 'ОС') {
-        const os = state.scoreTable['ОС'] || {znyshcheno:0, poshkodzheno:0};
+        const os = _priceFor('ОС', dt) || {znyshcheno:0, poshkodzheno:0};
         if (result === 'знищено') return os.znyshcheno * (parseInt(q200)||0) + os.poshkodzheno * (parseInt(q300)||0);
         if (result === 'пошкоджено') return os.poshkodzheno * (parseInt(q300)||0);
         return 0;
     }
-    const target = state.scoreTable[abbr];
+    const target = _priceFor(abbr, dt);
     if (!target) return 0;
     if (result === 'знищено') return target.znyshcheno;
     if (result === 'пошкоджено') return target.poshkodzheno;
@@ -6470,9 +6491,10 @@ async function saveEditRecord() {
     r.qty300 = er.qty300;
     r.drone = er.drone;
     r.ammo = er.ammo;
-    const _osE=state.scoreTable['ОС']||{znyshcheno:0,poshkodzheno:0};
+    const _edDt = (er.day && er.month && er.year) ? (er.day + '.' + er.month + '.' + er.year) : (r.datetime || '');
+    const _osE=_priceFor('ОС', _edDt)||{znyshcheno:0,poshkodzheno:0};
     let _ptsE=0;
-    er.targets.forEach(t=>{const _p=t.name.trim().split(' '),_l=_p[_p.length-1],_r=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.name.trim(),_u=_r.toUpperCase();const _ab=Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})();if(_ab==='ОС'){if(t.result==='знищено')_ptsE+=_osE.znyshcheno*(parseInt(er.qty200)||0)+_osE.poshkodzheno*(parseInt(er.qty300)||0);else if(t.result==='пошкоджено')_ptsE+=_osE.poshkodzheno*(parseInt(er.qty300)||0);}else{const _sc=state.scoreTable[_ab];if(_sc)_ptsE+=t.result==='знищено'?_sc.znyshcheno:t.result==='пошкоджено'?_sc.poshkodzheno:0;}});
+    er.targets.forEach(t=>{const _p=t.name.trim().split(' '),_l=_p[_p.length-1],_r=/^\d+$/.test(_l)?_p.slice(0,-1).join(' '):t.name.trim(),_u=_r.toUpperCase();const _ab=Object.keys(state.scoreTable).find(k=>k.toUpperCase()===_u)||(()=>{const _lo=_r.toLowerCase();for(const[_a,_d]of Object.entries(state.scoreTable))if(_d.fullName&&_d.fullName.toLowerCase()===_lo)return _a;return _r;})();if(_ab==='ОС'){if(t.result==='знищено')_ptsE+=_osE.znyshcheno*(parseInt(er.qty200)||0)+_osE.poshkodzheno*(parseInt(er.qty300)||0);else if(t.result==='пошкоджено')_ptsE+=_osE.poshkodzheno*(parseInt(er.qty300)||0);}else{const _sc=_priceFor(_ab,_edDt);if(_sc)_ptsE+=t.result==='знищено'?_sc.znyshcheno:t.result==='пошкоджено'?_sc.poshkodzheno:0;}});
     r.points=Math.round((_ptsE+(er.chk?1:0))*100)/100;
     if(!_hasHit(r)) r.points=0;
     // Дата й час вильоту: беремо обране в полях, секунди лишаємо як були.
