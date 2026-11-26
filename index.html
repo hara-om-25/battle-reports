@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-395';
+const APP_VER = 'v.26.11-396';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -1777,7 +1777,7 @@ function showPrices() {
             const cur = h.filter(x => x.ms <= now), pr = cur.length >= 2 ? cur[cur.length - 2] : null;
             const pf = _priceFor(a) || sc;
             return { a: a, n: d === a ? '' : d, z: pf.znyshcheno, p: pf.poshkodzheno,
-                     oz: pr ? pr.z : sc.oldZ, op: pr ? pr.p : sc.oldP };
+                     oz: pr ? pr.z : (pf !== sc && !h.length ? sc.znyshcheno : sc.oldZ), op: pr ? pr.p : (pf !== sc && !h.length ? sc.poshkodzheno : sc.oldP) };
         })
         .sort((x, y) => x.a.localeCompare(y.a, 'uk'));
     let _sel = null, _lastTap = { a: null, t: 0 };
