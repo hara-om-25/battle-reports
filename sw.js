@@ -1,4 +1,4 @@
-const CACHE = 'battle-reports-v39';
+const CACHE = 'battle-reports-v40';
 const PRECACHE = ['/battle-reports/', '/battle-reports/index.html', '/battle-reports/column-cutter.html'];
 
 self.addEventListener('install', e => {
@@ -7,7 +7,8 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    // лише свої старі кеші: на тому ж сайті (hara-om-25.github.io) живуть інші застосунки (плеєри), і їхні кеші не наші
+    Promise.all(keys.filter(k => k.startsWith('battle-reports-') && k !== CACHE).map(k => caches.delete(k)))
   ).then(() => self.clients.claim()));
 });
 

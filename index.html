@@ -689,7 +689,7 @@ const HOME_SHEET_ID = '16C9nHIQx_39ZqXbLHuqlmVYxrpHyf0XEDJW8HLnJMzs';
 // Номер складання — у шапці біля пошти. Піднімати з кожною зміною:
 // інакше не видно, чи браузер віддав свіжий застосунок, і замість
 // справжньої біди шукається та, якої вже немає
-const APP_VER = 'v.26.11-402';
+const APP_VER = 'v.26.11-403';
 let SHEET_ID = localStorage.getItem('sheetId') || HOME_SHEET_ID;
 
 let state = {
@@ -8396,7 +8396,8 @@ async function _checkUpdate() {
         _toast('ДОСТУПНЕ ОНОВЛЕННЯ ' + m[1] + ' — ОНОВЛЮЮ…', 4000);
         try { sessionStorage.setItem('br_upd_try', m[1]); sessionStorage.setItem('br_upd_done', m[1]); } catch (e) {}
         try { const reg = await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); } catch (e) {}
-        try { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } catch (e) {}
+        // лише свої кеші (battle-reports-…): на тому ж сайті живуть плеєри, їхні кеші (моделі розпізнавання тощо) не чіпаємо
+        try { const ks = await caches.keys(); await Promise.all(ks.filter(k => k.startsWith('battle-reports-')).map(k => caches.delete(k))); } catch (e) {}
         await new Promise(res => setTimeout(res, 1800));
         location.reload();
     } catch (e) {} finally { _updBusy = false; }
